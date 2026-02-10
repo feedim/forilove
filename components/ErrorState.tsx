@@ -171,7 +171,7 @@ export function EmptyState({
         {title}
       </h3>
 
-      <p className="text-gray-400 mb-5 sm:mb-6 text-sm sm:text-base">
+      <p className="text-gray-400 mb-5 sm:mb-6 text-sm">
         {message}
       </p>
 
