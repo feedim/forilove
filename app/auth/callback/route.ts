@@ -6,11 +6,16 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get("code");
 
   if (!code) {
-    return NextResponse.redirect(new URL("/login?error=no_code", request.url));
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  const redirectTo = new URL("/dashboard", request.url);
-  const response = NextResponse.redirect(redirectTo);
+  // Create a normal response (not redirect) so cookies are stored first
+  const response = new NextResponse(
+    `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>
+      <script>window.location.replace("/dashboard")</script>
+    </body></html>`,
+    { headers: { "Content-Type": "text/html" } }
+  );
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -29,22 +34,11 @@ export async function GET(request: NextRequest) {
     }
   );
 
-  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-  // Debug: show what happened instead of redirecting
-  const cookieHeaders = response.headers.getSetCookie();
-  const debugHtml = `<!DOCTYPE html><html><body style="background:#000;color:#fff;font-family:monospace;padding:40px">
-    <h1>Auth Callback Debug</h1>
-    <p><b>Code:</b> ${code.substring(0, 20)}...</p>
-    <p><b>Error:</b> ${error ? error.message : 'none'}</p>
-    <p><b>User:</b> ${data?.user?.email || 'null'}</p>
-    <p><b>Session:</b> ${data?.session ? 'exists' : 'null'}</p>
-    <p><b>Cookies set:</b> ${cookieHeaders.length}</p>
-    <ul>${cookieHeaders.map(c => `<li>${c.split('=')[0]}=...</li>`).join('')}</ul>
-    <br><a href="/dashboard" style="color:#e63e7a">Dashboard'a git →</a>
-  </body></html>`;
+  if (error) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 
-  return new NextResponse(debugHtml, {
-    headers: { "Content-Type": "text/html" },
-  });
+  return response;
 }
