@@ -284,7 +284,7 @@ export default function MusicPlayer({ musicUrl }: { musicUrl: string }) {
         videoId,
         playerVars: {
           autoplay: 0,
-          controls: 1, // Required for iOS Safari — native play button must exist
+          controls: 0,
           disablekb: 1,
           fs: 0,
           modestbranding: 1,
@@ -487,7 +487,7 @@ export default function MusicPlayer({ musicUrl }: { musicUrl: string }) {
                 </div>
               </div>
 
-              {/* Center: Play button with YouTube iframe overlay for iOS Safari */}
+              {/* Center: Play button */}
               <div className="relative">
                 {!hasInteracted && isReady ? (
                   <button onClick={togglePlay} className="h-12 w-12 sm:h-11 sm:w-11 rounded-full flex items-center justify-center hover:scale-110 active:scale-95 transition-transform animate-pulse" style={{ background: BRAND_PINK }} aria-label="Oynat">
@@ -498,10 +498,9 @@ export default function MusicPlayer({ musicUrl }: { musicUrl: string }) {
                     {playButtonIcon}
                   </button>
                 )}
-                {/* YouTube iframe — overlaid on play button, nearly invisible.
-                    On iOS Safari the user's tap hits this iframe directly which counts
-                    as a native user gesture inside the iframe, allowing audio playback.
-                    After first play, pointer-events disabled so taps reach our button. */}
+                {/* Hidden YouTube iframe — never intercepts taps.
+                    playVideo() is called directly from button click handler,
+                    which counts as user gesture for autoplay policy. */}
                 <div
                   ref={containerRef}
                   style={{
@@ -512,9 +511,9 @@ export default function MusicPlayer({ musicUrl }: { musicUrl: string }) {
                     width: 200,
                     height: 200,
                     overflow: "hidden",
-                    opacity: hasInteracted ? 0 : 0.01,
-                    pointerEvents: hasInteracted ? "none" : "auto",
-                    zIndex: 10,
+                    opacity: 0,
+                    pointerEvents: "none",
+                    zIndex: -1,
                   }}
                 />
               </div>

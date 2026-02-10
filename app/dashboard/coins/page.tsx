@@ -140,6 +140,16 @@ export default function CoinsPage() {
       </header>
 
       <main className="container mx-auto px-3 sm:px-6 pt-16 pb-24 md:pb-16 max-w-[600px]">
+        {packages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 sm:py-20 text-center">
+            <Coins className="h-14 w-14 sm:h-20 sm:w-20 text-yellow-500 mb-3 sm:mb-4" />
+            <h2 className="text-lg sm:text-2xl font-bold mb-2">Paketler yükleniyor</h2>
+            <p className="text-gray-400 mb-5 sm:mb-6 text-sm px-4">Coin paketleri henüz yapılandırılmamış.</p>
+            <button onClick={() => router.back()} className="btn-primary">
+              Geri Dön
+            </button>
+          </div>
+        ) : null}
         {packages.length > 0 && (() => {
           const pkg = getSelectedPackage();
           if (!pkg) return null;
