@@ -10,10 +10,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Extract Supabase project ref from URL for cookie name
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-  const ref = supabaseUrl.match(/\/\/([^.]+)/)?.[1] || ''
-  const cookiePrefix = `sb-${ref}-auth-token`
+  // Supabase auth cookie prefix
+  const cookiePrefix = 'sb-ethgmysmhwbcirznyrup-auth-token'
 
   // Reassemble Supabase auth cookie (may be chunked: .0, .1, .2, ...)
   let tokenStr = ''
@@ -63,7 +61,7 @@ export async function proxy(request: NextRequest) {
   if (isAuthenticated && userId && (pathname.startsWith('/admin') || pathname.startsWith('/creator'))) {
     try {
       const res = await fetch(
-        `${supabaseUrl}/rest/v1/profiles?select=role&user_id=eq.${userId}`,
+        `https://ethgmysmhwbcirznyrup.supabase.co/rest/v1/profiles?select=role&user_id=eq.${userId}`,
         {
           headers: {
             'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
