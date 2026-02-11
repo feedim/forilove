@@ -44,6 +44,11 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
   const supabase = createClient();
   // Deferred uploads: store File objects keyed by hook key, upload on publish
   const pendingUploadsRef = useRef<Record<string, File>>({});
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const previewInitRef = useRef(false);
+  // Ref to always access latest values (avoids stale closure in postMessage handler)
+  const valuesRef = useRef<Record<string, string>>({});
+  valuesRef.current = values;
 
   useEffect(() => {
     loadData();
@@ -61,7 +66,9 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== 'null' && event.origin !== window.location.origin) return;
       if (event.data?.type === 'EDIT_HOOK' && typeof event.data.key === 'string' && /^[a-zA-Z0-9_-]+$/.test(event.data.key)) {
-        openEditModal(event.data.key);
+        // Use valuesRef to avoid stale closure
+        setDraftValue(valuesRef.current[event.data.key] || '');
+        setEditingHook(event.data.key);
       }
     };
 
@@ -312,7 +319,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
         const regex = new RegExp(`HOOK_${key}`, 'g');
         html = html.replace(regex, value || '');
       });
-      setPreviewHtml(html);
+      writeToPreview(html);
     } else {
       // Use data-editable format
       const parser = new DOMParser();
@@ -398,7 +405,26 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
       `;
       doc.body.appendChild(script);
 
-      setPreviewHtml(doc.documentElement.outerHTML);
+      writeToPreview(doc.documentElement.outerHTML);
+    }
+  };
+
+  // Write HTML to iframe — first time uses srcDoc, subsequent times write directly (no white flash)
+  const writeToPreview = (html: string) => {
+    const iframe = iframeRef.current;
+    if (previewInitRef.current && iframe?.contentDocument) {
+      const doc = iframe.contentDocument;
+      const scrollY = doc.documentElement?.scrollTop || doc.body?.scrollTop || 0;
+      doc.open();
+      doc.write(html);
+      doc.close();
+      requestAnimationFrame(() => {
+        if (doc.documentElement) doc.documentElement.scrollTop = scrollY;
+        if (doc.body) doc.body.scrollTop = scrollY;
+      });
+    } else {
+      setPreviewHtml(html);
+      previewInitRef.current = true;
     }
   };
 
@@ -475,12 +501,12 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
       const randomSuffix = Math.random().toString(36).substring(2, 8);
       const finalSlug = `${cleanSlug}-${randomSuffix}`;
 
-      // Upload pending images to R2
+      // Upload pending images to R2 (sequential to avoid connection timeouts)
       const finalValues = { ...values };
       const pendingKeys = Object.keys(pendingUploadsRef.current);
       if (pendingKeys.length > 0) {
-        toast('Görseller yükleniyor...', { icon: '📤' });
-        const uploads = pendingKeys.map(async (key) => {
+        toast(`${pendingKeys.length} görsel yükleniyor...`, { icon: '📤' });
+        for (const key of pendingKeys) {
           const file = pendingUploadsRef.current[key];
           const optimizedName = getOptimizedFileName(file.name);
           const formData = new FormData();
@@ -488,10 +514,9 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
           formData.append('fileName', optimizedName);
           const res = await fetch('/api/upload/image', { method: 'POST', body: formData });
           const result = await res.json();
-          if (!res.ok) throw new Error(result.error || 'Upload failed');
+          if (!res.ok) throw new Error(result.error || `Görsel yüklenemedi: ${key}`);
           finalValues[key] = result.url;
-        });
-        await Promise.all(uploads);
+        }
         pendingUploadsRef.current = {};
         setValues(finalValues);
       }
@@ -792,6 +817,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
         {/* Live Preview - Full Width, account for mobile bottom bar */}
         <div className="h-[calc(100vh-73px-56px)] md:h-[calc(100vh-73px)] overflow-y-auto bg-white">
           <iframe
+            ref={iframeRef}
             srcDoc={previewHtml}
             className="w-full h-full border-0"
             title="Preview"
