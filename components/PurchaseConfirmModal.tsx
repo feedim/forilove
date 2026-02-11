@@ -140,14 +140,14 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
 
         {/* Coin Cost */}
         <div className="text-center pt-1">
-          <p className="text-sm text-gray-400">{options.itemName}</p>
           <p className="mt-1.5 text-[32px] font-extrabold text-yellow-500 tracking-tight">
             {options.coinCost} FL
           </p>
+          <p className="text-sm text-gray-400">{options.itemName}</p>
         </div>
 
         {/* Balance Info */}
-        <div className="bg-yellow-500/[0.06] border border-yellow-500/15 rounded-xl p-3.5 flex flex-col gap-1.5">
+        <div className="border border-white/10 rounded-xl p-3.5 flex flex-col gap-1.5">
           <div className="flex justify-between items-center">
             <span className="text-[13px] text-gray-400">Mevcut bakiye:</span>
             <span className="text-[13px] font-semibold text-yellow-500">{options.currentBalance} FL</span>
