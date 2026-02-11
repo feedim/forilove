@@ -33,7 +33,7 @@ function buildListSchemas(posts: BlogPost[]) {
       '@id': `${BLOG_BASE_URL}/blog`,
       name: 'Forilove Blog',
       description:
-        'Sevgiliye hediye fikirleri, dijital aşk sayfaları ve romantik sürprizler hakkında blog yazıları.',
+        'Sevgiliye hediye fikirleri, dijital anı sayfaları ve romantik sürprizler hakkında blog yazıları.',
       url: `${BLOG_BASE_URL}/blog`,
       inLanguage: BLOG_SEO.language,
       publisher: BLOG_PUBLISHER,

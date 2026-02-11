@@ -25,11 +25,11 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   return {
     title,
     description:
-      'Sevgiliye hediye fikirleri, dijital aşk sayfaları ve romantik sürprizler hakkında blog yazıları. Forilove ile sevdiklerinize unutulmaz anılar yaratın.',
+      'Sevgiliye hediye fikirleri, dijital anı sayfaları ve romantik sürprizler hakkında blog yazıları. Forilove ile sevdiklerinize unutulmaz anılar yaratın.',
     keywords: [
       'sevgiliye hediye fikirleri',
       'dijital hediye',
-      'online aşk sayfası',
+      'online anı sayfası',
       'sevgililer günü',
       'romantik sürpriz',
       'kişiselleştirilmiş hediye',
@@ -49,7 +49,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
     openGraph: {
       title,
       description:
-        'Sevgiliye hediye fikirleri, dijital aşk sayfaları ve romantik sürprizler hakkında blog yazıları.',
+        'Sevgiliye hediye fikirleri, dijital anı sayfaları ve romantik sürprizler hakkında blog yazıları.',
       url: canonical,
       type: 'website',
       siteName: BLOG_SEO.siteName,
@@ -59,7 +59,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
       card: 'summary_large_image',
       title,
       description:
-        'Sevgiliye hediye fikirleri, dijital aşk sayfaları ve romantik sürprizler hakkında blog yazıları.',
+        'Sevgiliye hediye fikirleri, dijital anı sayfaları ve romantik sürprizler hakkında blog yazıları.',
     },
   }
 }

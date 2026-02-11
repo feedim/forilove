@@ -110,7 +110,7 @@ export default function ReferralSection({ userId }: { userId: string }) {
         </svg>
       </summary>
 
-      <div className="px-4 sm:px-6 pb-4 sm:pb-6">
+      <div className="px-3 sm:px-6 pb-3 sm:pb-6">
 
       {/* Referral Link */}
       <div className="bg-black/20 rounded-lg p-3 sm:p-4 mb-4">

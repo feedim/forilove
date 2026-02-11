@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, useRef, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Eye, ChevronDown, ChevronUp, PanelLeftClose, PanelLeft, X, Heart, Coins, Upload, Music, Play, Pause, Globe, Lock } from "lucide-react";
@@ -42,6 +42,8 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
   const [termsAccepted, setTermsAccepted] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+  // Deferred uploads: store File objects keyed by hook key, upload on publish
+  const pendingUploadsRef = useRef<Record<string, File>>({});
 
   useEffect(() => {
     loadData();
@@ -316,8 +318,9 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, 'text/html');
 
-      // Validate URL protocol (block javascript:, data:, vbscript:)
+      // Validate URL protocol (allow data:image for local previews)
       const isSafeUrl = (url: string) => {
+        if (url.startsWith('data:image/')) return true;
         try {
           const parsed = new URL(url, 'https://placeholder.com');
           return /^https?:$/.test(parsed.protocol);
@@ -325,7 +328,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
       };
 
       // Sanitize CSS value (strip expressions, url(javascript:), etc.)
-      const safeCssValue = (val: string) => val.replace(/expression\s*\(|javascript:|data:/gi, '');
+      const safeCssValue = (val: string) => val.replace(/expression\s*\(|javascript:|vbscript:/gi, '');
 
       // Apply values to hooks
       Object.entries(values).forEach(([key, value]) => {
@@ -472,11 +475,32 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
       const randomSuffix = Math.random().toString(36).substring(2, 8);
       const finalSlug = `${cleanSlug}-${randomSuffix}`;
 
+      // Upload pending images to R2
+      const finalValues = { ...values };
+      const pendingKeys = Object.keys(pendingUploadsRef.current);
+      if (pendingKeys.length > 0) {
+        toast('Görseller yükleniyor...', { icon: '📤' });
+        const uploads = pendingKeys.map(async (key) => {
+          const file = pendingUploadsRef.current[key];
+          const optimizedName = getOptimizedFileName(file.name);
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('fileName', optimizedName);
+          const res = await fetch('/api/upload/image', { method: 'POST', body: formData });
+          const result = await res.json();
+          if (!res.ok) throw new Error(result.error || 'Upload failed');
+          finalValues[key] = result.url;
+        });
+        await Promise.all(uploads);
+        pendingUploadsRef.current = {};
+        setValues(finalValues);
+      }
+
       const updateData: any = {
         title: safeTitle,
         slug: project.is_published ? project.slug : finalSlug,
         description: safeDescription,
-        hook_values: values,
+        hook_values: finalValues,
         music_url: musicUrl || null,
         updated_at: new Date().toISOString(),
         is_published: true,
@@ -546,7 +570,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
   };
 
   const handleImageUpload = async (file: File) => {
-    if (!currentHook) return;
+    if (!currentHook || !editingHook) return;
 
     setUploadingImage(true);
     try {
@@ -557,31 +581,21 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
         return;
       }
 
-      // Compress image before upload
+      // Compress image locally
       const compressedFile = await compressImage(file);
-      const optimizedName = getOptimizedFileName(file.name);
 
-      // Upload to R2 via API route
-      const formData = new FormData();
-      formData.append('file', compressedFile);
-      formData.append('fileName', optimizedName);
+      // Store as data URL for local preview (no R2 upload yet)
+      const reader = new FileReader();
+      reader.onload = () => {
+        setDraftValue(reader.result as string);
+        // Store File for deferred upload at publish time
+        pendingUploadsRef.current[editingHook] = compressedFile;
+      };
+      reader.readAsDataURL(compressedFile);
 
-      const res = await fetch('/api/upload/image', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const result = await res.json();
-
-      if (!res.ok) {
-        throw new Error(result.error || 'Upload failed');
-      }
-
-      // Update draft value (will be applied on save)
-      setDraftValue(result.url);
-      toast.success('Görsel yüklendi!');
+      toast.success('Görsel eklendi!');
     } catch (error: any) {
-      toast.error('Yükleme hatası: ' + error.message);
+      toast.error('Görsel hatası: ' + error.message);
     } finally {
       setUploadingImage(false);
     }

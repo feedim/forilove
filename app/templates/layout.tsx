@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     "evlilik teklifi şablonu",
     "web sayfası şablonu",
     "sevgiliye hediye",
-    "love page template"
+    "anı sayfası şablonu"
   ],
   openGraph: {
     title: "Şablonlar - Forilove",

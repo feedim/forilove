@@ -15,7 +15,7 @@ export default function HelpPage() {
     name: "Yardım Merkezi - Forilove",
     url: "https://forilove.com/help",
     mainEntity: [
-      { "@type": "Question", name: "Forilove nedir?", acceptedAnswer: { "@type": "Answer", text: "Forilove, sevdiklerinize özel kişiselleştirilmiş aşk sayfaları oluşturmanızı sağlayan bir platformdur." } },
+      { "@type": "Question", name: "Forilove nedir?", acceptedAnswer: { "@type": "Answer", text: "Forilove, sevdiklerinize özel kişiselleştirilmiş anı sayfaları oluşturmanıza olanak sağlayan bir platformdur." } },
       { "@type": "Question", name: "FL Coins nedir?", acceptedAnswer: { "@type": "Answer", text: "Premium şablonları satın almak için kullanılan dijital para birimidir." } },
       { "@type": "Question", name: "Şablonu satın aldıktan sonra ne olur?", acceptedAnswer: { "@type": "Answer", text: "Şablon kalıcı olarak sizindir. İstediğiniz kadar düzenleyebilir ve yeniden yayımlayabilirsiniz." } },
       { "@type": "Question", name: "Müzik nasıl eklenir?", acceptedAnswer: { "@type": "Answer", text: "Editörde Müzik Ekle butonuna tıklayarak bir YouTube linki yapıştırın. Müzik sayfanızda arka planda çalacaktır." } },
@@ -29,8 +29,8 @@ export default function HelpPage() {
       <section>
         <h2 className="text-2xl font-bold text-white mb-4">Forilove Nedir?</h2>
         <p>
-          Forilove, sevdiklerinize özel kişiselleştirilmiş aşk sayfaları oluşturmanızı
-          sağlayan bir platformdur. Premium şablonlar arasından seçim yaparak fotoğraf,
+          Forilove, sevdiklerinize özel kişiselleştirilmiş anı sayfaları oluşturmanıza
+          olanak sağlayan bir platformdur. Premium şablonlar arasından seçim yaparak fotoğraf,
           metin ve müzik ekleyebilir, ardından oluşturduğunuz sayfayı bir link ile
           paylaşabilirsiniz.
         </p>

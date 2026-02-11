@@ -57,7 +57,7 @@ export default function RootLayout({
                   "@id": "https://www.forilove.com/#organization",
                   name: "Forilove",
                   url: "https://www.forilove.com",
-                  description: "Sevdiklerinize özel kişiselleştirilmiş aşk sayfaları oluşturun.",
+                  description: "Sevdiklerinize özel kişiselleştirilmiş anı sayfaları oluşturun.",
                   contactPoint: {
                     "@type": "ContactPoint",
                     email: "contact@forilove.com",

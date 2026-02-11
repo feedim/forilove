@@ -132,7 +132,7 @@ export function ShareSheet({ url, title = "", isOpen, onClose }: ShareSheetProps
         >
           <div>
             <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#fff" }}>Paylas</h3>
-            <p style={{ margin: 0, marginTop: 2, fontSize: 12, color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 280 }}>{title || url}</p>
+            <p style={{ margin: 0, marginTop: 2, fontSize: 15, color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 280 }}>{title || url}</p>
           </div>
           <button
             onClick={onClose}
@@ -243,7 +243,7 @@ export function ShareSheet({ url, title = "", isOpen, onClose }: ShareSheetProps
               <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
             </svg>
           </div>
-          <p style={{ margin: 0, fontSize: 12, color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{url}</p>
+          <p style={{ margin: 0, fontSize: 15, color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{url}</p>
         </div>
       </div>
     </div>,

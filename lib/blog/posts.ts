@@ -29,7 +29,7 @@ export const blogPosts: BlogPost[] = [
 <p>14 Şubat yaklaşıyor ve kafanızda hâlâ "ne alsam?" sorusu dönüyorsa — rahat olun, yalnız değilsiniz 😅 Her yıl milyonlarca kişi aynı stresi yaşıyor. Ama bu sene farklı olacak, çünkü biz sizin için hem klasik hem yaratıcı seçenekleri bir araya getirdik.</p>
 <p>Hazırsanız başlıyoruz 👇</p>
 
-<h2>1. 💌 Kişiselleştirilmiş Dijital Aşk Sayfası</h2>
+<h2>1. 💌 Kişiselleştirilmiş Dijital Anı Sayfası</h2>
 <p>Tamam, biliyoruz — listenin birincisi bizim ürün. Ama bir saniye, açıklamamıza izin verin çünkü gerçekten mantıklı 😄</p>
 <p><strong>Forilove</strong> ile sevgilinize özel bir web sayfası oluşturuyorsunuz. Birlikte çekildiğiniz fotoğraflar, favori şarkınız, tanışma tarihinizden bu yana geçen süre sayacı, kalpten gelen mesajlarınız... Hepsi tek bir sayfada, tek bir linkte.</p>
 <p>En güzel yanı ne biliyor musunuz? Çiçek solar, çikolata biter — ama bu sayfa <strong>sonsuza kadar</strong> kalır. Yıllar sonra birlikte açıp "aaa bak ne yazmışım" diyeceğiniz dijital bir anı defteri 🥹</p>
@@ -83,15 +83,15 @@ export const blogPosts: BlogPost[] = [
   },
   {
     slug: 'sevgiliye-dijital-hediye-kisisellestirilmis-ask-sayfasi',
-    title: 'Sevgiliye En Güzel Dijital Hediye: Kişiselleştirilmiş Aşk Sayfası',
+    title: 'Sevgiliye En Güzel Dijital Hediye: Kişiselleştirilmiş Anı Sayfası',
     description:
-      'Sevgililer günü, yıl dönümü veya özel bir gün için sevgiline en anlamlı dijital hediyeyi keşfet. Kişiselleştirilmiş online aşk sayfası ile duygularını kalıcı hale getir.',
+      'Sevgililer günü, yıl dönümü veya özel bir gün için sevgiline en anlamlı dijital hediyeyi keşfet. Kişiselleştirilmiş online anı sayfası ile duygularını kalıcı hale getir.',
     keywords: [
       'sevgiliye dijital hediye',
-      'online aşk sayfası',
+      'online anı sayfası',
       'sevgililer günü hediye fikirleri',
       'kişiselleştirilmiş hediye',
-      'dijital aşk mektubu',
+      'dijital anı mektubu',
       'sevgiliye online hediye',
     ],
     date: '2026-02-10',
@@ -103,9 +103,9 @@ export const blogPosts: BlogPost[] = [
 <p>Dijital hediye, internet üzerinden hazırlanıp paylaşılan kişiselleştirilmiş bir sürprizdir. Bir web sayfası, bir video, bir müzik listesi veya hepsi bir arada olabilir. Önemli olan, karşı tarafa "seni düşündüm, senin için emek harcadım" mesajını vermesidir.</p>
 <p>Geleneksel hediyelerin aksine, dijital hediyeler her yerden erişilebilir. Sevgiliniz ister İstanbul'da ister yurt dışında olsun, telefonunu açtığı an hediyenize ulaşabilir.</p>
 
-<h2>Neden Kişiselleştirilmiş Bir Aşk Sayfası?</h2>
-<p>Bir aşk sayfası, sevgilinize özel olarak tasarlanmış bir web sayfasıdır. İçinde birlikte çektiğiniz fotoğraflar, favori şarkınız, tanışma tarihinizden bu yana geçen süre sayacı ve kalbinizden geçen mesajlar yer alabilir.</p>
-<p>Kişiselleştirilmiş aşk sayfasının avantajları:</p>
+<h2>Neden Kişiselleştirilmiş Bir Anı Sayfası?</h2>
+<p>Bir anı sayfası, sevgilinize özel olarak tasarlanmış bir web sayfasıdır. İçinde birlikte çektiğiniz fotoğraflar, favori şarkınız, tanışma tarihinizden bu yana geçen süre sayacı ve kalbinizden geçen mesajlar yer alabilir.</p>
+<p>Kişiselleştirilmiş anı sayfasının avantajları:</p>
 <ul>
 <li><strong>Benzersiz:</strong> Dünyada sadece sevgilinize özel bir hediye</li>
 <li><strong>Kalıcı:</strong> Yıllar sonra bile erişilebilir, anılarınız kaybolmaz</li>
@@ -115,7 +115,7 @@ export const blogPosts: BlogPost[] = [
 </ul>
 
 <h2>Forilove ile Nasıl Yapılır?</h2>
-<p>Forilove, kod bilmeden dakikalar içinde profesyonel görünümlü bir aşk sayfası oluşturmanızı sağlar. Yapmanız gereken çok basit:</p>
+<p>Forilove, kod bilmeden dakikalar içinde profesyonel görünümlü bir anı sayfası oluşturmanızı sağlar. Yapmanız gereken çok basit:</p>
 <ol>
 <li><strong>Üye olun</strong> — Ücretsiz hesap oluşturun</li>
 <li><strong>Şablon seçin</strong> — Birbirinden güzel şablonlar arasından size en uygun olanı seçin</li>
@@ -125,7 +125,7 @@ export const blogPosts: BlogPost[] = [
 <p>Tüm süreç 10 dakikadan kısa sürer. Teknik bilgi gerektirmez. Telefonunuzdan bile yapabilirsiniz.</p>
 
 <h2>Hangi Özel Günlerde Kullanılır?</h2>
-<p>Kişiselleştirilmiş aşk sayfaları sadece Sevgililer Günü için değil, birçok özel an için harika bir hediye seçeneğidir:</p>
+<p>Kişiselleştirilmiş anı sayfaları sadece Sevgililer Günü için değil, birçok özel an için harika bir hediye seçeneğidir:</p>
 <ul>
 <li>Sevgililer Günü sürprizi</li>
 <li>Yıl dönümü kutlaması</li>

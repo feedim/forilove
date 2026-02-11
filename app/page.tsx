@@ -37,7 +37,7 @@ export default function Home() {
 
             {/* Description */}
             <p className="text-base sm:text-lg md:text-xl text-gray-400 mb-10 max-w-2xl mx-auto px-2">
-              Özel tasarlanmış şablonlar ile sevdikleriniz için unutulmaz aşk sayfaları oluşturun
+              Özel tasarlanmış şablonlar ile sevdikleriniz için unutulmaz anı sayfaları oluşturun
             </p>
 
             {/* CTA Buttons */}
@@ -81,7 +81,7 @@ export default function Home() {
             {/* Section Header */}
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Nasıl Çalışır?</h2>
-              <p className="text-gray-400 text-lg">3 basit adımda aşk sayfanızı oluşturun</p>
+              <p className="text-gray-400 text-lg">3 basit adımda anı sayfanızı oluşturun</p>
             </div>
 
             {/* Steps */}
