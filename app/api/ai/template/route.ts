@@ -221,7 +221,7 @@ Her bölüme anlamlı data-editable ve data-area attribute'ları ekle. Varsayıl
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash-preview-05-20",
+      model: "gemini-2.5-flash",
       generationConfig: {
         temperature: 0.9,
         maxOutputTokens: 16000,
