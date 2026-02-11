@@ -1077,8 +1077,8 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
             <span className="font-medium">Geri</span>
           </button>
           <h1 className="text-base sm:text-lg font-bold max-w-[200px] sm:max-w-[300px] truncate md:absolute md:left-[120px] md:border-l md:border-white/10 md:pl-4">{template?.name}</h1>
-          {/* Desktop buttons - hidden on mobile */}
-          <div className="hidden md:flex items-center gap-2">
+          {/* Desktop buttons - hidden on mobile, scrollable when overflow */}
+          <div className="hidden md:flex items-center gap-2 max-w-[calc(100vw-280px)] overflow-x-auto scrollbar-hide">
             {loading ? (
               <div className="text-sm text-gray-400">Yükleniyor...</div>
             ) : !isPurchased ? (
@@ -1119,7 +1119,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                     </div>
                     <button
                       onClick={() => setShowAIModal(true)}
-                      className="btn-secondary flex items-center gap-2 px-4 py-2 text-sm"
+                      className="btn-secondary shrink-0 flex items-center gap-2 px-4 py-2 text-sm whitespace-nowrap"
                     >
                       <Sparkles className="h-4 w-4" style={{ color: 'lab(49.5493% 79.8381 2.31768)' }} />
                       AI ile Doldur
@@ -1132,7 +1132,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                           setDraftHiddenAreas(hidden);
                           setShowSectionsModal(true);
                         }}
-                        className="btn-secondary flex items-center gap-2 px-4 py-2 text-sm"
+                        className="btn-secondary shrink-0 flex items-center gap-2 px-4 py-2 text-sm whitespace-nowrap"
                       >
                         <LayoutGrid className="h-4 w-4" />
                         Bölümler
@@ -1181,7 +1181,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                     ) : (
                       <button
                         onClick={() => setShowMusicModal(true)}
-                        className="btn-secondary flex items-center gap-2 px-4 py-2 text-sm"
+                        className="btn-secondary shrink-0 flex items-center gap-2 px-4 py-2 text-sm whitespace-nowrap"
                       >
                         <Music className="h-4 w-4" />
                         Müzik Ekle
@@ -1189,7 +1189,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                     )}
                     <button
                       onClick={handlePreview}
-                      className="btn-secondary flex items-center gap-2 px-4 py-2 text-sm"
+                      className="btn-secondary shrink-0 flex items-center gap-2 px-4 py-2 text-sm whitespace-nowrap"
                     >
                       <Eye className="h-4 w-4" />
                       Önizleme
@@ -1197,7 +1197,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                     <button
                       onClick={handlePublish}
                       disabled={saving}
-                      className="btn-primary px-4 py-2 text-sm"
+                      className="btn-primary shrink-0 px-4 py-2 text-sm whitespace-nowrap"
                     >
                       {saving
                         ? (project.is_published ? "Güncelleniyor..." : "Paylaşılıyor...")
@@ -1286,7 +1286,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                   className="btn-secondary shrink-0 flex items-center gap-2 px-4 py-2.5 text-sm whitespace-nowrap"
                 >
                   <Sparkles className="h-4 w-4" style={{ color: 'lab(49.5493% 79.8381 2.31768)' }} />
-                  AI
+                  AI Doldur
                 </button>
                 {musicUrl ? (
                   <div className="btn-secondary shrink-0 flex items-center rounded-full overflow-hidden" style={{ padding: '0 1rem' }}>
@@ -1643,7 +1643,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                               value={draftValue && !draftValue.startsWith('data:') ? draftValue : ''}
                               onChange={(e) => setDraftValue(e.target.value)}
                               className="input-modern w-full text-base"
-                              placeholder="https://images.unsplash.com/..."
+                              placeholder="https://ornek.com/gorsel.jpg"
                             />
                           </div>
 

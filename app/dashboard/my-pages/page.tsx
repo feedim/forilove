@@ -140,7 +140,13 @@ export default function MyPagesPage() {
         }
       }
 
-      // 2. Delete the project
+      // 2. Delete saved_projects references (other users' saves)
+      await supabase
+        .from("saved_projects")
+        .delete()
+        .eq("project_id", projectId);
+
+      // 3. Delete the project
       const { error } = await supabase
         .from("projects")
         .delete()
@@ -149,7 +155,7 @@ export default function MyPagesPage() {
 
       if (error) throw error;
 
-      // 3. Clear any cached preview/editor data
+      // 4. Clear any cached preview/editor data
       try {
         sessionStorage.removeItem('forilove_preview');
       } catch {}

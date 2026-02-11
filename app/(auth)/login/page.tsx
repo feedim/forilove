@@ -7,14 +7,12 @@ import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import AuthLayout from "@/components/AuthLayout";
 import PasswordInput from "@/components/PasswordInput";
-import AccountRestoreModal from "@/components/AccountRestoreModal";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [deletionDate, setDeletionDate] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
 
@@ -69,14 +67,6 @@ export default function LoginPage() {
         localStorage.setItem("forilove_remember_email", email);
       } else {
         localStorage.removeItem("forilove_remember_email");
-      }
-
-      // Check if account is scheduled for deletion
-      const deletionRequested = data.user?.user_metadata?.deletion_requested_at;
-      if (deletionRequested) {
-        setDeletionDate(deletionRequested);
-        setLoading(false);
-        return;
       }
 
       toast.success("Giriş başarılı!");
@@ -180,17 +170,6 @@ export default function LoginPage() {
             </Link>
           </p>
 
-      {deletionDate && (
-        <AccountRestoreModal
-          scheduledDeletionAt={deletionDate}
-          onRestore={() => {
-            setDeletionDate(null);
-            toast.success("Hesabınız geri yüklendi!");
-            router.push("/dashboard");
-            router.refresh();
-          }}
-        />
-      )}
     </AuthLayout>
   );
 }

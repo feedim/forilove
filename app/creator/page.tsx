@@ -99,8 +99,16 @@ export default function CreatorDashboard() {
         .select("id, hook_values")
         .eq("template_id", templateId);
 
-      // 2. Delete R2 images from projects
+      // 2. Delete R2 images and related data from projects
       if (projects && projects.length > 0) {
+        const projectIds = projects.map(p => p.id);
+
+        // Delete saved_projects references
+        await supabase
+          .from("saved_projects")
+          .delete()
+          .in("project_id", projectIds);
+
         for (const project of projects) {
           const hookValues = project.hook_values as Record<string, string> | null;
           if (hookValues) {
@@ -118,7 +126,6 @@ export default function CreatorDashboard() {
         }
 
         // 3. Delete all projects
-        const projectIds = projects.map(p => p.id);
         await supabase
           .from("projects")
           .delete()

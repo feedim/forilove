@@ -180,7 +180,7 @@ export default function ExplorePage() {
             <div className="w-16" />
           </nav>
         </header>
-        <div className="flex-1 relative">
+        <div className="flex-1 relative w-full sm:max-w-[480px] sm:mx-auto">
           <div className="animate-pulse bg-white/[0.04] absolute inset-0 rounded-none" />
           <div className="absolute bottom-20 left-4 right-20 space-y-2">
             <div className="animate-pulse bg-white/[0.08] h-3 w-24 rounded-lg" />

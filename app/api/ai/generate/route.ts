@@ -26,17 +26,30 @@ function checkRateLimit(userId: string): boolean {
   return true;
 }
 
-function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`${label} zaman aşımına uğradı (${ms / 1000}s)`)), ms)
-    ),
-  ]);
+// Retry with exponential backoff for 429 errors
+async function callGeminiWithRetry(
+  model: any,
+  content: any[],
+  maxRetries = 3
+): Promise<any> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await model.generateContent(content);
+    } catch (error: any) {
+      const is429 = error?.status === 429 || error?.message?.includes("429") || error?.message?.includes("Resource exhausted");
+      if (is429 && attempt < maxRetries) {
+        const delay = Math.min(2000 * Math.pow(2, attempt), 15000);
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
+      throw error;
+    }
+  }
 }
 
 function sanitizeHooks(hooks: any[]): HookInput[] {
-  const allowedTypes = new Set(["text", "textarea", "color", "date", "url", "video", "image", "background-image"]);
+  // Only text-based types — AI does NOT touch images
+  const allowedTypes = new Set(["text", "textarea", "color", "date", "url", "video"]);
   return hooks
     .filter((h) => h && typeof h.key === "string" && h.key.length <= 64 && allowedTypes.has(h.type))
     .map((h) => ({
@@ -50,18 +63,14 @@ function sanitizeHooks(hooks: any[]): HookInput[] {
 // Extract a compact text-only summary of the HTML template structure (no full HTML sent to AI)
 function extractTemplateContext(html: string): string {
   if (!html) return "";
-  // Extract text content hints from the HTML to understand the template's theme
   const textParts: string[] = [];
-  // Get title
   const titleMatch = html.match(/<title>(.*?)<\/title>/i);
   if (titleMatch) textParts.push(`Şablon adı: "${titleMatch[1]}"`);
-  // Get headings
   const headingMatches = html.matchAll(/<h[1-3][^>]*>(.*?)<\/h[1-3]>/gi);
   for (const m of headingMatches) {
     const text = m[1].replace(/<[^>]*>/g, '').replace(/HOOK_\w+/g, '___').trim();
     if (text && text !== '___') textParts.push(text);
   }
-  // Get data-area labels for section context
   const areaMatches = html.matchAll(/data-area="([^"]+)"/g);
   const areas: string[] = [];
   for (const m of areaMatches) areas.push(m[1].replace(/[_-]/g, ' '));
@@ -114,8 +123,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Geçerli hook bulunamadı" }, { status: 400 });
     }
 
-    const imageHooks = hooks.filter((h) => h.type === "image" || h.type === "background-image");
-
     // Extract template context from HTML (compact, no raw HTML to AI)
     const templateContext = typeof htmlContent === "string"
       ? extractTemplateContext(htmlContent.slice(0, 50_000))
@@ -130,13 +137,11 @@ export async function POST(req: NextRequest) {
         date: "GG.AA.YYYY formatında tarih",
         url: "boş string döndür",
         video: "boş string döndür",
-        image: "İngilizce Unsplash arama kelimesi (2-4 kelime)",
-        "background-image": "İngilizce Unsplash arama kelimesi (2-4 kelime)",
       };
       return `- key:"${h.key}" | tip:${h.type} | label:"${h.label}" | mevcut:"${h.defaultValue.slice(0, 80)}" → ${typeGuide[h.type] || "kısa metin"}`;
     });
 
-    const systemPrompt = `Sen Forilove platformunun AI asistanısın. Kullanıcılar sevdikleri kişiler için özel anı sayfaları oluşturuyor. Sen kullanıcının yazdığı kısa açıklamadan yola çıkarak şablondaki TÜM düzenlenebilir alanları en uygun şekilde dolduruyorsun.
+    const systemPrompt = `Sen Forilove platformunun AI asistanısın. Kullanıcılar sevdikleri kişiler için özel anı sayfaları oluşturuyor. Sen kullanıcının yazdığı kısa açıklamadan yola çıkarak şablondaki TÜM düzenlenebilir metin alanlarını en uygun şekilde dolduruyorsun.
 
 ## Platform Bilgisi
 Forilove, kişiselleştirilmiş dijital aşk/anı sayfaları oluşturma platformudur. Kullanıcılar şablon seçer, düzenler ve sevdikleriyle paylaşır. Sayfalar sevgililer günü, yıldönümü, doğum günü, evlilik teklifi gibi özel anlar için hazırlanır.
@@ -152,6 +157,9 @@ Kullanıcının prompt'unu dikkatlice analiz et:
 ## Şablon Bağlamı
 ${templateContext || "Genel romantik anı sayfası"}
 
+## ÖNEMLİ: Görsellere dokunma!
+Görsel alanları (image, background-image) sana gönderilmez. Sadece metin, renk ve tarih alanlarını doldur.
+
 ## Kurallar
 1. Tüm metin içeriği Türkçe, samimi ve duygusal olmalı
 2. text: kısa, öz metin (max 100 karakter). Başlıklar etkileyici, alt başlıklar tamamlayıcı olmalı
@@ -159,9 +167,8 @@ ${templateContext || "Genel romantik anı sayfası"}
 4. color: HEX renk kodu. Şablonun temasına uygun romantik tonlar (pembe, kırmızı, bordo, altın, leylak)
 5. date: GG.AA.YYYY formatında. Kullanıcı tarih verdiyse onu kullan, vermediyse bugünün tarihini kullan
 6. url/video: her zaman boş string "" döndür
-7. image/background-image: İngilizce Unsplash arama kelimesi (2-4 kelime). Romantik, çift temalı, estetik görseller için anahtar kelime yaz (örn: "romantic couple sunset", "love letter roses", "couple holding hands beach")
-8. Her alanın label'ını ve mevcut değerini dikkate al — ne tür içerik beklendiğini anla
-9. Hook key'inden de ipucu çıkar: "partner_name" → isim, "anniversary_date" → tarih, "love_message" → uzun mesaj, "cover_photo" → kapak görseli
+7. Her alanın label'ını ve mevcut değerini dikkate al — ne tür içerik beklendiğini anla
+8. Hook key'inden de ipucu çıkar: "partner_name" → isim, "anniversary_date" → tarih, "love_message" → uzun mesaj
 
 ## Çıktı
 Sadece JSON döndür: {"key1":"değer1","key2":"değer2",...}
@@ -181,13 +188,13 @@ ${hookLines.join("\n")}`;
       },
     });
 
-    const result = await withTimeout(
-      model.generateContent([
+    const result = await callGeminiWithRetry(
+      model,
+      [
         { text: systemPrompt },
         { text: `Kullanıcının isteği: ${prompt.slice(0, 500)}` },
-      ]),
-      15_000,
-      "Gemini"
+      ],
+      3
     );
 
     const aiText = result.response.text();
@@ -202,45 +209,7 @@ ${hookLines.join("\n")}`;
       return NextResponse.json({ error: "AI yanıtı parse edilemedi" }, { status: 500 });
     }
 
-    // Unsplash image fetch
-    const unsplashKey = process.env.UNSPLASH_ACCESS_KEY;
-    if (unsplashKey && unsplashKey !== "..." && imageHooks.length > 0) {
-      const imageResults = await withTimeout(
-        Promise.all(
-          imageHooks.map(async (hook) => {
-            const searchQuery = aiValues[hook.key];
-            if (!searchQuery || typeof searchQuery !== "string") {
-              return { key: hook.key, url: hook.defaultValue };
-            }
-            try {
-              const res = await fetch(
-                `https://api.unsplash.com/search/photos?query=${encodeURIComponent(searchQuery.slice(0, 100))}&per_page=1&orientation=landscape`,
-                {
-                  headers: { Authorization: `Client-ID ${unsplashKey}` },
-                  signal: AbortSignal.timeout(8_000),
-                }
-              );
-              if (!res.ok) return { key: hook.key, url: hook.defaultValue };
-              const data = await res.json();
-              return {
-                key: hook.key,
-                url: data.results?.[0]?.urls?.regular || hook.defaultValue,
-              };
-            } catch {
-              return { key: hook.key, url: hook.defaultValue };
-            }
-          })
-        ),
-        10_000,
-        "Unsplash"
-      ).catch(() => imageHooks.map((h) => ({ key: h.key, url: h.defaultValue })));
-
-      for (const img of imageResults) {
-        aiValues[img.key] = img.url;
-      }
-    }
-
-    // Filter: only valid hook keys, string values
+    // Filter: only valid hook keys, string values — no image keys allowed
     const validKeys = new Set(hooks.map((h) => h.key));
     const filteredValues: Record<string, string> = {};
     for (const [key, value] of Object.entries(aiValues)) {

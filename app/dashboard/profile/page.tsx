@@ -22,6 +22,7 @@ export default function ProfilePage() {
   const [editEmail, setEditEmail] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [confirmDeleteText, setConfirmDeleteText] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -101,21 +102,21 @@ export default function ProfilePage() {
       return;
     }
 
+    setDeleting(true);
     try {
-      // Soft delete: mark account for deletion in auth metadata
-      const { error: metaError } = await supabase.auth.updateUser({
-        data: {
-          deletion_requested_at: new Date().toISOString(),
-        }
-      });
-
-      if (metaError) throw metaError;
+      const res = await fetch("/api/account/delete", { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Hesap silinemedi");
+      }
 
       await supabase.auth.signOut();
-      toast.success("Hesabınız 14 gün içinde kalıcı olarak silinecek");
+      toast.success("Hesabınız ve tüm verileriniz kalıcı olarak silindi.");
       router.push("/");
     } catch (error: any) {
       toast.error("Silme hatası: " + translateError(error.message));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -461,7 +462,7 @@ export default function ProfilePage() {
               <div className="space-y-3">
                 <div>
                   <p className="text-sm text-red-500 mb-3">
-                    Hesabınız 14 gün içinde kalıcı olarak silinecek. Bu süre içinde giriş yaparak hesabınızı geri yükleyebilirsiniz.
+                    Hesabınız ve tüm verileriniz kalıcı olarak silinecektir. Bu işlem geri alınamaz.
                   </p>
                   <p className="text-sm text-gray-400 mb-2">
                     Devam etmek için <span className="font-bold text-white">DELETE</span> yazın:
@@ -478,9 +479,9 @@ export default function ProfilePage() {
                   <button
                     onClick={handleDeleteAccount}
                     className="flex-1 btn-danger"
-                    disabled={confirmDeleteText !== "DELETE"}
+                    disabled={confirmDeleteText !== "DELETE" || deleting}
                   >
-                    Evet, Sil
+                    {deleting ? "Siliniyor..." : "Evet, Sil"}
                   </button>
                   <button
                     onClick={() => {
