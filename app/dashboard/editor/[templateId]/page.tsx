@@ -1062,6 +1062,50 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
               <>
                 {project && (
                   <>
+                    <div className="btn-secondary shrink-0 flex items-center rounded-full overflow-hidden" style={{ padding: '0 1rem' }}>
+                      <button
+                        onClick={undo}
+                        disabled={!canUndo}
+                        className="flex items-center justify-center px-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
+                        style={{ height: 38 }}
+                        aria-label="Geri al"
+                        title="Geri Al (Ctrl+Z)"
+                      >
+                        <Undo2 className="h-[25px] w-[25px] text-white/70" />
+                      </button>
+                      <div className="w-px h-5 bg-white/15 shrink-0" />
+                      <button
+                        onClick={redo}
+                        disabled={!canRedo}
+                        className="flex items-center justify-center px-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
+                        style={{ height: 38 }}
+                        aria-label="Yinele"
+                        title="Yinele (Ctrl+Shift+Z)"
+                      >
+                        <Redo2 className="h-[25px] w-[25px] text-white/70" />
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => setShowAIModal(true)}
+                      className="btn-secondary flex items-center gap-2 px-4 py-2 text-sm"
+                    >
+                      <Sparkles className="h-4 w-4" style={{ color: 'lab(49.5493% 79.8381 2.31768)' }} />
+                      AI ile Doldur
+                    </button>
+                    {areas.length > 0 && (
+                      <button
+                        onClick={() => {
+                          const hidden = new Set<string>();
+                          areas.forEach(a => { if (values[`__area_${a.key}`] === 'hidden') hidden.add(a.key); });
+                          setDraftHiddenAreas(hidden);
+                          setShowSectionsModal(true);
+                        }}
+                        className="btn-secondary flex items-center gap-2 px-4 py-2 text-sm"
+                      >
+                        <LayoutGrid className="h-4 w-4" />
+                        Bölümler
+                      </button>
+                    )}
                     {musicUrl ? (
                       <div className="btn-secondary shrink-0 flex items-center rounded-full overflow-hidden" style={{ padding: '0 1rem' }}>
                         {/* Play/Pause */}
@@ -1107,57 +1151,15 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                         onClick={() => setShowMusicModal(true)}
                         className="btn-secondary flex items-center gap-2 px-4 py-2 text-sm"
                       >
+                        <Music className="h-4 w-4" />
                         Müzik Ekle
                       </button>
                     )}
-                    {areas.length > 0 && (
-                      <button
-                        onClick={() => {
-                          const hidden = new Set<string>();
-                          areas.forEach(a => { if (values[`__area_${a.key}`] === 'hidden') hidden.add(a.key); });
-                          setDraftHiddenAreas(hidden);
-                          setShowSectionsModal(true);
-                        }}
-                        className="btn-secondary flex items-center gap-2 px-4 py-2 text-sm"
-                      >
-                        <LayoutGrid className="h-4 w-4" />
-                        Bölümler
-                      </button>
-                    )}
-                    <div className="btn-secondary shrink-0 flex items-center rounded-full overflow-hidden" style={{ padding: '0 1rem' }}>
-                      <button
-                        onClick={undo}
-                        disabled={!canUndo}
-                        className="flex items-center justify-center px-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
-                        style={{ height: 38 }}
-                        aria-label="Geri al"
-                        title="Geri Al (Ctrl+Z)"
-                      >
-                        <Undo2 className="h-[25px] w-[25px] text-white/70" />
-                      </button>
-                      <div className="w-px h-5 bg-white/15 shrink-0" />
-                      <button
-                        onClick={redo}
-                        disabled={!canRedo}
-                        className="flex items-center justify-center px-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
-                        style={{ height: 38 }}
-                        aria-label="Yinele"
-                        title="Yinele (Ctrl+Shift+Z)"
-                      >
-                        <Redo2 className="h-[25px] w-[25px] text-white/70" />
-                      </button>
-                    </div>
-                    <button
-                      onClick={() => setShowAIModal(true)}
-                      className="btn-secondary flex items-center gap-2 px-4 py-2 text-sm"
-                    >
-                      <Sparkles className="h-4 w-4" style={{ color: 'lab(49.5493% 79.8381 2.31768)' }} />
-                      AI ile Doldur
-                    </button>
                     <button
                       onClick={handlePreview}
                       className="btn-secondary flex items-center gap-2 px-4 py-2 text-sm"
                     >
+                      <Eye className="h-4 w-4" />
                       Önizleme
                     </button>
                     <button
