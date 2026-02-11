@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import OpenAI from "openai";
-
-function getOpenAI() {
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-}
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 interface HookInput {
   key: string;
@@ -42,18 +38,15 @@ export async function POST(req: NextRequest) {
     }
 
     // Separate hooks into text-type and image-type
-    const textHooks: HookInput[] = [];
     const imageHooks: HookInput[] = [];
 
     for (const hook of hooks) {
       if (hook.type === "image" || hook.type === "background-image") {
         imageHooks.push(hook);
-      } else {
-        textHooks.push(hook);
       }
     }
 
-    // Build hook descriptions for GPT
+    // Build hook descriptions
     const hookDescriptions = hooks.map((h) => {
       let instruction = "";
       switch (h.type) {
@@ -84,14 +77,7 @@ export async function POST(req: NextRequest) {
       return `- "${h.key}" (${h.type}, label: "${h.label}"): ${instruction}`;
     });
 
-    // Call OpenAI GPT-4o
-    const completion = await getOpenAI().chat.completions.create({
-      model: "gpt-4o",
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content: `Sen romantik bir sayfa tasarımcısısın. Kullanıcının verdiği bilgilere göre bir aşk/sevgi sayfasının tüm alanlarını doldur.
+    const systemPrompt = `Sen romantik bir sayfa tasarımcısısın. Kullanıcının verdiği bilgilere göre bir aşk/sevgi sayfasının tüm alanlarını doldur.
 
 Kurallar:
 - Türkçe, duygusal ve romantik içerik üret
@@ -105,18 +91,25 @@ Kurallar:
 Sadece aşağıdaki key'ler için değer üret. JSON olarak döndür: { "key1": "değer1", "key2": "değer2", ... }
 
 Alanlar:
-${hookDescriptions.join("\n")}`,
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      temperature: 0.8,
-      max_tokens: 2000,
+${hookDescriptions.join("\n")}`;
+
+    // Call Gemini
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.0-flash",
+      generationConfig: {
+        responseMimeType: "application/json",
+        temperature: 0.8,
+        maxOutputTokens: 2000,
+      },
     });
 
-    const aiText = completion.choices[0]?.message?.content;
+    const result = await model.generateContent([
+      { text: systemPrompt },
+      { text: prompt },
+    ]);
+
+    const aiText = result.response.text();
     if (!aiText) {
       return NextResponse.json(
         { error: "AI yanıt üretemedi" },
@@ -136,7 +129,7 @@ ${hookDescriptions.join("\n")}`,
 
     // Fetch Unsplash images for image hooks in parallel
     const unsplashKey = process.env.UNSPLASH_ACCESS_KEY;
-    if (unsplashKey && imageHooks.length > 0) {
+    if (unsplashKey && unsplashKey !== "..." && imageHooks.length > 0) {
       const imageResults = await Promise.all(
         imageHooks.map(async (hook) => {
           const searchQuery = aiValues[hook.key];
@@ -170,7 +163,6 @@ ${hookDescriptions.join("\n")}`,
         })
       );
 
-      // Replace search keywords with actual Unsplash URLs
       for (const result of imageResults) {
         aiValues[result.key] = result.url;
       }
