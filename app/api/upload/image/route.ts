@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getR2Client } from '@/lib/r2/client';
 
 // Client converts everything to JPEG before sending, but accept originals too as fallback
@@ -66,6 +66,48 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || 'Yükleme hatası' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { url } = await request.json();
+    if (!url || typeof url !== 'string') {
+      return NextResponse.json({ error: 'URL gerekli' }, { status: 400 });
+    }
+
+    // Extract key from R2 public URL
+    const publicUrl = process.env.R2_PUBLIC_URL || '';
+    if (!publicUrl || !url.startsWith(publicUrl)) {
+      return NextResponse.json({ error: 'Geçersiz URL' }, { status: 400 });
+    }
+
+    const key = url.replace(`${publicUrl}/`, '');
+
+    // Ensure user can only delete their own files
+    if (!key.startsWith(`${user.id}/`)) {
+      return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 });
+    }
+
+    const r2 = getR2Client();
+    await r2.send(new DeleteObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME!,
+      Key: key,
+    }));
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || 'Silme hatası' },
       { status: 500 }
     );
   }

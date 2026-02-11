@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Heart, Menu } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { escapeHtml } from "@/lib/security/sanitize";
+
 import DOMPurify from "isomorphic-dompurify";
 import toast from "react-hot-toast";
 import { AI_PROMPT } from "@/lib/constants/ai-prompt";
@@ -132,10 +132,9 @@ export default function EditŞablonPage({ params }: { params: Promise<{ template
 
     setSaving(true);
     try {
-      // Sanitize inputs against XSS
-      const safeName = escapeHtml(trimmedName).substring(0, 60);
+      const safeName = trimmedName.substring(0, 60);
       const safeSlug = trimmedSlug.replace(/[^a-z0-9-]/g, '').substring(0, 40);
-      const safeDescription = escapeHtml(trimmedDesc).substring(0, 50);
+      const safeDescription = trimmedDesc.substring(0, 50);
 
       const { error } = await supabase
         .from("templates")

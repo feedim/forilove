@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Strip console.* calls from client-side production bundles
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
   // Security headers to protect against common web vulnerabilities
   async headers() {
     return [

@@ -8,7 +8,6 @@ import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { compressImage, validateImageFile, getOptimizedFileName } from '@/lib/utils/imageCompression';
 import { ShareSheet } from '@/components/ShareIconButton';
-import { escapeHtml } from '@/lib/security/sanitize';
 
 interface TemplateHook {
   key: string;
@@ -465,9 +464,8 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
     if (!project) return;
     setSaving(true);
     try {
-      // Sanitize user inputs against XSS
-      const safeTitle = escapeHtml(draftTitle.trim()).substring(0, 60);
-      const safeDescription = escapeHtml(draftDescription.trim()).substring(0, 50);
+      const safeTitle = draftTitle.trim().substring(0, 60);
+      const safeDescription = draftDescription.trim().substring(0, 50);
 
       // Slug: strict alphanumeric + hyphens only, then add random suffix
       const cleanSlug = generateSlug(draftSlug.trim());

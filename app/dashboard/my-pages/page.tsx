@@ -112,7 +112,7 @@ export default function MyPagesPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [loadingMore, hasMore]);
 
-  const handleUnpublishProject = async (projectId: string) => {
+  const handleDeleteProject = async (projectId: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -120,17 +120,42 @@ export default function MyPagesPage() {
         return;
       }
 
+      const project = projects.find(p => p.id === projectId);
+      if (!project) return;
+      const templateId = project.template_id;
+
+      // 1. Delete uploaded R2 images from hook_values
+      const hookValues = project.hook_values as Record<string, string> | null;
+      if (hookValues) {
+        const r2Urls = Object.values(hookValues).filter(
+          (v) => typeof v === 'string' && v.includes('.r2.dev/')
+        );
+        for (const url of r2Urls) {
+          fetch('/api/upload/image', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url }),
+          }).catch(() => {});
+        }
+      }
+
+      // 2. Delete the project
       const { error } = await supabase
         .from("projects")
-        .update({ is_published: false })
+        .delete()
         .eq("id", projectId)
         .eq("user_id", user.id);
 
       if (error) throw error;
 
+      // 3. Clear any cached preview/editor data
+      try {
+        sessionStorage.removeItem('forilove_preview');
+      } catch {}
+
       setProjects(projects.filter(p => p.id !== projectId));
       setUnpublishConfirm(null);
-      toast.success("Sayfa yayından kaldırıldı");
+      toast.success("Sayfa silindi");
     } catch (error: any) {
       toast.error("İşlem hatası: " + error.message);
     }
@@ -173,7 +198,7 @@ export default function MyPagesPage() {
                 viewHref={`/p/${project.slug}`}
                 shareUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/p/${project.slug}`}
                 unpublishConfirm={unpublishConfirm}
-                onUnpublish={handleUnpublishProject}
+                onUnpublish={handleDeleteProject}
                 onUnpublishConfirm={setUnpublishConfirm}
               />
             ))}
