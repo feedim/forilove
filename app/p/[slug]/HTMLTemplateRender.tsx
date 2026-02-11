@@ -65,6 +65,21 @@ export function HTMLTemplateRender({ project, musicUrl }: { project: any; musicU
     html = html.replace(srcRegex, `$1${sanitizedUrl}"`);
   });
 
+  // Remove hidden data-area sections
+  const hiddenAreas = Object.entries(htmlData)
+    .filter(([key, value]) => key.startsWith('__area_') && value === 'hidden')
+    .map(([key]) => key.replace('__area_', ''));
+
+  if (hiddenAreas.length > 0) {
+    const areaParser = new DOMParser();
+    const areaDoc = areaParser.parseFromString(html, 'text/html');
+    hiddenAreas.forEach(areaName => {
+      const el = areaDoc.querySelector(`[data-area="${areaName}"]`);
+      if (el) el.remove();
+    });
+    html = areaDoc.documentElement.outerHTML;
+  }
+
   // Sanitize HTML with DOMPurify before rendering
   const sanitizedHtml = DOMPurify.sanitize(html, {
     WHOLE_DOCUMENT: true,

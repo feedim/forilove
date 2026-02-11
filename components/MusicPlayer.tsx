@@ -19,7 +19,7 @@ declare global {
 // ─── Helpers ─────────────────────────────────────────────────
 function extractYouTubeId(url: string): string | null {
   const match = url.match(
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/|music\.youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/
   );
   return match ? match[1] : null;
 }
@@ -268,6 +268,10 @@ export default function MusicPlayer({ musicUrl }: { musicUrl: string }) {
     iframe.setAttribute("allowfullscreen", "");
     iframe.setAttribute("playsinline", "");
     iframe.style.cssText = "border:none;position:absolute;inset:0;width:100%;height:100%;";
+    // Set src explicitly so the embed loads even before YT API is ready.
+    // enablejsapi=1 allows YT.Player to wrap this iframe for programmatic control.
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=0&controls=0&disablekb=1&fs=0&modestbranding=1&playsinline=1&rel=0&origin=${encodeURIComponent(origin)}`;
     containerRef.current.appendChild(iframe);
 
     if (!window.YT) {
@@ -276,22 +280,14 @@ export default function MusicPlayer({ musicUrl }: { musicUrl: string }) {
       document.body.appendChild(tag);
     }
 
+    let initDone = false;
     const initPlayer = () => {
-      if (destroyedRef.current) return;
-      // YT.Player reuses existing <iframe> elements (by ID) instead of replacing them,
-      // so our pre-set allow="autoplay" attribute is preserved.
+      if (destroyedRef.current || initDone) return;
+      initDone = true;
+      // YT.Player wraps the existing iframe (matched by ID) that already has
+      // the embed src with enablejsapi=1. Don't pass videoId/playerVars
+      // since they're already encoded in the iframe src.
       playerRef.current = new window.YT.Player(iframeId, {
-        videoId,
-        playerVars: {
-          autoplay: 0,
-          controls: 0,
-          disablekb: 1,
-          fs: 0,
-          modestbranding: 1,
-          playsinline: 1,
-          rel: 0,
-          origin: typeof window !== "undefined" ? window.location.origin : "",
-        },
         events: {
           onReady: () => {
             if (destroyedRef.current) return;
@@ -333,15 +329,33 @@ export default function MusicPlayer({ musicUrl }: { musicUrl: string }) {
       });
     };
 
-    if (window.YT?.Player) initPlayer();
-    else window.onYouTubeIframeAPIReady = initPlayer;
+    // Robust API detection: global callback + polling fallback
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+    if (window.YT?.Player) {
+      initPlayer();
+    } else {
+      const prevCallback = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        prevCallback?.();
+        initPlayer();
+      };
+      // Polling fallback: global callback can be overwritten by other scripts
+      pollTimer = setInterval(() => {
+        if (destroyedRef.current) { clearInterval(pollTimer!); pollTimer = null; return; }
+        if (window.YT?.Player) {
+          clearInterval(pollTimer!);
+          pollTimer = null;
+          initPlayer();
+        }
+      }, 300);
+    }
 
     return () => {
       destroyedRef.current = true;
       stopTracking();
-      if (window.onYouTubeIframeAPIReady === initPlayer) {
-        window.onYouTubeIframeAPIReady = undefined;
-      }
+      if (pollTimer) clearInterval(pollTimer);
       try { playerRef.current?.destroy?.(); } catch {}
       playerRef.current = null;
       if (iframe.parentNode) {
@@ -460,8 +474,8 @@ export default function MusicPlayer({ musicUrl }: { musicUrl: string }) {
 
       {/* ── Full Player ──────────────────────────────────── */}
       {!minimized && (
-        <div className="fixed bottom-0 left-0 right-0 z-[9999]" suppressHydrationWarning>
-          <div className="bg-[#181818]">
+        <div className="fixed bottom-0 left-0 right-0 z-[9999]" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999, display: 'block' }} suppressHydrationWarning>
+          <div style={{ background: '#181818', display: 'block', visibility: 'visible', opacity: 1 }}>
             <ProgressBar
               progress={progress}
               hoverProgress={hoverProgress}
@@ -508,12 +522,16 @@ export default function MusicPlayer({ musicUrl }: { musicUrl: string }) {
                     left: "50%",
                     top: "50%",
                     transform: "translate(-50%, -50%)",
-                    width: 200,
-                    height: 200,
+                    width: "200px",
+                    height: "200px",
+                    minWidth: "200px",
+                    minHeight: "200px",
                     overflow: "hidden",
                     opacity: 0,
                     pointerEvents: "none",
                     zIndex: -1,
+                    display: "block",
+                    visibility: "visible",
                   }}
                 />
               </div>

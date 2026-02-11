@@ -151,13 +151,13 @@ export default function ExplorePage() {
           .eq("user_id", user.id)
           .eq("project_id", projectId);
         if (error) throw error;
-        toast.success("Kaydedilenlerden cikarildi");
+        toast.success("Kaydedilenlerden çıkarıldı.");
       } else {
         const { error } = await supabase
           .from("saved_projects")
           .insert({ user_id: user.id, project_id: projectId });
         if (error) throw error;
-        toast.success("Kaydedildi");
+        toast.success("Kaydedilenlere eklendi!");
       }
     } catch {
       // Rollback
@@ -166,7 +166,7 @@ export default function ExplorePage() {
       } else {
         setSavedProjects(prev => prev.filter(id => id !== projectId));
       }
-      toast.error("Islem basarisiz");
+      toast.error("İşlem başarısız.");
     }
   };
 

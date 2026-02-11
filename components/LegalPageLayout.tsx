@@ -21,7 +21,7 @@ export default function LegalPageLayout({
     <div className="min-h-screen bg-black text-white">
       <PublicHeader variant="back" />
 
-      <main className={`container mx-auto px-6 py-16 ${maxWidthClass}`}>
+      <main className={`container mx-auto px-3 sm:px-6 py-10 sm:py-16 ${maxWidthClass}`}>
         <h1 className="text-4xl font-bold mb-6">{title}</h1>
         {lastUpdated && (
           <p className="text-gray-500 mb-8">Son güncelleme: {lastUpdated}</p>

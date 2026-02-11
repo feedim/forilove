@@ -119,7 +119,7 @@ export default function PurchasedTemplatesPage() {
           throw error;
         }
 
-        toast.success("Kaydedilenlerden çıkarıldı");
+        toast.success("Kaydedilenlerden çıkarıldı.");
       } else {
         // Save
         const { error } = await supabase
@@ -135,7 +135,7 @@ export default function PurchasedTemplatesPage() {
           throw error;
         }
 
-        toast.success("Kaydedilenlere eklendi");
+        toast.success("Kaydedilenlere eklendi!");
       }
     } catch (error: any) {
       toast.error(error.message || "İşlem başarısız");

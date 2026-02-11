@@ -71,7 +71,7 @@ export default function ProjectCard({
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-3 mb-0.5">
-          <h3 className="text-base font-semibold truncate">{title}</h3>
+          <h3 className="text-xl font-semibold truncate">{title}</h3>
           {viewCount !== undefined && (
             <span className="flex items-center gap-1 text-xs text-gray-500 shrink-0">
               <Eye className="h-3.5 w-3.5" />
@@ -101,22 +101,22 @@ export default function ProjectCard({
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <Link href={editHref}>
-              <button className="px-3 py-1.5 text-xs font-medium text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-all flex items-center gap-1.5" aria-label="Düzenle">
+              <button className="h-8 px-3 text-xs font-medium text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-all flex items-center gap-1.5" aria-label="Düzenle">
                 <Edit className="h-3.5 w-3.5" aria-hidden="true" />
-                Duzenle
+                Düzenle
               </button>
             </Link>
             {viewHref && (
               <a
                 href={viewHref}
                 target="_blank"
-                className="px-3 py-1.5 text-xs font-medium text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-all flex items-center gap-1.5"
+                className="h-8 px-3 text-xs font-medium text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-all flex items-center gap-1.5"
                 aria-label="Görüntüle"
               >
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                Goruntule
+                Görüntüle
               </a>
             )}
             {shareUrl && (
@@ -129,8 +129,8 @@ export default function ProjectCard({
             )}
             <button
               onClick={() => onUnpublishConfirm(id)}
-              className="p-2 text-gray-500 hover:text-white rounded-lg transition-all ml-auto"
-              aria-label="Yayından Kaldır"
+              className="h-8 w-8 flex items-center justify-center text-gray-500 hover:text-white rounded-lg transition-all ml-auto"
+              aria-label="Sil"
             >
               <Trash2 className="h-4 w-4" />
             </button>

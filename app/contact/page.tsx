@@ -16,7 +16,7 @@ export default function ContactPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "ContactPage", name: "İletişim - Forilove", description: "Forilove ile iletişime geçin.", url: "https://forilove.com/contact", isPartOf: { "@id": "https://forilove.com/#website" } }) }} />
       <PublicHeader variant="back" />
 
-      <main className="container mx-auto px-6 py-16 max-w-3xl">
+      <main className="container mx-auto px-3 sm:px-6 py-10 sm:py-16 max-w-3xl">
         <h1 className="text-4xl font-bold mb-6">İletişim</h1>
 
         <div className="space-y-8">

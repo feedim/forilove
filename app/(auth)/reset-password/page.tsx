@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import AuthLayout from "@/components/AuthLayout";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
@@ -42,31 +43,25 @@ export default function ResetPasswordPage() {
   return (
     <AuthLayout title="Yeni Şifre Belirle" subtitle="Yeni şifrenizi aşağıya girin">
       <form onSubmit={handleReset} className="space-y-4">
-            <div>
-              <input
-                type="password"
-                placeholder="Yeni şifre"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                maxLength={128}
-                className="input-modern w-full"
-              />
-            </div>
+            <PasswordInput
+              placeholder="Yeni şifre"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              maxLength={128}
+              className="input-modern w-full"
+            />
 
-            <div>
-              <input
-                type="password"
-                placeholder="Yeni şifre (tekrar)"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                minLength={6}
-                maxLength={128}
-                className="input-modern w-full"
-              />
-            </div>
+            <PasswordInput
+              placeholder="Yeni şifre (tekrar)"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              minLength={6}
+              maxLength={128}
+              className="input-modern w-full"
+            />
 
             <button
               type="submit"

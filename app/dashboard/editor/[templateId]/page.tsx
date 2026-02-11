@@ -40,12 +40,14 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
   const [showMusicModal, setShowMusicModal] = useState(false);
   const [editorMusicPlaying, setEditorMusicPlaying] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isChangingImage, setIsChangingImage] = useState(false);
   const router = useRouter();
   const supabase = createClient();
   // Deferred uploads: store File objects keyed by hook key, upload on publish
   const pendingUploadsRef = useRef<Record<string, File>>({});
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const previewInitRef = useRef(false);
+  const oldImageUrlRef = useRef<string>('');
   // Ref to always access latest values (avoids stale closure in postMessage handler)
   const valuesRef = useRef<Record<string, string>>({});
   valuesRef.current = values;
@@ -67,8 +69,14 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
       if (event.origin !== 'null' && event.origin !== window.location.origin) return;
       if (event.data?.type === 'EDIT_HOOK' && typeof event.data.key === 'string' && /^[a-zA-Z0-9_-]+$/.test(event.data.key)) {
         // Use valuesRef to avoid stale closure
+        setIsChangingImage(false);
         setDraftValue(valuesRef.current[event.data.key] || '');
+        oldImageUrlRef.current = valuesRef.current[event.data.key] || '';
         setEditingHook(event.data.key);
+      }
+      // data-area: hide a section
+      if (event.data?.type === 'HIDE_AREA' && typeof event.data.area === 'string' && /^[a-zA-Z0-9_-]+$/.test(event.data.area)) {
+        setValues(prev => ({ ...prev, [`__area_${event.data.area}`]: 'hidden' }));
       }
     };
 
@@ -316,10 +324,40 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
     if (html.includes('HOOK_')) {
       // Replace HOOK_ placeholders with values
       Object.entries(values).forEach(([key, value]) => {
+        if (key.startsWith('__')) return;
         const regex = new RegExp(`HOOK_${key}`, 'g');
         html = html.replace(regex, value || '');
       });
-      writeToPreview(html);
+
+      // Process data-area removable sections
+      const hookParser = new DOMParser();
+      const hookDoc = hookParser.parseFromString(html, 'text/html');
+      const hookAreas = hookDoc.querySelectorAll('[data-area]');
+      if (hookAreas.length > 0) {
+        hookAreas.forEach(el => {
+          const areaName = el.getAttribute('data-area');
+          if (!areaName) return;
+          if (values[`__area_${areaName}`] === 'hidden') {
+            el.setAttribute('style', (el.getAttribute('style') || '') + ';display:none !important;');
+          } else {
+            el.setAttribute('style', (el.getAttribute('style') || '') + ';position:relative;');
+            const btn = hookDoc.createElement('button');
+            btn.className = 'forilove-area-remove';
+            btn.setAttribute('data-remove-area', areaName);
+            btn.textContent = '\u2715';
+            el.appendChild(btn);
+          }
+        });
+        const areaStyle = hookDoc.createElement('style');
+        areaStyle.textContent = '.forilove-area-remove{position:absolute;top:8px;right:8px;z-index:9999;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,0.6);color:white;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;backdrop-filter:blur(4px);opacity:0;transition:opacity 0.2s;} [data-area]:hover .forilove-area-remove{opacity:1;}';
+        hookDoc.head.appendChild(areaStyle);
+        const areaScript = hookDoc.createElement('script');
+        areaScript.textContent = "document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.forilove-area-remove').forEach(function(btn){btn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();window.parent.postMessage({type:'HIDE_AREA',area:btn.getAttribute('data-remove-area')},'*');});});});";
+        hookDoc.body.appendChild(areaScript);
+        writeToPreview(hookDoc.documentElement.outerHTML);
+      } else {
+        writeToPreview(html);
+      }
     } else {
       // Use data-editable format
       const parser = new DOMParser();
@@ -375,6 +413,27 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
         element.setAttribute('style', `${currentStyle}; cursor: pointer;`);
       });
 
+      // Process data-area removable sections
+      doc.querySelectorAll('[data-area]').forEach(el => {
+        const areaName = el.getAttribute('data-area');
+        if (!areaName) return;
+        if (values[`__area_${areaName}`] === 'hidden') {
+          el.setAttribute('style', (el.getAttribute('style') || '') + ';display:none !important;');
+        } else {
+          el.setAttribute('style', (el.getAttribute('style') || '') + ';position:relative;');
+          const btn = doc.createElement('button');
+          btn.className = 'forilove-area-remove';
+          btn.setAttribute('data-remove-area', areaName);
+          btn.textContent = '\u2715';
+          el.appendChild(btn);
+        }
+      });
+
+      // Add data-area styles
+      const areaStyle = doc.createElement('style');
+      areaStyle.textContent = '.forilove-area-remove{position:absolute;top:8px;right:8px;z-index:9999;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,0.6);color:white;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;backdrop-filter:blur(4px);opacity:0;transition:opacity 0.2s;} [data-area]:hover .forilove-area-remove{opacity:1;}';
+      doc.head.appendChild(areaStyle);
+
       // Add click event listener script
       const script = doc.createElement('script');
       script.textContent = `
@@ -383,7 +442,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
             el.addEventListener('click', function(e) {
               e.preventDefault();
               e.stopPropagation();
-              const key = el.getAttribute('data-editable');
+              var key = el.getAttribute('data-editable');
               window.parent.postMessage({ type: 'EDIT_HOOK', key: key }, '*');
             });
 
@@ -399,6 +458,15 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
             el.addEventListener('mouseleave', function() {
               el.style.outline = '2px solid transparent';
               el.style.boxShadow = 'none';
+            });
+          });
+
+          // data-area remove buttons
+          document.querySelectorAll('.forilove-area-remove').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+              e.preventDefault();
+              e.stopPropagation();
+              window.parent.postMessage({ type: 'HIDE_AREA', area: btn.getAttribute('data-remove-area') }, '*');
             });
           });
         });
@@ -505,7 +573,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
       const finalValues = { ...values };
       const pendingKeys = Object.keys(pendingUploadsRef.current);
       if (pendingKeys.length > 0) {
-        toast(`${pendingKeys.length} görsel yükleniyor...`, { icon: '📤' });
+        toast('Yayımlanıyor…', { icon: '📤' });
         for (const key of pendingKeys) {
           const file = pendingUploadsRef.current[key];
           const optimizedName = getOptimizedFileName(file.name);
@@ -580,18 +648,63 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
 
   const openEditModal = (hookKey: string) => {
     setDraftValue(values[hookKey] || '');
+    setIsChangingImage(false);
+    oldImageUrlRef.current = values[hookKey] || '';
     setEditingHook(hookKey);
   };
 
-  const saveEditModal = () => {
-    if (editingHook) {
-      setValues({ ...values, [editingHook]: draftValue });
+  const saveEditModal = async () => {
+    if (!editingHook) { setEditingHook(null); return; }
+
+    const hook = hooks.find(h => h.key === editingHook);
+    let finalValue = draftValue;
+
+    // R2 cleanup: if image changed and old was on R2, delete it
+    const oldUrl = oldImageUrlRef.current;
+    if (oldUrl && oldUrl !== finalValue && oldUrl.includes('.r2.dev/')) {
+      fetch('/api/upload/image', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: oldUrl }),
+      }).catch(() => {});
     }
+
+    // Try to optimize remote image URLs (download + compress)
+    if ((hook?.type === 'image' || hook?.type === 'background-image') &&
+        finalValue &&
+        /^https?:\/\//.test(finalValue) &&
+        !finalValue.includes('.r2.dev/')) {
+      setUploadingImage(true);
+      try {
+        const res = await fetch(finalValue);
+        if (res.ok) {
+          const blob = await res.blob();
+          if (blob.type.startsWith('image/')) {
+            const file = new File([blob], 'optimized.jpg', { type: blob.type });
+            const compressed = await compressImage(file);
+            finalValue = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.readAsDataURL(compressed);
+            });
+            pendingUploadsRef.current[editingHook] = compressed;
+          }
+        }
+      } catch {
+        // CORS or network error — keep original URL
+      } finally {
+        setUploadingImage(false);
+      }
+    }
+
+    setValues(prev => ({ ...prev, [editingHook]: finalValue }));
     setEditingHook(null);
+    setIsChangingImage(false);
   };
 
   const closeEditModal = () => {
     setEditingHook(null);
+    setIsChangingImage(false);
   };
 
   const handleImageUpload = async (file: File) => {
@@ -852,7 +965,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
             <div className="flex items-center px-4 py-2">
               {/* Sol: Araçlar — swipeable with fade hint */}
               <div
-                className="flex items-center gap-2 overflow-x-auto pr-6"
+                className="flex-1 min-w-0 flex items-center gap-2 overflow-x-auto pr-6"
                 style={{
                   scrollbarWidth: 'none',
                   WebkitOverflowScrolling: 'touch',
@@ -922,17 +1035,40 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
           </div>
         )}
 
+        {/* Hidden Areas Restoration Pill */}
+        {isPurchased && Object.keys(values).some(k => k.startsWith('__area_') && values[k] === 'hidden') && (
+          <div className="fixed bottom-[72px] md:bottom-4 left-1/2 -translate-x-1/2 z-40 bg-zinc-800/90 backdrop-blur-xl rounded-full px-4 py-2 flex items-center gap-3 border border-white/10 animate-scale-in">
+            <span className="text-sm text-gray-300">
+              {Object.keys(values).filter(k => k.startsWith('__area_') && values[k] === 'hidden').length} bölüm gizlendi
+            </span>
+            <button
+              onClick={() => {
+                setValues(prev => {
+                  const next = { ...prev };
+                  Object.keys(next).forEach(k => {
+                    if (k.startsWith('__area_')) delete next[k];
+                  });
+                  return next;
+                });
+              }}
+              className="text-pink-400 text-sm font-medium hover:text-pink-300 transition-colors"
+            >
+              Geri Al
+            </button>
+          </div>
+        )}
+
         {/* Edit Modal - CapCut Style */}
         {editingHook && currentHook && (
           <>
             {/* Modal Overlay */}
             <div
-              className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center"
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
               onClick={closeEditModal}
             >
               {/* Modal Content */}
               <div
-                className="bg-zinc-900 w-full sm:w-[500px] sm:rounded-4xl rounded-t-4xl p-5 space-y-4 animate-slide-up"
+                className="bg-zinc-900 w-full sm:w-[500px] rounded-4xl p-5 space-y-4 animate-scale-in max-h-[90vh] overflow-y-auto"
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Modal Header */}
@@ -953,19 +1089,23 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                 {/* Edit Field */}
                 <div className="space-y-3">
                   {currentHook.type === 'textarea' ? (
-                    <textarea
-                      value={draftValue}
-                      onChange={(e) => setDraftValue(e.target.value)}
-                      className="input-modern w-full min-h-[200px] resize-y text-base"
-                      placeholder={currentHook.defaultValue}
-                      autoFocus
-                    />
+                    <div>
+                      <textarea
+                        value={draftValue}
+                        onChange={(e) => setDraftValue(e.target.value.slice(0, 1000))}
+                        className="input-modern w-full min-h-[200px] resize-y text-base"
+                        placeholder={currentHook.defaultValue}
+                        maxLength={1000}
+                        autoFocus
+                      />
+                      <p className="text-[11px] text-gray-500 mt-1 text-right">{draftValue.length}/1000</p>
+                    </div>
                   ) : currentHook.type === 'image' || currentHook.type === 'background-image' ? (
                     <div className="space-y-4">
-                      {draftValue ? (
+                      {draftValue && !isChangingImage ? (
                         <>
                           {/* Image preview */}
-                          <div className="relative w-full h-48 rounded-2xl overflow-hidden border border-white/10">
+                          <div className="relative w-full h-48 rounded-3xl overflow-hidden border border-white/10">
                             <img
                               src={draftValue}
                               alt={`${currentHook.label} önizlemesi`}
@@ -973,20 +1113,13 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                             />
                           </div>
                           {/* Change image button */}
-                          <label className="btn-secondary flex items-center justify-center gap-2 w-full py-2.5 text-sm cursor-pointer">
+                          <button
+                            onClick={() => setIsChangingImage(true)}
+                            className="btn-secondary flex items-center justify-center gap-2 w-full py-2.5 text-sm"
+                          >
                             <Upload className="h-4 w-4" />
-                            {uploadingImage ? 'Yükleniyor...' : 'Görseli Değiştir'}
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              disabled={uploadingImage}
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) handleImageUpload(file);
-                              }}
-                            />
-                          </label>
+                            Görseli Değiştir
+                          </button>
                         </>
                       ) : (
                         <>
@@ -995,7 +1128,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                             <label className="block text-xs text-gray-400 mb-2">URL ile Ekle</label>
                             <input
                               type="url"
-                              value={draftValue}
+                              value={draftValue && !draftValue.startsWith('data:') ? draftValue : ''}
                               onChange={(e) => setDraftValue(e.target.value)}
                               className="input-modern w-full text-base"
                               placeholder="https://images.unsplash.com/..."
@@ -1106,14 +1239,20 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                       autoFocus
                     />
                   ) : (
-                    <input
-                      type="text"
-                      value={draftValue}
-                      onChange={(e) => setDraftValue(e.target.value)}
-                      className="input-modern w-full text-base"
-                      placeholder={currentHook.defaultValue}
-                      autoFocus
-                    />
+                    <div>
+                      <input
+                        type="text"
+                        value={draftValue}
+                        onChange={(e) => setDraftValue(e.target.value.slice(0, 1000))}
+                        className="input-modern w-full text-base"
+                        placeholder={currentHook.defaultValue}
+                        maxLength={1000}
+                        autoFocus
+                      />
+                      {draftValue.length > 100 && (
+                        <p className="text-[11px] text-gray-500 mt-1 text-right">{draftValue.length}/1000</p>
+                      )}
+                    </div>
                   )}
                 </div>
 
@@ -1127,9 +1266,10 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                   </button>
                   <button
                     onClick={saveEditModal}
+                    disabled={uploadingImage}
                     className="flex-1 btn-primary py-3"
                   >
-                    Kaydet
+                    {uploadingImage ? 'Yükleniyor...' : 'Kaydet'}
                   </button>
                 </div>
               </div>
@@ -1139,8 +1279,8 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
 
       {/* Music Modal */}
       {showMusicModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-zinc-900 w-full sm:w-[500px] sm:rounded-4xl rounded-t-4xl p-5 space-y-4 animate-slide-up"
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 w-full sm:w-[500px] rounded-4xl p-5 space-y-4 animate-scale-in"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
@@ -1235,8 +1375,8 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
 
       {/* Details Modal */}
       {showDetailsModal && project && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-zinc-900 w-full sm:w-[500px] sm:rounded-4xl rounded-t-4xl p-5 space-y-4 animate-slide-up">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 w-full sm:w-[500px] rounded-4xl p-5 space-y-4 animate-scale-in">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <div>
                 <h3 className="text-lg font-bold text-white">Sayfa Bilgileri</h3>
@@ -1320,8 +1460,8 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
 
       {/* Visibility Modal */}
       {showVisibilityModal && project && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-zinc-900 w-full sm:w-[500px] sm:rounded-4xl rounded-t-4xl p-5 space-y-4 animate-slide-up">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 w-full sm:w-[500px] rounded-4xl p-5 space-y-4 animate-scale-in">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <div>
                 <h3 className="text-lg font-bold text-white">Sayfa Görünürlüğü</h3>
@@ -1406,7 +1546,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
       )}
       {/* Hidden YouTube player for editor music preview */}
       {editorMusicPlaying && musicUrl && (() => {
-        const match = musicUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+        const match = musicUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/|music\.youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/);
         const videoId = match ? match[1] : null;
         if (!videoId) return null;
         return (

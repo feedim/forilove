@@ -16,7 +16,7 @@ export default function AboutPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "AboutPage", name: "Hakkımızda - Forilove", description: "Forilove hakkında bilgi edinin.", url: "https://forilove.com/about", isPartOf: { "@id": "https://forilove.com/#website" } }) }} />
       <PublicHeader variant="back" />
 
-      <main className="container mx-auto px-6 py-16 max-w-3xl">
+      <main className="container mx-auto px-3 sm:px-6 py-10 sm:py-16 max-w-3xl">
         <h1 className="text-4xl font-bold mb-6">Hakkımızda</h1>
 
         <div className="space-y-6 text-gray-400">

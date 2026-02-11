@@ -108,7 +108,7 @@ export default function SavedTemplatesPage() {
       if (error) throw error;
 
       setTemplates(templates.filter(t => t.id !== templateId));
-      toast.success("Kaydedilenlerden çıkarıldı");
+      toast.success("Kaydedilenlerden çıkarıldı.");
     } catch (error: any) {
       toast.error(error.message || "İşlem başarısız");
     }

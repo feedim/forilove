@@ -471,6 +471,16 @@ input[type="url"]:focus {
   animation: slideUp 0.25s ease-out;
 }
 
+/* Scale In - Center Modal */
+@keyframes scaleIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@utility animate-scale-in {
+  animation: scaleIn 0.2s ease-out;
+}
+
 /* Blog Prose Typography */
 .prose-blog {
   color: #a3a3a3;

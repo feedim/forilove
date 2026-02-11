@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import AuthLayout from "@/components/AuthLayout";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function RegisterPage() {
   return (
@@ -184,18 +185,15 @@ function RegisterForm() {
               />
             </div>
 
-            <div>
-              <input
-                type="password"
-                placeholder="Şifre (en az 6 karakter)"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                maxLength={128}
-                className="input-modern w-full"
-              />
-            </div>
+            <PasswordInput
+              placeholder="Şifre (en az 6 karakter)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              maxLength={128}
+              className="input-modern w-full"
+            />
 
             <label className="flex items-start gap-3 cursor-pointer select-none">
               <input

@@ -97,7 +97,7 @@ export default function ReferralSection({ userId }: { userId: string }) {
           </div>
           <div>
             <h3 className="font-bold text-lg">Arkadaşlarını Davet Et</h3>
-            <p className="text-sm text-gray-400">Arkadaşların satın alırsa %5 komisyon kazan</p>
+            <p className="text-sm text-gray-400">Arkadaşların satın alırsa %5 komisyon kazan.</p>
           </div>
         </div>
         <svg

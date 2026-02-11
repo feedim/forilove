@@ -203,7 +203,7 @@ export default function DashboardPage() {
           throw error;
         }
 
-        toast.success("Kaydedilenlerden çıkarıldı");
+        toast.success("Kaydedilenlerden çıkarıldı.");
       } else {
         // Save
         const { error } = await supabase
@@ -219,7 +219,7 @@ export default function DashboardPage() {
           throw error;
         }
 
-        toast.success("Kaydedilenlere eklendi");
+        toast.success("Kaydedilenlere eklendi!");
       }
     } catch (error: any) {
       toast.error(error.message || "İşlem başarısız");
@@ -279,7 +279,7 @@ export default function DashboardPage() {
         <div className="container mx-auto px-3 sm:px-6">
           <h1 className="text-4xl font-bold mb-4">Şablonları Keşfet</h1>
           <p className="text-base text-gray-400">
-            Sevgilinize özel bir sayfa oluşturmak için bir şablon seçin ve düzenleyin.
+            Sevdiğinize özel bir sayfa oluşturmak için bir şablon seçin ve düzenleyin.
           </p>
         </div>
       </section>
@@ -289,7 +289,7 @@ export default function DashboardPage() {
         {templates.length === 0 ? (
           <EmptyState
             title="Henüz şablon yok"
-            message="Şu anda görüntülenebilecek şablon bulunmuyor."
+            message="Şu anda görüntülenebilecek şablon yok."
             action={{
               label: "Sayfayı Yenile",
               onClick: () => window.location.reload()

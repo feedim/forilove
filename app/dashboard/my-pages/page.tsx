@@ -155,10 +155,64 @@ export default function MyPagesPage() {
 
       setProjects(projects.filter(p => p.id !== projectId));
       setUnpublishConfirm(null);
-      toast.success("Sayfa silindi");
+      toast.success("Sayfa silindi.");
     } catch (error: any) {
       toast.error("İşlem hatası: " + error.message);
     }
+  };
+
+  // Apply hook_values to template HTML for preview
+  const getRenderedHtml = (project: any) => {
+    let html = project.templates?.html_content;
+    if (!html) return undefined;
+    const hookValues = project.hook_values as Record<string, string> | null;
+    if (!hookValues) return html;
+
+    if (html.includes('HOOK_')) {
+      Object.entries(hookValues).forEach(([key, value]) => {
+        if (key.startsWith('__')) return;
+        html = html.replace(new RegExp(`HOOK_${key}`, 'g'), String(value) || '');
+      });
+    } else {
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        Object.entries(hookValues).forEach(([key, value]) => {
+          if (key.startsWith('__')) return;
+          const el = doc.querySelector(`[data-editable="${key}"]`);
+          if (!el) return;
+          const type = el.getAttribute('data-type') || 'text';
+          const strVal = String(value);
+          if (type === 'image') {
+            el.setAttribute('src', strVal);
+          } else if (type === 'background-image') {
+            const style = el.getAttribute('style') || '';
+            el.setAttribute('style', `${style}; background-image: url('${strVal}');`);
+          } else {
+            el.textContent = strVal;
+          }
+        });
+        html = doc.documentElement.outerHTML;
+      } catch {}
+    }
+
+    // Remove hidden data-area sections
+    try {
+      const hiddenAreas = Object.entries(hookValues)
+        .filter(([key, value]) => key.startsWith('__area_') && value === 'hidden')
+        .map(([key]) => key.replace('__area_', ''));
+      if (hiddenAreas.length > 0) {
+        const areaParser = new DOMParser();
+        const areaDoc = areaParser.parseFromString(html, 'text/html');
+        hiddenAreas.forEach(areaName => {
+          const el = areaDoc.querySelector(`[data-area="${areaName}"]`);
+          if (el) el.remove();
+        });
+        html = areaDoc.documentElement.outerHTML;
+      }
+    } catch {}
+
+    return html;
   };
 
   if (loading) {
@@ -193,7 +247,7 @@ export default function MyPagesPage() {
                 title={project.title}
                 subtitle={project.templates?.name}
                 viewCount={project.view_count || 0}
-                htmlContent={project.templates?.html_content}
+                htmlContent={getRenderedHtml(project)}
                 editHref={`/dashboard/editor/${project.template_id}`}
                 viewHref={`/p/${project.slug}`}
                 shareUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/p/${project.slug}`}

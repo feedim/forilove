@@ -24,7 +24,7 @@ export default function DashboardHeader({
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    toast.success("Başarıyla çıkış yapıldı");
+    toast.success("Başarıyla çıkış yapıldı.");
     router.push("/");
     router.refresh();
   };

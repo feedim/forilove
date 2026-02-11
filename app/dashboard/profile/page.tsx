@@ -264,7 +264,7 @@ export default function ProfilePage() {
               <Link href="/dashboard/transactions" className="flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors">
                 <div className="flex items-center gap-3">
                   <Clock className="h-5 w-5 text-gray-400" />
-                  <span>İşlem Geçmişi</span>
+                  <span className="font-medium">İşlem Geçmişi</span>
                 </div>
                 <ArrowLeft className="h-4 w-4 text-gray-400 rotate-180" />
               </Link>
@@ -272,7 +272,7 @@ export default function ProfilePage() {
               <Link href="/dashboard/purchased" className="flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors">
                 <div className="flex items-center gap-3">
                   <ShoppingBag className="h-5 w-5 text-gray-400" />
-                  <span>Satın Alınanlar</span>
+                  <span className="font-medium">Satın Alınanlar</span>
                 </div>
                 <ArrowLeft className="h-4 w-4 text-gray-400 rotate-180" />
               </Link>
@@ -280,7 +280,7 @@ export default function ProfilePage() {
               <Link href="/dashboard/my-pages" className="flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors">
                 <div className="flex items-center gap-3">
                   <Heart className="h-5 w-5 text-gray-400" />
-                  <span>Sayfalarım</span>
+                  <span className="font-medium">Sayfalarım</span>
                 </div>
                 <ArrowLeft className="h-4 w-4 text-gray-400 rotate-180" />
               </Link>
@@ -288,7 +288,7 @@ export default function ProfilePage() {
               <Link href="/dashboard/saved" className="flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors">
                 <div className="flex items-center gap-3">
                   <Bookmark className="h-5 w-5 text-gray-400" />
-                  <span>Kaydedilenler</span>
+                  <span className="font-medium">Kaydedilenler</span>
                 </div>
                 <ArrowLeft className="h-4 w-4 text-gray-400 rotate-180" />
               </Link>
@@ -385,35 +385,35 @@ export default function ProfilePage() {
               <Link href="/help" className="flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors">
                 <div className="flex items-center gap-3">
                   <HelpCircle className="h-5 w-5 text-gray-400" />
-                  <span>Yardım Merkezi</span>
+                  <span className="font-medium">Yardım Merkezi</span>
                 </div>
                 <ArrowLeft className="h-4 w-4 text-gray-400 rotate-180" />
               </Link>
               <Link href="/contact" className="flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors">
                 <div className="flex items-center gap-3">
                   <MessageCircle className="h-5 w-5 text-gray-400" />
-                  <span>Bize Ulaşın</span>
+                  <span className="font-medium">Bize Ulaşın</span>
                 </div>
                 <ArrowLeft className="h-4 w-4 text-gray-400 rotate-180" />
               </Link>
               <Link href="/privacy" className="flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors">
                 <div className="flex items-center gap-3">
                   <Shield className="h-5 w-5 text-gray-400" />
-                  <span>Gizlilik Politikası</span>
+                  <span className="font-medium">Gizlilik Politikası</span>
                 </div>
                 <ArrowLeft className="h-4 w-4 text-gray-400 rotate-180" />
               </Link>
               <Link href="/terms" className="flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors">
                 <div className="flex items-center gap-3">
                   <FileText className="h-5 w-5 text-gray-400" />
-                  <span>Kullanım Koşulları</span>
+                  <span className="font-medium">Kullanım Koşulları</span>
                 </div>
                 <ArrowLeft className="h-4 w-4 text-gray-400 rotate-180" />
               </Link>
               <Link href="/distance-sales-contract" className="flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors">
                 <div className="flex items-center gap-3">
                   <ScrollText className="h-5 w-5 text-gray-400" />
-                  <span>Mesafeli Satış Sözleşmesi</span>
+                  <span className="font-medium">Mesafeli Satış Sözleşmesi</span>
                 </div>
                 <ArrowLeft className="h-4 w-4 text-gray-400 rotate-180" />
               </Link>
