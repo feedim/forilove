@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 
 interface ConfirmOptions {
   itemName: string;
+  description?: string;
   coinCost: number;
   currentBalance: number;
   icon?: "ai" | "template";
@@ -124,7 +125,12 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-white/10">
-          <h3 className="text-lg font-bold text-white">Satın Alma Onayı</h3>
+          <div>
+            <h3 className="text-lg font-bold text-white">Satın Alma Onayı</h3>
+            {options.description && (
+              <p className="text-xs text-gray-400 mt-0.5">{options.description}</p>
+            )}
+          </div>
           <button
             onClick={onClose}
             disabled={loading}

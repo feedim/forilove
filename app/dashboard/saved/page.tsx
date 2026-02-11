@@ -141,6 +141,7 @@ export default function SavedTemplatesPage() {
 
     const confirmResult = await confirm({
       itemName: template.name,
+      description: "Şablonu satın alıp düzenlemeye başlayın",
       coinCost: coinPrice,
       currentBalance: coinBalance,
       icon: 'template',

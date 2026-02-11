@@ -888,6 +888,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
     // Show purchase confirmation modal
     const result = await confirm({
       itemName: "AI ile Doldur",
+      description: "Tek cümleyle tüm alanları doldurun",
       coinCost: AI_COST,
       currentBalance: coinBalance,
       icon: 'ai',
@@ -992,6 +993,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
 
     const result = await confirm({
       itemName: template.name,
+      description: "Şablonu satın alıp düzenlemeye başlayın",
       coinCost: coinPrice,
       currentBalance: coinBalance,
       icon: 'template',
