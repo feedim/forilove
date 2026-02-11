@@ -127,7 +127,7 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
         <div className="flex items-center justify-between pb-3 border-b border-white/10">
           <div>
             <h3 className="text-lg font-bold text-white">Satın Alma Onayı</h3>
-            <p className="text-xs text-gray-400 mt-0.5">{options.description || options.itemName}</p>
+            <p className="text-xs text-gray-400 mt-0.5">Satın almak için işlemi onaylayın</p>
           </div>
           <button
             onClick={onClose}
@@ -154,7 +154,7 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
         <div className="border border-white/10 rounded-xl p-3.5 flex flex-col gap-1.5">
           <div className="flex justify-between items-center">
             <span className="text-[13px] text-gray-400">Mevcut bakiye:</span>
-            <span className="text-[13px] font-semibold text-yellow-500">{options.currentBalance} FL</span>
+            <span className="text-[13px] font-semibold text-white">{options.currentBalance} FL</span>
           </div>
           <div className="h-px bg-yellow-500/10" />
           <div className="flex justify-between items-center">
