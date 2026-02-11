@@ -1099,6 +1099,19 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
             <span className="font-medium">Geri</span>
           </button>
           <h1 className="text-lg sm:text-xl font-bold max-w-[200px] sm:max-w-[300px] truncate md:absolute md:left-[120px] md:border-l md:border-white/10 md:pl-4">{template?.name}</h1>
+          {/* Mobile: Paylaş button in header */}
+          {isPurchased && project && (
+            <button
+              onClick={handlePublish}
+              disabled={saving}
+              className="md:hidden btn-primary shrink-0 px-4 py-2 text-sm whitespace-nowrap"
+            >
+              {saving
+                ? (project.is_published ? "Güncelleniyor..." : "Paylaşılıyor...")
+                : (project.is_published ? "Güncelle" : "Paylaş")
+              }
+            </button>
+          )}
           {/* Desktop buttons - hidden on mobile, max-width prevents overlap with absolute title */}
           <div className="hidden md:flex items-center gap-2 max-w-[calc(100vw-480px)]">
             {loading ? (
@@ -1284,14 +1297,11 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
         {isPurchased && project && (
           <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-xl border-t border-white/10">
             <div className="flex items-center px-4 py-2">
-              {/* Sol: Araçlar — swipeable with fade hint */}
               <div
-                className="flex-1 min-w-0 flex items-center gap-2 overflow-x-auto pr-6"
+                className="flex-1 min-w-0 flex items-center gap-2 overflow-x-auto"
                 style={{
                   scrollbarWidth: 'none',
                   WebkitOverflowScrolling: 'touch',
-                  maskImage: 'linear-gradient(to right, black calc(100% - 80px), transparent)',
-                  WebkitMaskImage: 'linear-gradient(to right, black calc(100% - 80px), transparent)',
                 }}
               >
                 <div className="btn-secondary shrink-0 flex items-center rounded-full overflow-hidden" style={{ padding: '0 1rem' }}>
@@ -1392,17 +1402,6 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                   Önizleme
                 </button>
               </div>
-              {/* Sağ: Paylaş */}
-              <button
-                onClick={handlePublish}
-                disabled={saving}
-                className="btn-primary shrink-0 px-4 py-2.5 text-sm ml-2 whitespace-nowrap"
-              >
-                {saving
-                  ? (project.is_published ? "Güncelleniyor..." : "Paylaşılıyor...")
-                  : (project.is_published ? "Güncelle" : "Paylaş")
-                }
-              </button>
             </div>
           </div>
         )}
