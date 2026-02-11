@@ -9,6 +9,13 @@ import toast from "react-hot-toast";
 import { compressImage, validateImageFile, getOptimizedFileName } from '@/lib/utils/imageCompression';
 import { ShareSheet } from '@/components/ShareIconButton';
 
+declare global { interface Window { YT: any; onYouTubeIframeAPIReady: (() => void) | undefined; } }
+
+function extractVideoId(url: string): string | null {
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/|music\.youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
 interface TemplateHook {
   key: string;
   type: 'text' | 'image' | 'textarea' | 'color' | 'date' | 'url' | 'background-image' | 'video';
@@ -39,6 +46,11 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
   const [musicUrl, setMusicUrl] = useState<string>("");
   const [showMusicModal, setShowMusicModal] = useState(false);
   const [editorMusicPlaying, setEditorMusicPlaying] = useState(false);
+  const [editorMusicProgress, setEditorMusicProgress] = useState(0);
+  const editorYtPlayerRef = useRef<any>(null);
+  const editorYtContainerRef = useRef<HTMLDivElement>(null);
+  const editorYtIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const editorYtDestroyedRef = useRef(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isChangingImage, setIsChangingImage] = useState(false);
   const [areas, setAreas] = useState<{ key: string; label: string }[]>([]);
@@ -159,6 +171,95 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
     document.addEventListener('keydown', handleKeydown);
     return () => document.removeEventListener('keydown', handleKeydown);
   }, []);
+
+  // YouTube IFrame API player for editor music with real progress tracking
+  useEffect(() => {
+    const videoId = musicUrl ? extractVideoId(musicUrl) : null;
+    if (!videoId || !editorMusicPlaying) {
+      // Cleanup when stopped or no URL
+      if (editorYtIntervalRef.current) { clearInterval(editorYtIntervalRef.current); editorYtIntervalRef.current = null; }
+      try { editorYtPlayerRef.current?.destroy?.(); } catch {}
+      editorYtPlayerRef.current = null;
+      editorYtDestroyedRef.current = true;
+      setEditorMusicProgress(0);
+      return;
+    }
+
+    editorYtDestroyedRef.current = false;
+
+    const startTracking = () => {
+      if (editorYtIntervalRef.current) clearInterval(editorYtIntervalRef.current);
+      editorYtIntervalRef.current = setInterval(() => {
+        if (editorYtDestroyedRef.current) return;
+        const ct = editorYtPlayerRef.current?.getCurrentTime?.();
+        const dur = editorYtPlayerRef.current?.getDuration?.();
+        if (ct != null && dur && dur > 0) {
+          setEditorMusicProgress((ct / dur) * 100);
+        }
+      }, 500);
+    };
+
+    // Create hidden container for YT player
+    const container = document.createElement('div');
+    container.style.cssText = 'position:fixed;width:0;height:0;overflow:hidden;top:-9999px;left:-9999px;';
+    document.body.appendChild(container);
+
+    const iframe = document.createElement('iframe');
+    const iframeId = `editor-yt-${videoId}-${Date.now()}`;
+    iframe.id = iframeId;
+    iframe.allow = 'autoplay; encrypted-media';
+    iframe.style.cssText = 'border:none;width:1px;height:1px;';
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&loop=1&playlist=${videoId}&controls=0&disablekb=1&fs=0&modestbranding=1&playsinline=1&rel=0&origin=${encodeURIComponent(origin)}`;
+    container.appendChild(iframe);
+
+    if (!window.YT) {
+      const tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      document.body.appendChild(tag);
+    }
+
+    let initDone = false;
+    const initPlayer = () => {
+      if (editorYtDestroyedRef.current || initDone) return;
+      initDone = true;
+      editorYtPlayerRef.current = new window.YT.Player(iframeId, {
+        events: {
+          onReady: () => {
+            if (editorYtDestroyedRef.current) return;
+            editorYtPlayerRef.current?.setVolume?.(80);
+            startTracking();
+          },
+          onStateChange: (event: any) => {
+            if (editorYtDestroyedRef.current) return;
+            if (event.data === 1) startTracking();
+            else if (event.data === 0) { setEditorMusicProgress(100); }
+          },
+        },
+      });
+    };
+
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+    if (window.YT?.Player) {
+      initPlayer();
+    } else {
+      const prev = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => { prev?.(); initPlayer(); };
+      pollTimer = setInterval(() => {
+        if (editorYtDestroyedRef.current) { clearInterval(pollTimer!); return; }
+        if (window.YT?.Player) { clearInterval(pollTimer!); pollTimer = null; initPlayer(); }
+      }, 300);
+    }
+
+    return () => {
+      editorYtDestroyedRef.current = true;
+      if (editorYtIntervalRef.current) { clearInterval(editorYtIntervalRef.current); editorYtIntervalRef.current = null; }
+      if (pollTimer) clearInterval(pollTimer);
+      try { editorYtPlayerRef.current?.destroy?.(); } catch {}
+      editorYtPlayerRef.current = null;
+      if (container.parentNode) container.parentNode.removeChild(container);
+    };
+  }, [editorMusicPlaying, musicUrl]);
 
   const loadData = async () => {
     try {
@@ -954,7 +1055,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                             <svg width="40" height="40" viewBox="0 0 40 40" className="absolute inset-0 -rotate-90" style={{ pointerEvents: 'none' }}>
                               <circle cx="20" cy="20" r="18" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="2.5" />
                               <circle cx="20" cy="20" r="18" fill="none" strokeWidth="2.5" strokeLinecap="round"
-                                style={{ stroke: 'lab(49.5493% 79.8381 2.31768)', strokeDasharray: `${2 * Math.PI * 18}`, strokeDashoffset: `${2 * Math.PI * 18 * 0.25}`, animation: 'editorRingSpin 8s linear infinite' }}
+                                style={{ stroke: 'lab(49.5493% 79.8381 2.31768)', strokeDasharray: `${2 * Math.PI * 18}`, strokeDashoffset: `${2 * Math.PI * 18 * (1 - editorMusicProgress / 100)}`, transition: 'stroke-dashoffset 0.4s' }}
                               />
                             </svg>
                           )}
@@ -985,24 +1086,29 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                         Bölümler
                       </button>
                     )}
-                    <button
-                      onClick={undo}
-                      disabled={!canUndo}
-                      className="p-2 rounded-full bg-white/10 transition-all hover:bg-white/15 disabled:opacity-30 disabled:cursor-not-allowed"
-                      aria-label="Geri al"
-                      title="Geri Al (Ctrl+Z)"
-                    >
-                      <Undo2 className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={redo}
-                      disabled={!canRedo}
-                      className="p-2 rounded-full bg-white/10 transition-all hover:bg-white/15 disabled:opacity-30 disabled:cursor-not-allowed"
-                      aria-label="Yinele"
-                      title="Yinele (Ctrl+Shift+Z)"
-                    >
-                      <Redo2 className="h-4 w-4" />
-                    </button>
+                    <div className="btn-secondary shrink-0 flex items-center rounded-full overflow-hidden" style={{ padding: '0 1rem' }}>
+                      <button
+                        onClick={undo}
+                        disabled={!canUndo}
+                        className="flex items-center justify-center px-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
+                        style={{ height: 38 }}
+                        aria-label="Geri al"
+                        title="Geri Al (Ctrl+Z)"
+                      >
+                        <Undo2 className="h-5 w-5 text-white/70" />
+                      </button>
+                      <div className="w-px h-5 bg-white/15 shrink-0" />
+                      <button
+                        onClick={redo}
+                        disabled={!canRedo}
+                        className="flex items-center justify-center px-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
+                        style={{ height: 38 }}
+                        aria-label="Yinele"
+                        title="Yinele (Ctrl+Shift+Z)"
+                      >
+                        <Redo2 className="h-5 w-5 text-white/70" />
+                      </button>
+                    </div>
                     <button
                       onClick={handlePreview}
                       className="btn-secondary flex items-center gap-2 px-4 py-2 text-sm"
@@ -1075,22 +1181,27 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                   WebkitMaskImage: 'linear-gradient(to right, black calc(100% - 40px), transparent)',
                 }}
               >
-                <button
-                  onClick={undo}
-                  disabled={!canUndo}
-                  className="shrink-0 p-2.5 rounded-full bg-white/10 transition-all hover:bg-white/15 disabled:opacity-30 disabled:cursor-not-allowed"
-                  aria-label="Geri al"
-                >
-                  <Undo2 className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={redo}
-                  disabled={!canRedo}
-                  className="shrink-0 p-2.5 rounded-full bg-white/10 transition-all hover:bg-white/15 disabled:opacity-30 disabled:cursor-not-allowed"
-                  aria-label="Yinele"
-                >
-                  <Redo2 className="h-4 w-4" />
-                </button>
+                <div className="btn-secondary shrink-0 flex items-center rounded-full overflow-hidden" style={{ padding: '0 1rem' }}>
+                  <button
+                    onClick={undo}
+                    disabled={!canUndo}
+                    className="flex items-center justify-center px-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
+                    style={{ height: 38 }}
+                    aria-label="Geri al"
+                  >
+                    <Undo2 className="h-5 w-5 text-white/70" />
+                  </button>
+                  <div className="w-px h-5 bg-white/15 shrink-0" />
+                  <button
+                    onClick={redo}
+                    disabled={!canRedo}
+                    className="flex items-center justify-center px-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
+                    style={{ height: 38 }}
+                    aria-label="Yinele"
+                  >
+                    <Redo2 className="h-5 w-5 text-white/70" />
+                  </button>
+                </div>
                 {musicUrl ? (
                   <div className="btn-secondary shrink-0 flex items-center rounded-full overflow-hidden" style={{ padding: '0 1rem' }}>
                     {/* Play/Pause */}
@@ -1118,7 +1229,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                           <span style={{ position: 'absolute', top: -6, right: 2, fontSize: 8, opacity: 0.5, color: 'lab(49.5493% 79.8381 2.31768)', animation: 'floatNote2 3s ease-in-out infinite 0.8s' }}>&#9834;</span>
                         </div>
                       )}
-                      {/* Progress ring */}
+                      {/* Spinning ring */}
                       {editorMusicPlaying && (
                         <svg width="40" height="40" viewBox="0 0 40 40" className="absolute inset-0 -rotate-90" style={{ pointerEvents: 'none' }}>
                           <circle cx="20" cy="20" r="18" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="2.5" />
@@ -1796,20 +1907,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
           onClose={() => setShowShareModal(false)}
         />
       )}
-      {/* Hidden YouTube player for editor music preview */}
-      {editorMusicPlaying && musicUrl && (() => {
-        const match = musicUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/|music\.youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/);
-        const videoId = match ? match[1] : null;
-        if (!videoId) return null;
-        return (
-          <iframe
-            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&loop=1&playlist=${videoId}`}
-            allow="autoplay"
-            className="fixed w-0 h-0 opacity-0 pointer-events-none"
-            style={{ top: '-9999px', left: '-9999px' }}
-          />
-        );
-      })()}
+      {/* YouTube player managed by useEffect — no inline iframe needed */}
       </div>
     </div>
   );

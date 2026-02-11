@@ -7,6 +7,7 @@ import { ArrowLeft, Coins, Heart } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import TransactionCard from "@/components/TransactionCard";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import { TransactionListSkeleton } from "@/components/Skeletons";
 
 interface Transaction {
   id: string;
@@ -123,8 +124,18 @@ export default function TransactionsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Heart className="h-12 w-12 text-pink-500 fill-pink-500 animate-pulse" />
+      <div className="min-h-screen bg-black text-white">
+        <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-xl min-h-[73px]">
+          <nav className="container mx-auto px-3 sm:px-6 flex items-center justify-between min-h-[73px]">
+            <div className="flex items-center gap-2"><ArrowLeft className="h-5 w-5" /><span className="font-medium">Geri</span></div>
+            <h1 className="text-lg font-semibold">İşlem Geçmişi</h1>
+            <div className="w-16" />
+          </nav>
+        </header>
+        <main className="container mx-auto px-3 sm:px-6 pt-16 pb-24 md:pb-16 max-w-4xl">
+          <TransactionListSkeleton count={6} />
+        </main>
+        <MobileBottomNav />
       </div>
     );
   }

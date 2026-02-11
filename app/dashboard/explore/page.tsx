@@ -68,17 +68,17 @@ export default function ExplorePage() {
   const fetchCreatorNames = async (projects: PublicProject[]) => {
     const userIds = [...new Set(projects.map(p => p.user_id).filter(Boolean))];
     if (userIds.length === 0) return;
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("user_id, name, surname, full_name")
-      .in("user_id", userIds);
-    const map: Record<string, string> = {};
-    userIds.forEach(uid => {
-      const p = profiles?.find(pr => pr.user_id === uid);
-      const name = p ? ([p.name, p.surname].filter(Boolean).join(" ") || p.full_name || "Anonim") : "Anonim";
-      map[uid] = name;
-    });
-    setCreatorNames(prev => ({ ...prev, ...map }));
+    try {
+      const res = await fetch("/api/creators", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userIds }),
+      });
+      if (res.ok) {
+        const map = await res.json();
+        setCreatorNames(prev => ({ ...prev, ...map }));
+      }
+    } catch { /* silent */ }
   };
 
   const loadData = async () => {
@@ -172,8 +172,26 @@ export default function ExplorePage() {
 
   if (loading) {
     return (
-      <div className="h-dvh bg-black flex items-center justify-center">
-        <Heart className="h-12 w-12 text-pink-500 fill-pink-500 animate-pulse" />
+      <div className="h-dvh bg-black flex flex-col">
+        <header className="bg-transparent min-h-[73px]">
+          <nav className="container mx-auto px-3 sm:px-6 flex items-center justify-between min-h-[73px]">
+            <div className="flex items-center gap-2 text-white/80"><ArrowLeft className="h-5 w-5" /><span className="font-medium">Geri</span></div>
+            <h1 className="text-lg font-semibold text-white/90">Keşfet</h1>
+            <div className="w-16" />
+          </nav>
+        </header>
+        <div className="flex-1 relative">
+          <div className="animate-pulse bg-white/[0.04] absolute inset-0 rounded-none" />
+          <div className="absolute bottom-20 left-4 right-20 space-y-2">
+            <div className="animate-pulse bg-white/[0.08] h-3 w-24 rounded-lg" />
+            <div className="animate-pulse bg-white/[0.08] h-6 w-48 rounded-lg" />
+            <div className="animate-pulse bg-white/[0.08] h-4 w-32 rounded-lg" />
+          </div>
+          <div className="absolute right-3 bottom-32 flex flex-col gap-5">
+            {[1,2,3,4].map(i => <div key={i} className="animate-pulse bg-white/[0.08] w-12 h-12 rounded-full" />)}
+          </div>
+        </div>
+        <MobileBottomNav />
       </div>
     );
   }
@@ -223,7 +241,7 @@ export default function ExplorePage() {
               <iframe
                 src={`/api/projects/${project.id}/preview`}
                 className="w-full h-full pointer-events-none"
-                sandbox=""
+                sandbox="allow-scripts"
                 scrolling="no"
                 loading={index < 2 ? "eager" : "lazy"}
                 style={{ overflow: "hidden" }}
@@ -339,7 +357,7 @@ export default function ExplorePage() {
           <iframe
             src={`/api/projects/${inspectingId}/preview`}
             className="w-full h-full"
-            sandbox="allow-same-origin"
+            sandbox="allow-scripts allow-same-origin"
           />
         </div>
       )}

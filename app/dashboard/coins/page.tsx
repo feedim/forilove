@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import TransactionCard from "@/components/TransactionCard";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import { CoinPageSkeleton } from "@/components/Skeletons";
 
 interface CoinPackage {
   id: string;
@@ -114,8 +115,18 @@ export default function CoinsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Heart className="h-12 w-12 text-pink-500 fill-pink-500 animate-pulse" />
+      <div className="min-h-screen bg-black text-white">
+        <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-xl min-h-[73px]">
+          <nav className="container mx-auto px-3 sm:px-6 flex items-center justify-between min-h-[73px]">
+            <div className="flex items-center gap-2"><ArrowLeft className="h-5 w-5" /><span className="font-medium">Geri</span></div>
+            <h1 className="text-lg font-semibold">FL Coin Al</h1>
+            <div className="w-16" />
+          </nav>
+        </header>
+        <main className="container mx-auto px-3 sm:px-6 pt-16 pb-24 md:pb-16 max-w-[600px]">
+          <CoinPageSkeleton />
+        </main>
+        <MobileBottomNav />
       </div>
     );
   }

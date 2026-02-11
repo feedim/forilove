@@ -7,8 +7,8 @@ import { Heart } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { CoinWallet } from "@/components/CoinWallet";
-import LoadingScreen from "@/components/LoadingScreen";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import { TemplateGridSkeleton } from "@/components/Skeletons";
 import TemplateCard from "@/components/TemplateCard";
 import { EmptyState } from "@/components/ErrorState";
 
@@ -85,11 +85,25 @@ export default function DashboardPage() {
       // Load user profile
       const { data: profile } = await supabase
         .from('profiles')
-        .select('coin_balance')
+        .select('coin_balance, name, surname')
         .eq('user_id', user.id)
         .single();
 
       setCoinBalance(profile?.coin_balance || 0);
+
+      // Sync OAuth display name to profile if missing
+      if (profile && !profile.name && !profile.surname) {
+        const meta = user.user_metadata;
+        const fullName = meta?.full_name || meta?.name || '';
+        if (fullName) {
+          const parts = fullName.trim().split(/\s+/);
+          const firstName = parts[0] || '';
+          const lastName = parts.slice(1).join(' ') || '';
+          if (firstName) {
+            supabase.from('profiles').update({ name: firstName, surname: lastName }).eq('user_id', user.id).then(() => {});
+          }
+        }
+      }
 
       // Load user purchases first
       const { data: purchasesData, error: purchasesError } = await supabase
@@ -252,7 +266,28 @@ export default function DashboardPage() {
   };
 
   if (loading) {
-    return <LoadingScreen />;
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-xl">
+          <nav className="container mx-auto px-3 sm:px-6 py-5 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Heart className="h-7 w-7 text-pink-500 fill-pink-500" />
+              <span className="text-2xl font-bold">Forilove</span>
+            </div>
+          </nav>
+        </header>
+        <section className="pt-12 pb-8">
+          <div className="container mx-auto px-3 sm:px-6">
+            <div className="animate-pulse bg-white/[0.06] h-10 w-64 rounded-lg mb-4" />
+            <div className="animate-pulse bg-white/[0.06] h-5 w-96 max-w-full rounded-lg" />
+          </div>
+        </section>
+        <main className="container mx-auto px-3 sm:px-6 pb-20 md:pb-8">
+          <TemplateGridSkeleton />
+        </main>
+        <MobileBottomNav />
+      </div>
+    );
   }
 
   return (

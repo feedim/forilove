@@ -134,7 +134,7 @@ function RegisterForm() {
         // Wait a bit for session to be fully set
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        router.push("/dashboard");
+        router.push("/dashboard/my-pages");
         router.refresh();
       } else {
         // No session but user exists - redirect to login

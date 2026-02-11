@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Heart, ArrowLeft, ShoppingBag } from "lucide-react";
+import { TemplateGridSkeleton } from "@/components/Skeletons";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -144,8 +145,18 @@ export default function PurchasedTemplatesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-white">
-        <Heart className="h-12 w-12 text-pink-500 fill-pink-500 animate-pulse" />
+      <div className="min-h-screen bg-black text-white">
+        <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-xl min-h-[73px]">
+          <nav className="container mx-auto px-3 sm:px-6 flex items-center justify-between min-h-[73px]">
+            <div className="flex items-center gap-2"><ArrowLeft className="h-5 w-5" /><span className="font-medium">Geri</span></div>
+            <h1 className="text-lg font-semibold">Satın Alınanlar</h1>
+            <div className="w-16" />
+          </nav>
+        </header>
+        <main className="container mx-auto px-3 sm:px-6 py-8 pb-24 md:pb-16">
+          <TemplateGridSkeleton count={3} />
+        </main>
+        <MobileBottomNav />
       </div>
     );
   }

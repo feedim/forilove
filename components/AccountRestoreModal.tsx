@@ -24,21 +24,15 @@ export default function AccountRestoreModal({
   const handleRestore = async () => {
     setLoading(true);
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase.rpc("restore_user_account", {
-        user_uuid: user.id,
+      // Clear deletion metadata to reactivate account
+      const { error } = await supabase.auth.updateUser({
+        data: { deletion_requested_at: null },
       });
 
       if (error) throw error;
 
-      if (data.success) {
-        onRestore();
-        router.refresh();
-      }
+      onRestore();
+      router.refresh();
     } catch (error) {
       console.error("Error restoring account:", error);
       alert("Hesap geri yüklenirken bir hata oluştu.");
