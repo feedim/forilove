@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 import { Heart } from "lucide-react";
 
 export default function FixTemplatesPage() {

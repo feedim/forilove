@@ -157,12 +157,6 @@ export default function AdminDashboard() {
                 <p className="text-gray-400 text-sm">Veritabanı taşıma işlemleri</p>
               </div>
             </Link>
-            <Link href="/admin/migrate-coins">
-              <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6 hover:bg-zinc-800 transition-colors cursor-pointer">
-                <h3 className="text-xl font-bold mb-2">Coin Taşıma</h3>
-                <p className="text-gray-400 text-sm">Kullanıcı coin bakiyelerini yönet</p>
-              </div>
-            </Link>
           </div>
         </div>
       </main>

@@ -100,11 +100,19 @@ export async function POST(request: NextRequest) {
     const email = user.email || 'noreply@forilove.com';
     const payment_amount = (pkg.price_try * 100).toString();
     const user_name = profile?.full_name || cardOwner || 'Forilove Kullanıcısı';
-    const user_address = 'Forilove Platform';
-    const user_phone = '5555555555';
+    const user_address = 'Dijital Urun - Forilove';
+    const user_phone = '8508400000';
 
-    const merchant_ok_url = `${process.env.NEXT_PUBLIC_APP_URL}/payment/success`;
-    const merchant_fail_url = `${process.env.NEXT_PUBLIC_APP_URL}/payment/failed`;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!appUrl) {
+      return NextResponse.json(
+        { success: false, error: 'Ödeme sistemi yapılandırması eksik. Lütfen daha sonra tekrar deneyin.' },
+        { status: 500 }
+      );
+    }
+
+    const merchant_ok_url = `${appUrl}/payment/success`;
+    const merchant_fail_url = `${appUrl}/payment/failed`;
 
     // PayTR token oluşturma
     const hashSTR = `${merchant_id}${user.id.substring(0, 20)}${merchant_oid}${email}${payment_amount}${user_basket}no_installment0${merchant_ok_url}${merchant_fail_url}${merchant_salt}`;

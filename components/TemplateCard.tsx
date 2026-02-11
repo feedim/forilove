@@ -127,14 +127,14 @@ export default function TemplateCard({
                 target="_blank"
                 className="btn-primary w-full py-2.5 text-sm text-center pointer-events-auto"
               >
-                Goruntule
+                Görüntüle
               </Link>
               {template.id && (
                 <Link
                   href={`/dashboard/editor/${template.id}`}
                   className="btn-secondary w-full py-2.5 text-sm text-center pointer-events-auto"
                 >
-                  Sablonu Kullan
+                  Şablonu Kullan
                 </Link>
               )}
             </div>

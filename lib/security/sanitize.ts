@@ -59,37 +59,4 @@ export function sanitizeUrl(url: string): string {
   return trimmedUrl;
 }
 
-/**
- * Sanitize user input based on field type
- * @param value - User input value
- * @param type - Type of field (text, url, image, etc.)
- * @returns Sanitized value
- */
-export function sanitizeByType(value: string, type: string): string {
-  if (!value) return '';
-
-  switch (type) {
-    case 'url':
-    case 'image':
-    case 'background-image':
-    case 'video':
-      return sanitizeUrl(value);
-
-    case 'color':
-      // Validate hex color format
-      if (/^#[0-9A-Fa-f]{6}$/.test(value) || /^#[0-9A-Fa-f]{3}$/.test(value)) {
-        return value;
-      }
-      if (process.env.NODE_ENV === 'development') {
-        console.warn(`Invalid color format: ${value}`);
-      }
-      return '#000000';
-
-    case 'text':
-    case 'textarea':
-    case 'date':
-    default:
-      return escapeHtml(value);
-  }
-}
 

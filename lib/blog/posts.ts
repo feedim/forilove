@@ -26,59 +26,59 @@ export const blogPosts: BlogPost[] = [
     date: '2026-02-09',
     readTime: '6 dk',
     content: `
-<p>14 Şubat yaklaşıyor ve kafanızda hâlâ "ne alsam?" sorusu dönüyorsa — rahat olun, yalnız değilsiniz 😅 Her yıl milyonlarca kişi aynı stresi yaşıyor. Ama bu sene farklı olacak, çünkü biz sizin için hem klasik hem yaratıcı seçenekleri bir araya getirdik.</p>
-<p>Hazırsanız başlıyoruz 👇</p>
+<p>14 Şubat yaklaşıyor ve kafanızda hâlâ "ne alsam?" sorusu dönüyorsa — rahat olun, yalnız değilsiniz. Her yıl milyonlarca kişi aynı stresi yaşıyor. Ama bu sene farklı olacak, çünkü biz sizin için hem klasik hem yaratıcı seçenekleri bir araya getirdik.</p>
+<p>Hazırsanız başlıyoruz</p>
 
-<h2>1. 💌 Kişiselleştirilmiş Dijital Anı Sayfası</h2>
-<p>Tamam, biliyoruz — listenin birincisi bizim ürün. Ama bir saniye, açıklamamıza izin verin çünkü gerçekten mantıklı 😄</p>
+<h2>1. Kişiselleştirilmiş Dijital Anı Sayfası</h2>
+<p>Tamam, biliyoruz — listenin birincisi bizim ürün. Ama bir saniye, açıklamamıza izin verin çünkü gerçekten mantıklı</p>
 <p><strong>Forilove</strong> ile sevgilinize özel bir web sayfası oluşturuyorsunuz. Birlikte çekildiğiniz fotoğraflar, favori şarkınız, tanışma tarihinizden bu yana geçen süre sayacı, kalpten gelen mesajlarınız... Hepsi tek bir sayfada, tek bir linkte.</p>
-<p>En güzel yanı ne biliyor musunuz? Çiçek solar, çikolata biter — ama bu sayfa <strong>sonsuza kadar</strong> kalır. Yıllar sonra birlikte açıp "aaa bak ne yazmışım" diyeceğiniz dijital bir anı defteri 🥹</p>
-<p>Üstelik 10 dakikada hazır, teknik bilgi falan gerekmiyor. <a href="https://forilove.com/templates">Şablonlara bir göz atın</a>, belki tam da aradığınız şey ordadır ✨</p>
+<p>En güzel yanı ne biliyor musunuz? Çiçek solar, çikolata biter — ama bu sayfa <strong>sonsuza kadar</strong> kalır. Yıllar sonra birlikte açıp "aaa bak ne yazmışım" diyeceğiniz dijital bir anı defteri</p>
+<p>Üstelik 10 dakikada hazır, teknik bilgi falan gerekmiyor. <a href="https://forilove.com/templates">Şablonlara bir göz atın</a>, belki tam da aradığınız şey ordadır</p>
 
-<h2>2. ✍️ El Yazısı Mektup</h2>
+<h2>2. El Yazısı Mektup</h2>
 <p>Evet, 2026'da el yazısıyla mektup yazmak. Kulağa eski moda mı geliyor? Tam da bu yüzden bu kadar değerli.</p>
-<p>Düşünsenize — herkes mesaj atıyor, herkes story paylaşıyor. Ama biri oturup sizin için kağıda kalemle bir şeyler yazdığında... O bambaşka bir his. O kağıdı yıllar sonra bile çekmeceden çıkarıp okuyorsunuz 💛</p>
+<p>Düşünsenize — herkes mesaj atıyor, herkes story paylaşıyor. Ama biri oturup sizin için kağıda kalemle bir şeyler yazdığında... O bambaşka bir his. O kağıdı yıllar sonra bile çekmeceden çıkarıp okuyorsunuz</p>
 <p><strong>Ne yazacağınızı bilmiyorsanız şöyle başlayın:</strong> Tanıştığınız günü hatırlayın. İlk izleniminiz ne olmuştu? Sizi güldüren bir anınız var mı? Onu yazın. Mükemmel cümleler kurmak zorunda değilsiniz — samimi olan her şey güzeldir.</p>
-<p>Bonus ipucu: Mektubun içine Forilove sayfanızın linkini de koyabilirsiniz. Mektubu okuyup telefonu açtığında müzikle karşılaşsın 🎶</p>
+<p>Bonus ipucu: Mektubun içine Forilove sayfanızın linkini de koyabilirsiniz. Mektubu okuyup telefonu açtığında müzikle karşılaşsın</p>
 
-<h2>3. 🎈 Deneyim Hediyesi</h2>
+<h2>3. Deneyim Hediyesi</h2>
 <p>Bir nesne almak yerine bir <strong>anı</strong> hediye edin. Ciddiyiz — araştırmalar da bunu söylüyor: insanlar nesnelerden çok deneyimlerden mutlu oluyor.</p>
 <p>Birkaç fikir:</p>
 <ul>
-<li>🍳 İkili yemek atölyesi (birlikte makarna yapmak düşündüğünüzden çok daha eğlenceli)</li>
-<li>💆 Çift masajı (ikisinin de ihtiyacı var, kabul edelim)</li>
-<li>🎡 Sürpriz bir şehir gezisi veya günlük kaçamak</li>
-<li>🧺 Planlanmış bir piknik — battaniye, mum, favori atıştırmalıklar</li>
-<li>🎬 Açık hava sineması veya retro bir film gecesi</li>
+<li>İkili yemek atölyesi (birlikte makarna yapmak düşündüğünüzden çok daha eğlenceli)</li>
+<li>Çift masajı (ikisinin de ihtiyacı var, kabul edelim)</li>
+<li>Sürpriz bir şehir gezisi veya günlük kaçamak</li>
+<li>Planlanmış bir piknik — battaniye, mum, favori atıştırmalıklar</li>
+<li>Açık hava sineması veya retro bir film gecesi</li>
 </ul>
-<p>Bu tür hediyelerin güzel tarafı şu: hem veren hem alan aynı anda mutlu oluyor. Karşılıklı bir hediye gibi düşünün 😊</p>
+<p>Bu tür hediyelerin güzel tarafı şu: hem veren hem alan aynı anda mutlu oluyor. Karşılıklı bir hediye gibi düşünün</p>
 
-<h2>4. 💍 Kişiselleştirilmiş Takı</h2>
-<p>Klasik ama altın gibi bir seçenek (pun intended 😄). Üzerine isim, tarih ya da anlamlı bir kelime kazınmış bir kolye veya bileklik — her baktığında sizi hatırlasın.</p>
+<h2>4. Kişiselleştirilmiş Takı</h2>
+<p>Klasik ama altın gibi bir seçenek (pun intended). Üzerine isim, tarih ya da anlamlı bir kelime kazınmış bir kolye veya bileklik — her baktığında sizi hatırlasın.</p>
 <p>Burada önemli olan şey şu: <strong>pahalı olması gerekmiyor</strong>. 50 TL'lik ama üzerinde tanışma tarihiniz kazılı bir bileklik, 500 TL'lik sıradan bir kolyeden çok daha anlamlı. Mesele karat değil, düşünce.</p>
-<p>Tavsiyemiz: İsim yerine sadece ikinizin bildiği bir kelime veya tarih kazıtın. Böylece her baktığında küçük bir sır gibi gülümsesin 🤫</p>
+<p>Tavsiyemiz: İsim yerine sadece ikinizin bildiği bir kelime veya tarih kazıtın. Böylece her baktığında küçük bir sır gibi gülümsesin</p>
 
-<h2>5. 🎁 Sürpriz Kutu</h2>
+<h2>5. Sürpriz Kutu</h2>
 <p>Bu hediyenin güzelliği, içine ne koyarsanız koyun "vay be, tüm bunları düşünmüş" dedirtmesi.</p>
 <p><strong>Nasıl yapılır?</strong> Güzel bir kutu alın ve sevgilinizin sevdiği küçük şeyleri doldurun:</p>
 <ul>
-<li>Favori çikolatası veya atıştırmalığı 🍫</li>
-<li>Birlikte çekildiğiniz bir fotoğrafın baskısı 📸</li>
+<li>Favori çikolatası veya atıştırmalığı</li>
+<li>Birlikte çekildiğiniz bir fotoğrafın baskısı</li>
 <li>"Seni sevmemin 10 nedeni" yazdığınız küçük notlar</li>
 <li>Sevdiği bir parfümün seyahat boyu</li>
-<li>Belki içine bir de Forilove sayfa linki yazılmış bir kart 😉</li>
+<li>Belki içine bir de Forilove sayfa linki yazılmış bir kart</li>
 </ul>
-<p>Burada sır şu: kutunun içindeki her şey "seni tanıyorum, seni dinliyorum, seni düşündüm" demeli. Bu mesajı veren her hediye, ne kadar küçük olursa olsun, kalbe dokunur 💕</p>
+<p>Burada sır şu: kutunun içindeki her şey "seni tanıyorum, seni dinliyorum, seni düşündüm" demeli. Bu mesajı veren her hediye, ne kadar küçük olursa olsun, kalbe dokunur</p>
 
-<h2>🌟 Bonus: Kombine Et, Efsane Yap</h2>
+<h2>Bonus: Kombine Et, Efsane Yap</h2>
 <p>Yukarıdaki hediyelerden birini tek başına verin — güzel. İkisini birleştirin — <strong>unutulmaz</strong>.</p>
 <p>Mesela şöyle bir senaryo düşünün:</p>
-<p>El yazısıyla bir mektup yazıyorsunuz. Mektubun sonuna "Sana bir sürprizim daha var..." diye bir not bırakıp Forilove sayfanızın linkini ekliyorsunuz. Sevgiliniz mektubu okuyor, linke tıklıyor ve karşısına müzikli, fotoğraflı, kişisel mesajlarla dolu bir sayfa açılıyor 🎵</p>
-<p>Bu kombinasyon, 14 Şubat'ın en çok hatırlanacak hediyesi olmaya aday. Ve toplam maliyeti? Muhtemelen bir restoran yemeğinden daha az 😏</p>
+<p>El yazısıyla bir mektup yazıyorsunuz. Mektubun sonuna "Sana bir sürprizim daha var..." diye bir not bırakıp Forilove sayfanızın linkini ekliyorsunuz. Sevgiliniz mektubu okuyor, linke tıklıyor ve karşısına müzikli, fotoğraflı, kişisel mesajlarla dolu bir sayfa açılıyor</p>
+<p>Bu kombinasyon, 14 Şubat'ın en çok hatırlanacak hediyesi olmaya aday. Ve toplam maliyeti? Muhtemelen bir restoran yemeğinden daha az</p>
 
-<h2>Son Söz ❤️</h2>
+<h2>Son Söz</h2>
 <p>Hediye vermenin özü şudur: "Sen benim için önemlisin ve bunu sana göstermek istedim." Bu mesajı veren her şey — ister 10 TL'lik bir not olsun, ister saatler harcayarak hazırladığınız bir sayfa — karşı taraf için paha biçilmezdir.</p>
-<p>Bu Sevgililer Günü'nde sevgilinize sadece bir hediye değil, bir <strong>his</strong> verin. Mutlu 14 Şubatlar! 🌹</p>
+<p>Bu Sevgililer Günü'nde sevgilinize sadece bir hediye değil, bir <strong>his</strong> verin. Mutlu 14 Şubatlar!</p>
 `,
   },
   {

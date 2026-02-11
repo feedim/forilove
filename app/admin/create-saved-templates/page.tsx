@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 
 export default function CreateSavedTemplatesPage() {
   const [loading, setLoading] = useState(false);
@@ -74,7 +74,7 @@ CREATE INDEX IF NOT EXISTS idx_saved_templates_created_at ON saved_templates(cre
       addLog(sqlContent);
       addLog("---");
 
-      toast.info("Please run the SQL manually in Supabase Dashboard", { duration: 10000 });
+      toast("Please run the SQL manually in Supabase Dashboard");
 
       // Verify table was created
       addLog("Verifying table creation...");

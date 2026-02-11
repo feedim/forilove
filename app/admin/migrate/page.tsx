@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 
 export default function MigratePage() {
   const [loading, setLoading] = useState(false);
@@ -128,7 +128,6 @@ export default function MigratePage() {
 
       toast.success(`Migration complete! Migrated: ${migrated}, Skipped: ${skipped}`);
     } catch (error: any) {
-      console.error(error);
       toast.error('Migration failed: ' + error.message);
     } finally {
       setLoading(false);
