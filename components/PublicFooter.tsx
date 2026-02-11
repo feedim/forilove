@@ -49,7 +49,7 @@ export default function PublicFooter() {
                 Kullanım Koşulları
               </Link>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 mt-2">
               {/* Visa */}
               <svg width="40" height="26" viewBox="0 0 750 471" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Visa">
                 <rect width="750" height="471" rx="40" fill="#1A1F71"/>
