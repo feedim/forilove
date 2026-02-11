@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import TemplateCard from "@/components/TemplateCard";
+import { usePurchaseConfirm } from "@/components/PurchaseConfirmModal";
 
 export default function SavedTemplatesPage() {
   const [templates, setTemplates] = useState<any[]>([]);
@@ -17,6 +18,7 @@ export default function SavedTemplatesPage() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const supabase = createClient();
+  const { confirm } = usePurchaseConfirm();
 
   useEffect(() => {
     loadSavedTemplates();
@@ -135,38 +137,37 @@ export default function SavedTemplatesPage() {
   }, [purchases, router]);
 
   const handlePurchase = async (template: any) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+    const coinPrice = template.coin_price || 0;
 
-      const coinPrice = template.coin_price || 0;
+    const confirmResult = await confirm({
+      itemName: template.name,
+      coinCost: coinPrice,
+      currentBalance: coinBalance,
+      icon: 'template',
+      onConfirm: async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Oturum bulunamadı');
 
-      // Check if user has enough coins
-      if (coinBalance < coinPrice) {
-        toast.error(`Yetersiz bakiye! ${coinPrice} FL Coin gerekli.`);
-        router.push('/dashboard/coins');
-        return;
-      }
+        const { data: result, error } = await supabase.rpc('purchase_template', {
+          p_user_id: user.id,
+          p_template_id: template.id,
+          p_coin_price: coinPrice
+        });
 
-      // Use atomic purchase transaction RPC
-      const { data: result, error } = await supabase.rpc('purchase_template', {
-        p_user_id: user.id,
-        p_template_id: template.id,
-        p_coin_price: coinPrice
-      });
+        if (error || !result.success) {
+          return { success: false, error: result?.error || 'Satın alma başarısız' };
+        }
 
-      if (error || !result.success) {
-        toast.error(result?.error || 'Satın alma başarısız');
-        return;
-      }
+        return { success: true, newBalance: result.new_balance };
+      },
+    });
 
-      toast.success(`${template.name} satın alındı! (-${coinPrice} FL Coin)`);
-      setCoinBalance(result.new_balance);
-      setPurchases([...purchases, template.id]);
-      router.push(`/dashboard/editor/${template.id}`);
-    } catch (error: any) {
-      toast.error(error.message || "Satın alma başarısız");
-    }
+    if (!confirmResult?.success) return;
+
+    toast.success(`${template.name} satın alındı! (-${coinPrice} FL Coin)`);
+    setCoinBalance(confirmResult.newBalance);
+    setPurchases([...purchases, template.id]);
+    router.push(`/dashboard/editor/${template.id}`);
   };
 
   if (loading) {

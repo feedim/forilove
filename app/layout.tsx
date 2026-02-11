@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
+import { PurchaseConfirmProvider } from "@/components/PurchaseConfirmModal";
 
 const inter = Inter({
   variable: "--font-geist-sans",
@@ -92,6 +93,7 @@ export default function RootLayout({
             gtag('config', 'G-3D5YZ6PJBS');
           `}
         </Script>
+        <PurchaseConfirmProvider>
         {children}
         <Toaster
           position="bottom-center"
@@ -125,6 +127,7 @@ export default function RootLayout({
             },
           }}
         />
+        </PurchaseConfirmProvider>
       </body>
     </html>
   );

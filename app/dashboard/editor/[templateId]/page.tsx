@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { compressImage, validateImageFile, getOptimizedFileName } from '@/lib/utils/imageCompression';
 import { ShareSheet } from '@/components/ShareIconButton';
+import { usePurchaseConfirm } from '@/components/PurchaseConfirmModal';
 
 declare global { interface Window { YT: any; onYouTubeIframeAPIReady: (() => void) | undefined; } }
 
@@ -62,6 +63,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
   const [selectedVisibility, setSelectedVisibility] = useState<boolean | null>(null);
   const router = useRouter();
   const supabase = createClient();
+  const { confirm } = usePurchaseConfirm();
   // Deferred uploads: store File objects keyed by hook key, upload on publish
   const pendingUploadsRef = useRef<Record<string, File>>({});
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -883,37 +885,38 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
   const handleAIGenerate = async () => {
     if (!aiPrompt.trim() || aiLoading) return;
 
-    // Check coin balance
-    if (coinBalance < AI_COST) {
-      toast.error(`Yetersiz bakiye! ${AI_COST} FL Coin gerekli.`);
-      setShowAIModal(false);
-      sessionStorage.setItem('forilove_return_url', `/dashboard/editor/${resolvedParams.templateId}`);
-      router.push('/dashboard/coins');
-      return;
-    }
+    // Show purchase confirmation modal
+    const result = await confirm({
+      itemName: "AI ile Doldur",
+      coinCost: AI_COST,
+      currentBalance: coinBalance,
+      icon: 'ai',
+      onConfirm: async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Oturum bulunamadı');
 
+        const { data: spendResult, error: spendError } = await supabase.rpc('spend_coins', {
+          p_user_id: user.id,
+          p_amount: AI_COST,
+          p_description: 'AI ile Doldur kullanımı',
+          p_reference_id: project?.id || null,
+          p_reference_type: 'ai_generate',
+        });
+
+        if (spendError) throw spendError;
+        if (!spendResult[0]?.success) {
+          return { success: false, error: spendResult[0]?.message || 'Coin harcama başarısız' };
+        }
+
+        return { success: true, newBalance: spendResult[0].new_balance };
+      },
+    });
+
+    if (!result?.success) return;
+
+    setCoinBalance(result.newBalance);
     setAILoading(true);
     try {
-      // Spend coins first
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Oturum bulunamadı');
-
-      const { data: spendResult, error: spendError } = await supabase.rpc('spend_coins', {
-        p_user_id: user.id,
-        p_amount: AI_COST,
-        p_description: 'AI ile Doldur kullanımı',
-        p_reference_id: project?.id || null,
-        p_reference_type: 'ai_generate',
-      });
-
-      if (spendError) throw spendError;
-      if (!spendResult[0]?.success) {
-        toast.error(spendResult[0]?.message || 'Coin harcama başarısız');
-        return;
-      }
-
-      setCoinBalance(spendResult[0].new_balance);
-
       // Only send AI-fillable hooks (no images, no area toggles)
       // Send current values (user edits) instead of original template defaults
       const fillableTypes = new Set(['text', 'textarea', 'color', 'date', 'url']);
@@ -985,105 +988,93 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
   };
 
   const handlePurchase = async () => {
-    setPurchasing(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+    const coinPrice = template.coin_price || 0;
 
-      const coinPrice = template.coin_price || 0;
+    const result = await confirm({
+      itemName: template.name,
+      coinCost: coinPrice,
+      currentBalance: coinBalance,
+      icon: 'template',
+      onConfirm: async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Oturum bulunamadı');
 
-      // Verify template is still active before purchase
-      const { data: freshTemplate } = await supabase
-        .from('templates')
-        .select('is_active, coin_price')
-        .eq('id', template.id)
-        .single();
+        // Verify template is still active before purchase
+        const { data: freshTemplate } = await supabase
+          .from('templates')
+          .select('is_active, coin_price')
+          .eq('id', template.id)
+          .single();
 
-      if (!freshTemplate?.is_active) {
-        toast.error('Bu şablon artık satışta değil.');
-        setPurchasing(false);
-        return;
-      }
-
-      // Use fresh price from DB (prevent client-side manipulation)
-      const verifiedPrice = freshTemplate.coin_price || coinPrice;
-
-      // Check if user has enough coins
-      if (coinBalance < verifiedPrice) {
-        toast.error(`Yetersiz bakiye! ${verifiedPrice} FL Coin gerekli.`);
-        sessionStorage.setItem('forilove_return_url', `/dashboard/editor/${resolvedParams.templateId}`);
-        router.push('/dashboard/coins');
-        return;
-      }
-
-      // Spend coins using database function
-      const { data: spendResult, error: spendError } = await supabase.rpc('spend_coins', {
-        p_user_id: user.id,
-        p_amount: verifiedPrice,
-        p_description: `Şablon satın alındı: ${template.name}`,
-        p_reference_id: template.id,
-        p_reference_type: 'template'
-      });
-
-      if (spendError) throw spendError;
-
-      if (!spendResult[0]?.success) {
-        toast.error(spendResult[0]?.message || 'Coin harcama başarısız');
-        return;
-      }
-
-      // Record purchase
-      const { data: purchaseData, error } = await supabase.from("purchases").insert({
-        user_id: user.id,
-        template_id: template.id,
-        coins_spent: verifiedPrice,
-        payment_method: "coins",
-        payment_status: "completed",
-      }).select().single();
-
-      if (error) throw error;
-
-      // Process referral commission (5% to referrer if user was referred)
-      if (purchaseData?.id) {
-        try {
-          const { data: commissionResult, error: commissionError } = await supabase.rpc(
-            'process_referral_commission',
-            {
-              buyer_user_id: user.id,
-              purchase_id_param: purchaseData.id,
-              purchase_amount: verifiedPrice
-            }
-          );
-
-          if (commissionError) {
-            if (process.env.NODE_ENV === 'development') {
-              console.log('Commission processing error:', commissionError);
-            }
-            // Don't block purchase if commission fails
-          } else if (commissionResult?.success) {
-            if (process.env.NODE_ENV === 'development') {
-              console.log('Commission processed:', commissionResult);
-            }
-            // Commission processed silently
-          }
-        } catch (commissionErr) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Commission error:', commissionErr);
-          }
-          // Don't block purchase if commission fails
+        if (!freshTemplate?.is_active) {
+          return { success: false, error: 'Bu şablon artık satışta değil.' };
         }
-      }
 
-      toast.success(`${template.name} satın alındı! (-${coinPrice} FL Coin)`);
-      setCoinBalance(spendResult[0].new_balance);
+        // Use fresh price from DB (prevent client-side manipulation)
+        const verifiedPrice = freshTemplate.coin_price || coinPrice;
 
-      // Reload page to create project and show edit buttons
-      window.location.reload();
-    } catch (error: any) {
-      toast.error(error.message || "Satın alma başarısız");
-    } finally {
-      setPurchasing(false);
-    }
+        // Spend coins using database function
+        const { data: spendResult, error: spendError } = await supabase.rpc('spend_coins', {
+          p_user_id: user.id,
+          p_amount: verifiedPrice,
+          p_description: `Şablon satın alındı: ${template.name}`,
+          p_reference_id: template.id,
+          p_reference_type: 'template'
+        });
+
+        if (spendError) throw spendError;
+        if (!spendResult[0]?.success) {
+          return { success: false, error: spendResult[0]?.message || 'Coin harcama başarısız' };
+        }
+
+        // Record purchase
+        const { data: purchaseData, error } = await supabase.from("purchases").insert({
+          user_id: user.id,
+          template_id: template.id,
+          coins_spent: verifiedPrice,
+          payment_method: "coins",
+          payment_status: "completed",
+        }).select().single();
+
+        if (error) throw error;
+
+        // Process referral commission (5% to referrer if user was referred)
+        if (purchaseData?.id) {
+          try {
+            const { data: commissionResult, error: commissionError } = await supabase.rpc(
+              'process_referral_commission',
+              {
+                buyer_user_id: user.id,
+                purchase_id_param: purchaseData.id,
+                purchase_amount: verifiedPrice
+              }
+            );
+
+            if (commissionError) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Commission processing error:', commissionError);
+              }
+            } else if (commissionResult?.success) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Commission processed:', commissionResult);
+              }
+            }
+          } catch (commissionErr) {
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Commission error:', commissionErr);
+            }
+          }
+        }
+
+        return { success: true, newBalance: spendResult[0].new_balance };
+      },
+    });
+
+    if (!result?.success) return;
+
+    toast.success(`${template.name} satın alındı! (-${coinPrice} FL Coin)`);
+    setCoinBalance(result.newBalance);
+    window.location.reload();
   };
 
   const currentHook = editingHook ? hooks.find(h => h.key === editingHook) : null;
@@ -1105,7 +1096,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
             <ArrowLeft className="h-5 w-5" />
             <span className="font-medium">Geri</span>
           </button>
-          <h1 className="text-base sm:text-lg font-bold max-w-[200px] sm:max-w-[300px] truncate md:absolute md:left-[120px] md:border-l md:border-white/10 md:pl-4">{template?.name}</h1>
+          <h1 className="text-lg sm:text-xl font-bold max-w-[200px] sm:max-w-[300px] truncate md:absolute md:left-[120px] md:border-l md:border-white/10 md:pl-4">{template?.name}</h1>
           {/* Desktop buttons - hidden on mobile, max-width prevents overlap with absolute title */}
           <div className="hidden md:flex items-center gap-2 max-w-[calc(100vw-480px)]">
             {loading ? (
