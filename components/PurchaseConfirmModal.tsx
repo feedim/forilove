@@ -127,9 +127,7 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
         <div className="flex items-center justify-between pb-3 border-b border-white/10">
           <div>
             <h3 className="text-lg font-bold text-white">Satın Alma Onayı</h3>
-            {options.description && (
-              <p className="text-xs text-gray-400 mt-0.5">{options.description}</p>
-            )}
+            <p className="text-xs text-gray-400 mt-0.5">{options.description || options.itemName}</p>
           </div>
           <button
             onClick={onClose}
