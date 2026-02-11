@@ -868,10 +868,42 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
     setIsChangingImage(false);
   };
 
+  const AI_COST = 15;
+
   const handleAIGenerate = async () => {
     if (!aiPrompt.trim() || aiLoading) return;
+
+    // Check coin balance
+    if (coinBalance < AI_COST) {
+      toast.error(`Yetersiz bakiye! ${AI_COST} FL Coin gerekli.`);
+      setShowAIModal(false);
+      sessionStorage.setItem('forilove_return_url', `/dashboard/editor/${resolvedParams.templateId}`);
+      router.push('/dashboard/coins');
+      return;
+    }
+
     setAILoading(true);
     try {
+      // Spend coins first
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Oturum bulunamadı');
+
+      const { data: spendResult, error: spendError } = await supabase.rpc('spend_coins', {
+        p_user_id: user.id,
+        p_amount: AI_COST,
+        p_description: 'AI ile Doldur kullanımı',
+        p_reference_id: project?.id || null,
+        p_reference_type: 'ai_generate',
+      });
+
+      if (spendError) throw spendError;
+      if (!spendResult[0]?.success) {
+        toast.error(spendResult[0]?.message || 'Coin harcama başarısız');
+        return;
+      }
+
+      setCoinBalance(spendResult[0].new_balance);
+
       // Filter out __area_* hooks — only send user-facing hooks
       const userHooks = hooks
         .filter(h => !h.key.startsWith('__'))
@@ -1399,6 +1431,17 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                     </p>
                   </div>
 
+                  {/* Fiyat bilgisi */}
+                  <div className="flex items-center justify-between px-4 py-3 rounded-2xl border border-white/10 bg-white/[0.03]">
+                    <div className="flex items-center gap-2">
+                      <Coins className="h-4 w-4 text-yellow-300" />
+                      <span className="text-sm text-white font-medium">{AI_COST} FL Coin</span>
+                    </div>
+                    <span className={`text-xs ${coinBalance >= AI_COST ? 'text-gray-400' : 'text-red-400'}`}>
+                      Bakiye: {coinBalance} FL
+                    </span>
+                  </div>
+
                   <div className="flex gap-3 pt-2">
                     <button
                       onClick={() => setShowAIModal(false)}
@@ -1406,13 +1449,28 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                     >
                       İptal
                     </button>
-                    <button
-                      onClick={handleAIGenerate}
-                      disabled={!aiPrompt.trim()}
-                      className="flex-1 btn-primary py-3 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      Oluştur
-                    </button>
+                    {coinBalance >= AI_COST ? (
+                      <button
+                        onClick={handleAIGenerate}
+                        disabled={!aiPrompt.trim()}
+                        className="flex-1 btn-primary py-3 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        Oluştur
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setShowAIModal(false);
+                          sessionStorage.setItem('forilove_return_url', `/dashboard/editor/${resolvedParams.templateId}`);
+                          router.push('/dashboard/coins');
+                        }}
+                        className="flex-1 btn-primary py-3 flex items-center justify-center gap-2"
+                      >
+                        <Coins className="h-4 w-4 text-yellow-300" />
+                        Coin Yükle
+                      </button>
+                    )}
                   </div>
                 </>
               )}
