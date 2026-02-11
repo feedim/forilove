@@ -86,47 +86,41 @@ export async function POST(req: NextRequest) {
     const today = new Date();
     const todayStr = `${String(today.getDate()).padStart(2, '0')}.${String(today.getMonth() + 1).padStart(2, '0')}.${today.getFullYear()}`;
 
-    // Build compact field list — each field on one line with type and what's expected
-    const fieldLines = hooks.map((h) => {
-      const typeHint = h.type === 'text' ? 'kısa metin, max 100 kar'
-        : h.type === 'textarea' ? 'uzun metin, max 500 kar'
-        : h.type === 'date' ? `tarih, format: GG.AA.YYYY`
-        : h.type === 'color' ? 'hex renk, ör: #FF6B9D'
-        : h.type === 'url' ? 'boş string döndür'
-        : h.type;
-      return `"${h.key}": ${typeHint} (label: "${h.label}")`;
+    // Build numbered field list
+    const fieldLines = hooks.map((h, i) => {
+      let typeRule = '';
+      if (h.type === 'text') typeRule = 'kısa metin yaz';
+      else if (h.type === 'textarea') typeRule = 'uzun duygusal metin yaz (2-4 cümle)';
+      else if (h.type === 'date') typeRule = `GG.AA.YYYY formatında tarih yaz (ör: ${todayStr})`;
+      else if (h.type === 'color') typeRule = 'HEX renk kodu yaz (ör: #FF6B9D)';
+      else if (h.type === 'url') typeRule = 'boş string yaz';
+      return `${i + 1}. "${h.key}" (${h.label}) → ${typeRule}`;
     });
 
-    // Required keys list for emphasis
-    const requiredKeys = hooks.map(h => `"${h.key}"`).join(', ');
-
-    const systemPrompt = `Sen romantik içerik yazarısın. Forilove platformu için aşk/anı sayfası içeriği üretiyorsun.
+    const systemPrompt = `Forilove anı sayfası içerik yazarısın. Kullanıcının anlattığı hikayeye göre sayfa içeriği üret.
 
 Bugün: ${todayStr}
 
-GÖREV: Kullanıcının açıklamasına göre aşağıdaki TÜM alanları doldur. Hiçbir alan atlanmamalı.
+MUTLAKA UYULMASI GEREKEN KURALLAR:
+1. Aşağıdaki ${hooks.length} alanın HER BİRİ için yeni değer üret. HİÇBİRİNİ ATLAMA.
+2. Mevcut değerleri KULLANMA — her alan için HİKAYEYE UYGUN YENİ içerik yaz.
+3. text alanları: Kısa, çarpıcı, duygusal başlıklar (max 100 karakter)
+4. textarea alanları: Samimi, kişisel, mektup tarzı metinler (2-4 cümle)
+5. date alanları: GG.AA.YYYY formatında. Kullanıcı tarih verdiyse kullan, yoksa hikayeye uygun bir tarih uydur.
+6. color alanları: HEX renk kodu (romantik tonlar: #FF6B9D, #E91E63, #D32F2F, #FFD700)
+7. url alanları: "" (boş string)
+8. İsim geçiyorsa başlık ve metinlerde kullan.
+9. "X yıllık" diyorsa başlangıç tarihini hesapla.
+10. Sadece JSON döndür, başka hiçbir şey yazma.
 
-ALANLAR (${hooks.length} adet):
-${fieldLines.join('\n')}
+DOLDURULMASI GEREKEN ${hooks.length} ALAN:
+${fieldLines.join('\n')}`;
 
-KURALLAR:
-- text: Kısa, duygusal, çarpıcı başlıklar ve metinler yaz
-- textarea: Samimi, mektup tarzı uzun metinler yaz. Kişiye özel hissettir
-- date: GG.AA.YYYY formatında. Kullanıcı tarih verdiyse onu kullan, yoksa ${todayStr}
-- color: HEX renk kodu (#FF6B9D gibi). Romantik tonlar kullan (pembe, kırmızı, bordo, altın)
-- url: Her zaman "" (boş string) döndür
-- İsim geçiyorsa ilgili alanlarda kullan
-- Belirsiz alanlar için şablona uygun romantik içerik üret
-- "X yıllık" ifadesi varsa tarihi bugünden geriye hesapla
+    const userMessage = `Hikaye: ${prompt.slice(0, 500)}
 
-JSON formatında SADECE bu key'leri içeren obje döndür: ${requiredKeys}
-Başka hiçbir metin veya açıklama ekleme, sadece JSON.`;
+Yukarıdaki ${hooks.length} alanın TAMAMINI doldur. JSON objesi döndür.`;
 
-    const userMessage = `${prompt.slice(0, 500)}
-
-ÖNEMLİ: JSON'da şu ${hooks.length} key'in TAMAMI olmalı: ${requiredKeys}`;
-
-    // Call Claude
+    // Call Claude with assistant prefill to force JSON output
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
     let aiText = "";
@@ -138,11 +132,14 @@ Başka hiçbir metin veya açıklama ekleme, sadece JSON.`;
           max_tokens: 4096,
           temperature: 0.7,
           system: systemPrompt,
-          messages: [{ role: "user", content: userMessage }],
+          messages: [
+            { role: "user", content: userMessage },
+            { role: "assistant", content: "{" },
+          ],
         });
         const block = response.content[0];
         if (block.type === "text") {
-          aiText = block.text;
+          aiText = "{" + block.text;
           break;
         }
         throw new Error("AI yanıt üretemedi");
@@ -167,27 +164,32 @@ Başka hiçbir metin veya açıklama ekleme, sadece JSON.`;
       if (!jsonMatch) throw new Error("No JSON found");
       aiValues = JSON.parse(jsonMatch[0]);
     } catch (e) {
-      console.error("AI JSON parse error. Raw response:", aiText.slice(0, 1000));
+      console.error("AI JSON parse error. Raw response:", aiText.slice(0, 2000));
       return NextResponse.json({ error: "AI yanıtı parse edilemedi" }, { status: 500 });
     }
 
-    // Build final values: ensure ALL hook keys are present
-    const validKeys = new Set(hooks.map((h) => h.key));
+    // Build final values: ALL hook keys must be present
     const filteredValues: Record<string, string> = {};
+    let filledByAI = 0;
 
     for (const hook of hooks) {
       const aiVal = aiValues[hook.key];
       if (typeof aiVal === "string" && aiVal.trim().length > 0) {
         filteredValues[hook.key] = aiVal.slice(0, 2000);
+        filledByAI++;
       } else {
-        // Fallback: use default value if AI missed this key
+        // AI missed this key — use default as last resort
         filteredValues[hook.key] = hook.defaultValue;
       }
     }
 
-    // Log coverage for debugging
-    const aiFilledCount = Object.keys(aiValues).filter(k => validKeys.has(k)).length;
-    console.log(`AI generate: ${aiFilledCount}/${hooks.length} fields filled by AI, ${hooks.length - aiFilledCount} used defaults`);
+    console.log(`AI generate: ${filledByAI}/${hooks.length} filled by AI. Prompt: "${prompt.slice(0, 80)}"`);
+
+    // If AI filled less than half, log warning with missing keys
+    if (filledByAI < hooks.length / 2) {
+      const missingKeys = hooks.filter(h => !aiValues[h.key] || typeof aiValues[h.key] !== 'string').map(h => h.key);
+      console.warn(`AI generate: LOW COVERAGE. Missing keys: ${missingKeys.join(', ')}`);
+    }
 
     return NextResponse.json({ values: filteredValues });
   } catch (error: any) {
