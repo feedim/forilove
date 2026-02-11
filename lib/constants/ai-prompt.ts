@@ -98,7 +98,7 @@ Daha fazla kontrol saglar. Her duzenlenebilir eleman uzerinde attribute'lar ile 
 | Attribute | Zorunlu | Aciklama |
 |---|---|---|
 | \`data-editable\` | Evet | Benzersiz alan anahtari (key) |
-| \`data-type\` | Hayir | Tur (\`text\`, \`textarea\`, \`image\`, \`background-image\`, \`color\`, \`date\`, \`url\`, \`video\`). Varsayilan: \`text\` |
+| \`data-type\` | Hayir | Tur (\`text\`, \`textarea\`, \`image\`, \`background-image\`, \`color\`, \`date\`, \`url\`). Varsayilan: \`text\` |
 | \`data-label\` | Hayir | Editorde gosterilen etiket. Varsayilan: key degeri |
 | \`data-css-property\` | Hayir | \`color\` tipinde hangi CSS ozelligine uygulanacagi (orn: \`color\`, \`border-color\`). Varsayilan: \`background-color\` |
 
@@ -211,17 +211,6 @@ Daha fazla kontrol saglar. Her duzenlenebilir eleman uzerinde attribute'lar ile 
 - \`href\` attribute'u degistirilir
 - Sadece \`http://\` ve \`https://\` protokolleri kabul edilir
 
-##### \`video\` — Video
-\`\`\`html
-<video
-  data-editable="video_clip"
-  data-type="video"
-  data-label="Video"
-  src="https://ornek.com/video.mp4"
-  controls
-></video>
-\`\`\`
-- \`src\` attribute'u degistirilir
 
 ---
 

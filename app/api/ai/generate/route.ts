@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Anthropic from "@anthropic-ai/sdk";
 
 interface HookInput {
   key: string;
@@ -26,30 +26,8 @@ function checkRateLimit(userId: string): boolean {
   return true;
 }
 
-// Retry with exponential backoff for 429 errors
-async function callGeminiWithRetry(
-  model: any,
-  content: any[],
-  maxRetries = 3
-): Promise<any> {
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await model.generateContent(content);
-    } catch (error: any) {
-      const is429 = error?.status === 429 || error?.message?.includes("429") || error?.message?.includes("Resource exhausted");
-      if (is429 && attempt < maxRetries) {
-        const delay = Math.min(2000 * Math.pow(2, attempt), 15000);
-        await new Promise((r) => setTimeout(r, delay));
-        continue;
-      }
-      throw error;
-    }
-  }
-}
-
 function sanitizeHooks(hooks: any[]): HookInput[] {
-  // Only text-based types — AI does NOT touch images
-  const allowedTypes = new Set(["text", "textarea", "color", "date", "url", "video"]);
+  const allowedTypes = new Set(["text", "textarea", "color", "date", "url"]);
   return hooks
     .filter((h) => h && typeof h.key === "string" && h.key.length <= 64 && allowedTypes.has(h.type))
     .map((h) => ({
@@ -58,24 +36,6 @@ function sanitizeHooks(hooks: any[]): HookInput[] {
       label: (typeof h.label === "string" ? h.label : h.key).slice(0, 100),
       defaultValue: (typeof h.defaultValue === "string" ? h.defaultValue : "").slice(0, 500),
     }));
-}
-
-// Extract a compact text-only summary of the HTML template structure (no full HTML sent to AI)
-function extractTemplateContext(html: string): string {
-  if (!html) return "";
-  const textParts: string[] = [];
-  const titleMatch = html.match(/<title>(.*?)<\/title>/i);
-  if (titleMatch) textParts.push(`Şablon adı: "${titleMatch[1]}"`);
-  const headingMatches = html.matchAll(/<h[1-3][^>]*>(.*?)<\/h[1-3]>/gi);
-  for (const m of headingMatches) {
-    const text = m[1].replace(/<[^>]*>/g, '').replace(/HOOK_\w+/g, '___').trim();
-    if (text && text !== '___') textParts.push(text);
-  }
-  const areaMatches = html.matchAll(/data-area="([^"]+)"/g);
-  const areas: string[] = [];
-  for (const m of areaMatches) areas.push(m[1].replace(/[_-]/g, ' '));
-  if (areas.length > 0) textParts.push(`Bölümler: ${areas.join(', ')}`);
-  return textParts.slice(0, 10).join(' | ');
 }
 
 export async function POST(req: NextRequest) {
@@ -99,10 +59,9 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { prompt, hooks: rawHooks, htmlContent } = body as {
+    const { prompt, hooks: rawHooks } = body as {
       prompt: string;
       hooks: any[];
-      htmlContent?: string;
     };
 
     if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0 || prompt.length > 500) {
@@ -123,100 +82,112 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Geçerli hook bulunamadı" }, { status: 400 });
     }
 
-    // Extract template context from HTML (compact, no raw HTML to AI)
-    const templateContext = typeof htmlContent === "string"
-      ? extractTemplateContext(htmlContent.slice(0, 50_000))
-      : "";
+    // Today's date
+    const today = new Date();
+    const todayStr = `${String(today.getDate()).padStart(2, '0')}.${String(today.getMonth() + 1).padStart(2, '0')}.${today.getFullYear()}`;
 
-    // Build detailed hook list for AI
-    const hookLines = hooks.map((h) => {
-      const typeGuide: Record<string, string> = {
-        text: "kısa metin, max 100 karakter",
-        textarea: "duygusal paragraf, max 500 karakter, satır sonları kullanılabilir",
-        color: "HEX renk kodu (#FF6B9D gibi)",
-        date: "GG.AA.YYYY formatında tarih",
-        url: "boş string döndür",
-        video: "boş string döndür",
-      };
-      return `- key:"${h.key}" | tip:${h.type} | label:"${h.label}" | mevcut:"${h.defaultValue.slice(0, 80)}" → ${typeGuide[h.type] || "kısa metin"}`;
+    // Build compact field list — each field on one line with type and what's expected
+    const fieldLines = hooks.map((h) => {
+      const typeHint = h.type === 'text' ? 'kısa metin, max 100 kar'
+        : h.type === 'textarea' ? 'uzun metin, max 500 kar'
+        : h.type === 'date' ? `tarih, format: GG.AA.YYYY`
+        : h.type === 'color' ? 'hex renk, ör: #FF6B9D'
+        : h.type === 'url' ? 'boş string döndür'
+        : h.type;
+      return `"${h.key}": ${typeHint} (label: "${h.label}")`;
     });
 
-    const systemPrompt = `Sen Forilove platformunun AI asistanısın. Kullanıcılar sevdikleri kişiler için özel anı sayfaları oluşturuyor. Sen kullanıcının yazdığı kısa açıklamadan yola çıkarak şablondaki TÜM düzenlenebilir metin alanlarını en uygun şekilde dolduruyorsun.
+    // Required keys list for emphasis
+    const requiredKeys = hooks.map(h => `"${h.key}"`).join(', ');
 
-## Platform Bilgisi
-Forilove, kişiselleştirilmiş dijital aşk/anı sayfaları oluşturma platformudur. Kullanıcılar şablon seçer, düzenler ve sevdikleriyle paylaşır. Sayfalar sevgililer günü, yıldönümü, doğum günü, evlilik teklifi gibi özel anlar için hazırlanır.
+    const systemPrompt = `Sen romantik içerik yazarısın. Forilove platformu için aşk/anı sayfası içeriği üretiyorsun.
 
-## Görevin
-Kullanıcının prompt'unu dikkatlice analiz et:
-- İsim geçiyorsa → isim alanlarına o ismi yaz
-- Tarih geçiyorsa → tarih alanlarına o tarihi yaz
-- İlişki süresi geçiyorsa → metinlerde buna referans ver
-- Özel bir tema/ton istiyorsa → tüm içeriği buna göre uyarla
-- Belirsiz alanlar için şablonun temasına uygun romantik/duygusal içerik üret
+Bugün: ${todayStr}
 
-## Şablon Bağlamı
-${templateContext || "Genel romantik anı sayfası"}
+GÖREV: Kullanıcının açıklamasına göre aşağıdaki TÜM alanları doldur. Hiçbir alan atlanmamalı.
 
-## ÖNEMLİ: Görsellere dokunma!
-Görsel alanları (image, background-image) sana gönderilmez. Sadece metin, renk ve tarih alanlarını doldur.
+ALANLAR (${hooks.length} adet):
+${fieldLines.join('\n')}
 
-## Kurallar
-1. Tüm metin içeriği Türkçe, samimi ve duygusal olmalı
-2. text: kısa, öz metin (max 100 karakter). Başlıklar etkileyici, alt başlıklar tamamlayıcı olmalı
-3. textarea: duygusal, içten paragraf (max 500 karakter). Mektup tarzında, kişiye özel hissettirmeli
-4. color: HEX renk kodu. Şablonun temasına uygun romantik tonlar (pembe, kırmızı, bordo, altın, leylak)
-5. date: GG.AA.YYYY formatında. Kullanıcı tarih verdiyse onu kullan, vermediyse bugünün tarihini kullan
-6. url/video: her zaman boş string "" döndür
-7. Her alanın label'ını ve mevcut değerini dikkate al — ne tür içerik beklendiğini anla
-8. Hook key'inden de ipucu çıkar: "partner_name" → isim, "anniversary_date" → tarih, "love_message" → uzun mesaj
+KURALLAR:
+- text: Kısa, duygusal, çarpıcı başlıklar ve metinler yaz
+- textarea: Samimi, mektup tarzı uzun metinler yaz. Kişiye özel hissettir
+- date: GG.AA.YYYY formatında. Kullanıcı tarih verdiyse onu kullan, yoksa ${todayStr}
+- color: HEX renk kodu (#FF6B9D gibi). Romantik tonlar kullan (pembe, kırmızı, bordo, altın)
+- url: Her zaman "" (boş string) döndür
+- İsim geçiyorsa ilgili alanlarda kullan
+- Belirsiz alanlar için şablona uygun romantik içerik üret
+- "X yıllık" ifadesi varsa tarihi bugünden geriye hesapla
 
-## Çıktı
-Sadece JSON döndür: {"key1":"değer1","key2":"değer2",...}
-Başka hiçbir açıklama veya metin ekleme.
+JSON formatında SADECE bu key'leri içeren obje döndür: ${requiredKeys}
+Başka hiçbir metin veya açıklama ekleme, sadece JSON.`;
 
-## Alanlar
-${hookLines.join("\n")}`;
+    const userMessage = `${prompt.slice(0, 500)}
 
-    // Call Gemini
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash",
-      generationConfig: {
-        responseMimeType: "application/json",
-        temperature: 0.85,
-        maxOutputTokens: 2000,
-      },
-    });
+ÖNEMLİ: JSON'da şu ${hooks.length} key'in TAMAMI olmalı: ${requiredKeys}`;
 
-    const result = await callGeminiWithRetry(
-      model,
-      [
-        { text: systemPrompt },
-        { text: `Kullanıcının isteği: ${prompt.slice(0, 500)}` },
-      ],
-      3
-    );
+    // Call Claude
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
-    const aiText = result.response.text();
+    let aiText = "";
+    const maxRetries = 3;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await anthropic.messages.create({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 4096,
+          temperature: 0.7,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userMessage }],
+        });
+        const block = response.content[0];
+        if (block.type === "text") {
+          aiText = block.text;
+          break;
+        }
+        throw new Error("AI yanıt üretemedi");
+      } catch (error: any) {
+        const status = error?.status;
+        if ((status === 429 || status === 529) && attempt < maxRetries) {
+          await new Promise((r) => setTimeout(r, Math.min(2000 * Math.pow(2, attempt), 15000)));
+          continue;
+        }
+        throw error;
+      }
+    }
+
     if (!aiText) {
       return NextResponse.json({ error: "AI yanıt üretemedi" }, { status: 500 });
     }
 
+    // Parse JSON from AI response
     let aiValues: Record<string, string>;
     try {
-      aiValues = JSON.parse(aiText);
-    } catch {
+      const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("No JSON found");
+      aiValues = JSON.parse(jsonMatch[0]);
+    } catch (e) {
+      console.error("AI JSON parse error. Raw response:", aiText.slice(0, 1000));
       return NextResponse.json({ error: "AI yanıtı parse edilemedi" }, { status: 500 });
     }
 
-    // Filter: only valid hook keys, string values — no image keys allowed
+    // Build final values: ensure ALL hook keys are present
     const validKeys = new Set(hooks.map((h) => h.key));
     const filteredValues: Record<string, string> = {};
-    for (const [key, value] of Object.entries(aiValues)) {
-      if (validKeys.has(key) && typeof value === "string") {
-        filteredValues[key] = value.slice(0, 2000);
+
+    for (const hook of hooks) {
+      const aiVal = aiValues[hook.key];
+      if (typeof aiVal === "string" && aiVal.trim().length > 0) {
+        filteredValues[hook.key] = aiVal.slice(0, 2000);
+      } else {
+        // Fallback: use default value if AI missed this key
+        filteredValues[hook.key] = hook.defaultValue;
       }
     }
+
+    // Log coverage for debugging
+    const aiFilledCount = Object.keys(aiValues).filter(k => validKeys.has(k)).length;
+    console.log(`AI generate: ${aiFilledCount}/${hooks.length} fields filled by AI, ${hooks.length - aiFilledCount} used defaults`);
 
     return NextResponse.json({ values: filteredValues });
   } catch (error: any) {

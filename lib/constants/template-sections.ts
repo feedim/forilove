@@ -47,7 +47,7 @@ export interface AITemplateResponse {
 
 // ♥ Forilove — Section Definition
 type SectionDef = {
-  html: (texts: Record<string, string>, headingFont: string) => string;
+  html: (texts: Record<string, string>, headingFont: string, colors: Record<string, string>) => string;
   css: (headingFont: string) => string;
 };
 
@@ -175,7 +175,7 @@ function createSectionRegistry(coverMood: string): Record<string, SectionDef> {
   return {
 
     hero: {
-      html: (t) => `
+      html: (t, _hf, c) => `
 <!-- ♥ Forilove — Hero -->
 <section class="fl-hero">
   <div class="fl-hero-bg" data-editable="cover_photo" data-type="background-image" data-label="Kapak Fotoğrafı" style="background-image:url('${coverUrl}')"></div>
@@ -196,17 +196,17 @@ function createSectionRegistry(coverMood: string): Record<string, SectionDef> {
 .fl-hero-deco{display:none}
 .fl-hero-content{position:relative;z-index:1;text-align:center;padding:2rem;max-width:800px;width:100%}
 .fl-hero-subtitle{font-size:clamp(11px,1.5vw,14px);letter-spacing:4px;text-transform:uppercase;color:rgba(255,255,255,0.7);margin-bottom:clamp(16px,3vw,32px);font-weight:300}
-.fl-hero-title{font-family:${hf};font-size:clamp(36px,9vw,88px);line-height:1.05;color:#fff;margin-bottom:clamp(12px,2vw,24px);font-weight:400}
+.fl-hero-title{font-family:${hf};font-size:clamp(36px,9vw,88px);line-height:1.05;color:#fff;margin-bottom:clamp(12px,2vw,24px);font-weight:400;text-shadow:0 2px 40px rgba(0,0,0,0.3)}
 .fl-hero-date{font-size:clamp(12px,1.5vw,14px);letter-spacing:3px;color:rgba(255,255,255,0.5);font-weight:300}
 .fl-hero-scroll{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:1;opacity:0.4;font-size:12px}
 .fl-hero-scroll span{display:block;animation:flBounce 2s ease-in-out infinite}`,
     },
 
     date: {
-      html: (t) => `
+      html: (t, _hf, c) => `
 <!-- ♥ Forilove — Date -->
 <section class="fl-date">
-  <div class="fl-divider"></div>
+  <div class="fl-divider" data-editable="divider_color" data-type="color" data-css-property="background-color" data-label="Ayırıcı Rengi" style="background-color:${c["--primary"]}"></div>
   <p class="fl-date-label">Özel Günümüz</p>
   <p class="fl-date-value" data-editable="special_date" data-type="date" data-label="Özel Tarih">${esc(t.special_date || "14.02.2024")}</p>
 </section>`,
@@ -236,8 +236,8 @@ function createSectionRegistry(coverMood: string): Record<string, SectionDef> {
 .fl-gallery-header{text-align:center;margin-bottom:clamp(24px,5vw,48px)}
 .fl-gallery-subtitle{font-size:clamp(14px,2vw,17px);color:var(--text-light);line-height:1.6;max-width:480px;margin:0 auto;font-weight:300}
 .fl-gallery-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:clamp(4px,1vw,12px)}
-.fl-gallery-img{width:100%;height:clamp(200px,35vw,500px);object-fit:cover;display:block;transition:all 0.6s cubic-bezier(0.4,0,0.2,1)}
-.fl-gallery-img:hover{opacity:0.85;transform:scale(1.01)}
+.fl-gallery-img{width:100%;height:clamp(200px,35vw,500px);object-fit:cover;display:block;border-radius:2px;box-shadow:0 2px 20px rgba(0,0,0,0.06);transition:all 0.7s cubic-bezier(0.4,0,0.2,1)}
+.fl-gallery-img:hover{transform:scale(1.02);box-shadow:0 8px 40px rgba(0,0,0,0.12);filter:brightness(1.05)}
 @media(max-width:480px){.fl-gallery-grid{grid-template-columns:1fr}.fl-gallery-img{height:clamp(220px,60vw,350px)}}`,
     },
 
@@ -254,20 +254,21 @@ function createSectionRegistry(coverMood: string): Record<string, SectionDef> {
 </section>`,
       css: (hf) => `
 .fl-letter{padding:clamp(60px,10vw,120px) clamp(16px,4vw,24px);max-width:650px;margin:0 auto}
-.fl-letter-body{text-align:center;position:relative}
-.fl-letter-deco{display:none}
-.fl-letter-text{font-family:${hf};font-size:clamp(16px,2.5vw,21px);line-height:2;color:var(--text);white-space:pre-line;font-weight:300}`,
+.fl-letter-body{text-align:center;position:relative;padding:clamp(24px,5vw,48px) clamp(16px,3vw,32px)}
+.fl-letter-deco{display:none;font-size:clamp(40px,6vw,64px);color:var(--primary);opacity:0.15;line-height:1;margin-bottom:16px;font-family:Georgia,serif}
+.fl-letter-deco::before{content:"\\201C"}
+.fl-letter-text{font-family:${hf};font-size:clamp(16px,2.5vw,21px);line-height:2;color:var(--text);white-space:pre-line;font-weight:300;font-style:italic}`,
     },
 
     timeline: {
-      html: (t, hf) => `
+      html: (t, hf, c) => `
 <!-- ♥ Forilove — Timeline -->
 <section class="fl-timeline" data-area="timeline" data-area-label="Zaman Çizelgesi">
   <div class="fl-divider"></div>
   <p class="fl-label">Hikayemiz</p>
   <div class="fl-timeline-track">
     <div class="fl-timeline-item fl-stagger-1">
-      <div class="fl-timeline-dot"></div>
+      <div class="fl-timeline-dot" data-editable="timeline_dot_color" data-type="color" data-css-property="background-color" data-label="Nokta Rengi" style="background-color:${c["--primary"]}"></div>
       <div class="fl-timeline-content">
         <h3 class="fl-timeline-title" data-editable="milestone_1_title" data-type="text" data-label="Anı 1 Başlık">${esc(t.milestone_1_title || "İlk Tanışma")}</h3>
         <p class="fl-timeline-desc" data-editable="milestone_1_text" data-type="text" data-label="Anı 1 Açıklama">${esc(t.milestone_1_text || "Kaderimiz o gün birleşti")}</p>
@@ -285,10 +286,10 @@ function createSectionRegistry(coverMood: string): Record<string, SectionDef> {
       css: (hf) => `
 .fl-timeline{padding:clamp(60px,10vw,120px) clamp(16px,4vw,24px);max-width:650px;margin:0 auto}
 .fl-timeline-track{position:relative;padding-left:clamp(24px,4vw,36px)}
-.fl-timeline-track::before{content:'';position:absolute;left:5px;top:0;bottom:0;width:1px;background:var(--primary);opacity:0.3}
+.fl-timeline-track::before{content:'';position:absolute;left:5px;top:0;bottom:0;width:1px;background:linear-gradient(180deg,var(--primary) 0%,transparent 100%);opacity:0.3}
 .fl-timeline-item{position:relative;padding:0 0 clamp(32px,5vw,48px) clamp(24px,4vw,36px)}
 .fl-timeline-item:last-child{padding-bottom:0}
-.fl-timeline-dot{position:absolute;left:-5px;top:6px;width:11px;height:11px;background:var(--primary);border-radius:50%;transition:all 0.3s ease}
+.fl-timeline-dot{position:absolute;left:-5px;top:6px;width:11px;height:11px;background:var(--primary);border-radius:50%;box-shadow:0 0 0 4px var(--primary-light);transition:all 0.3s ease}
 .fl-timeline-title{font-family:${hf};font-size:clamp(17px,2.5vw,22px);color:var(--dark);margin-bottom:8px;font-weight:500}
 .fl-timeline-desc{font-size:clamp(13px,1.8vw,15px);line-height:1.7;color:var(--text-light);font-weight:300}`,
     },
@@ -304,22 +305,23 @@ function createSectionRegistry(coverMood: string): Record<string, SectionDef> {
 </section>`,
       css: (hf) => `
 .fl-countdown{padding:clamp(60px,10vw,120px) 24px;text-align:center;max-width:600px;margin:0 auto}
-.fl-countdown-date{font-family:${hf};font-size:clamp(32px,7vw,60px);color:var(--primary);margin-bottom:16px;font-weight:400}
+.fl-countdown-date{font-family:${hf};font-size:clamp(36px,8vw,72px);color:var(--primary);margin-bottom:16px;font-weight:300;letter-spacing:-1px}
 .fl-countdown-text{font-size:clamp(12px,1.5vw,14px);letter-spacing:3px;text-transform:uppercase;color:var(--text-light);font-weight:300}`,
     },
 
     quotes: {
-      html: (t, hf) => `
+      html: (t, hf, c) => `
 <!-- ♥ Forilove — Quote -->
 <section class="fl-quote" data-area="quotes" data-area-label="Alıntı">
   <div class="fl-divider"></div>
-  <div class="fl-quote-deco"></div>
+  <div class="fl-quote-deco" data-editable="quote_deco_color" data-type="color" data-css-property="color" data-label="Alıntı Dekor Rengi" style="color:${c["--primary"]}"></div>
   <p class="fl-quote-text" data-editable="quote_text" data-type="textarea" data-label="Alıntı Metni">${esc(t.quote_text || "Seninle geçen her an, hayatımın en güzel sayfası oldu.")}</p>
   <p class="fl-quote-author" data-editable="quote_author" data-type="text" data-label="Alıntı Yazarı">${esc(t.quote_author || "Bizim Hikayemiz")}</p>
 </section>`,
       css: (hf) => `
 .fl-quote{padding:clamp(80px,12vw,160px) clamp(16px,4vw,24px);text-align:center;max-width:750px;margin:0 auto;position:relative}
-.fl-quote-deco{display:none}
+.fl-quote-deco{display:none;font-size:clamp(48px,8vw,80px);color:var(--primary);opacity:0.12;line-height:1;margin-bottom:clamp(12px,2vw,20px);font-family:Georgia,serif}
+.fl-quote-deco::before{content:"\\201C"}
 .fl-quote-text{font-family:${hf};font-style:italic;font-size:clamp(20px,4vw,38px);line-height:1.5;color:var(--dark);margin-bottom:clamp(24px,4vw,40px);font-weight:300}
 .fl-quote-author{font-size:clamp(10px,1.3vw,12px);letter-spacing:4px;text-transform:uppercase;color:var(--text-light);font-weight:400}`,
     },
@@ -335,42 +337,24 @@ function createSectionRegistry(coverMood: string): Record<string, SectionDef> {
 </section>`,
       css: (hf) => `
 .fl-fullimg{position:relative;overflow:hidden}
-.fl-fullimg-photo{width:100%;height:clamp(50vh,70vw,80vh);object-fit:cover;display:block;filter:brightness(0.65);transition:transform 8s ease}
+.fl-fullimg-photo{width:100%;height:clamp(50vh,70vw,80vh);object-fit:cover;display:block;filter:brightness(0.55);transition:transform 8s ease}
 .fl-fullimg:hover .fl-fullimg-photo{transform:scale(1.05)}
 .fl-fullimg-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px}
 .fl-fullimg-text{font-family:${hf};font-size:clamp(28px,6vw,64px);text-align:center;color:#fff;font-weight:300}`,
     },
 
-    video: {
-      html: (t) => `
-<!-- ♥ Forilove — Video -->
-<section class="fl-video" data-area="video" data-area-label="Video">
-  <div class="fl-divider"></div>
-  <p class="fl-label">Video</p>
-  <div class="fl-video-wrap">
-    <video class="fl-video-player" data-editable="video_url" data-type="video" data-label="Video" src="${esc(t.video_url || "")}" controls playsinline></video>
-  </div>
-  <p class="fl-video-caption" data-editable="video_caption" data-type="text" data-label="Video Açıklaması">${esc(t.video_caption || "Birlikte yaşadığımız özel an")}</p>
-</section>`,
-      css: () => `
-.fl-video{padding:clamp(60px,10vw,120px) clamp(16px,4vw,24px);max-width:900px;margin:0 auto}
-.fl-video-wrap{overflow:hidden;margin-bottom:16px}
-.fl-video-player{width:100%;display:block;background:#000}
-.fl-video-caption{text-align:center;font-size:clamp(12px,1.5vw,14px);letter-spacing:2px;text-transform:uppercase;color:var(--text-light);font-weight:300}`,
-    },
-
     footer: {
-      html: (t, hf) => `
+      html: (t, hf, c) => `
 <!-- ♥ Forilove — Footer -->
-<footer class="fl-footer">
+<footer class="fl-footer" data-editable="footer_bg_color" data-type="color" data-css-property="background-color" data-label="Footer Arka Plan" style="background-color:${c["--dark"]}">
   <div class="fl-divider"></div>
   <p class="fl-footer-message" data-editable="footer_text" data-type="textarea" data-label="Son Mesaj">${esc(t.footer_text || "Bu sayfa sana olan sevgimin küçük bir yansıması.\nSeni seviyorum, bugün ve her gün.")}</p>
   <p class="fl-footer-names" data-editable="footer_names" data-type="text" data-label="İsimler">${esc(t.footer_names || "♥")}</p>
 </footer>`,
       css: (hf) => `
-.fl-footer{padding:clamp(80px,12vw,120px) 24px clamp(48px,6vw,80px);text-align:center}
-.fl-footer-message{font-family:${hf};font-size:clamp(17px,3vw,28px);line-height:1.6;color:var(--text-light);max-width:520px;margin:0 auto clamp(24px,4vw,48px);font-weight:300;white-space:pre-line}
-.fl-footer-names{font-size:clamp(10px,1.3vw,12px);letter-spacing:5px;text-transform:uppercase;color:var(--text-light);opacity:0.6;font-weight:300}`,
+.fl-footer{padding:clamp(80px,12vw,120px) 24px clamp(48px,6vw,80px);text-align:center;background:var(--dark)}
+.fl-footer-message{font-family:${hf};font-size:clamp(17px,3vw,28px);line-height:1.6;color:rgba(255,255,255,0.6);max-width:520px;margin:0 auto clamp(24px,4vw,48px);font-weight:300;white-space:pre-line}
+.fl-footer-names{font-size:clamp(10px,1.3vw,12px);letter-spacing:5px;text-transform:uppercase;color:rgba(255,255,255,0.3);font-weight:300}`,
     },
   };
 }
@@ -406,7 +390,7 @@ const ANIMATION_LIBRARY = `
 // ════════════════════════════════════════════════════════════
 
 const COLOR_RE = /^(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\))$/;
-const VALID_SECTIONS = ["hero", "date", "gallery", "love_letter", "timeline", "countdown", "quotes", "full_image", "video", "footer"];
+const VALID_SECTIONS = ["hero", "date", "gallery", "love_letter", "timeline", "countdown", "quotes", "full_image", "footer"];
 const SAFE_FONT_RE = /^[a-zA-Z0-9 :@;,]+$/;
 const VALID_COVER_MOODS = Object.keys(COVER_PHOTOS);
 
@@ -552,6 +536,7 @@ export function validateAIResponse(raw: unknown): AITemplateResponse | null {
 
 export function sanitizeCustomCss(css: string): string {
   let s = css.slice(0, 8000);
+  // Security
   s = s.replace(/<\/?script[^>]*>/gi, "");
   s = s.replace(/javascript\s*:/gi, "");
   s = s.replace(/expression\s*\(/gi, "");
@@ -559,6 +544,8 @@ export function sanitizeCustomCss(css: string): string {
   s = s.replace(/-moz-binding\s*:/gi, "");
   s = s.replace(/behavior\s*:/gi, "");
   s = s.replace(/<[^>]*>/g, "");
+  // Strip !important so AI can't override structural locks
+  s = s.replace(/!important/gi, "");
   return s;
 }
 
@@ -588,12 +575,22 @@ body{font-family:'${bodyFontName}',sans-serif;color:var(--text);background:${ai.
 img{max-width:100%;height:auto}
 .fl-label{font-size:clamp(10px,1.2vw,12px);letter-spacing:4px;text-transform:uppercase;color:var(--text-light);margin-bottom:clamp(24px,4vw,40px);text-align:center;font-weight:400}`;
 
+  // Color map for color-editable elements
+  const colorMap: Record<string, string> = {
+    "--primary": ai.cssVariables["--primary"],
+    "--primary-light": ai.cssVariables["--primary-light"],
+    "--dark": ai.cssVariables["--dark"],
+    "--text": ai.cssVariables["--text"],
+    "--text-light": ai.cssVariables["--text-light"],
+    "--accent": ai.cssVariables["--accent"],
+  };
+
   let sectionsHTML = "";
   let sectionsCSS = "";
   for (const key of ai.sections) {
     const def = sections[key];
     if (!def) continue;
-    sectionsHTML += def.html(ai.defaultTexts, headingFont);
+    sectionsHTML += def.html(ai.defaultTexts, headingFont, colorMap);
     sectionsCSS += def.css(headingFont);
   }
 
@@ -608,7 +605,7 @@ img{max-width:100%;height:auto}
   }
   if (ai.animations.sections) {
     const kf = animMap[ai.animations.sections] || "flFadeInUp";
-    entranceCSS += `.fl-gallery,.fl-letter,.fl-timeline,.fl-quote,.fl-countdown,.fl-video,.fl-date,.fl-fullimg,.fl-footer{animation:${kf} 0.8s ease-out both}`;
+    entranceCSS += `.fl-gallery,.fl-letter,.fl-timeline,.fl-quote,.fl-countdown,.fl-date,.fl-fullimg,.fl-footer{animation:${kf} 0.8s ease-out both}`;
   }
 
   const custom = ai.customCSS ? `\n/* ♥ Forilove — AI Theme */\n${ai.customCSS}` : "";
@@ -632,6 +629,26 @@ img{max-width:100%;height:auto}
     safetyCSS += "\n.fl-timeline-title{color:rgba(255,255,255,0.8)}.fl-quote-text{color:rgba(255,255,255,0.75)}.fl-letter-text{color:rgba(255,255,255,0.6)}.fl-date-value{color:var(--primary)}.fl-date-label{color:rgba(255,255,255,0.3)}.fl-label{color:rgba(255,255,255,0.3)}";
   }
 
+  // ♥ Structural locks — protect layout from AI overrides
+  // Placed LAST with !important so AI customCSS (which has !important stripped) cannot break layout
+  const structuralLocks = `
+/* ♥ Forilove — Structural Locks */
+.fl-hero{position:relative!important;min-height:100vh!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important}
+.fl-hero-bg{position:absolute!important;inset:0!important;background-size:cover!important;background-position:center!important}
+.fl-hero-overlay{position:absolute!important;inset:0!important}
+.fl-hero-content{display:block!important;position:relative!important;z-index:2!important;text-align:center!important;max-width:800px!important;width:100%!important;padding:2rem!important}
+.fl-gallery{max-width:1100px!important;margin-left:auto!important;margin-right:auto!important}
+.fl-gallery-grid{display:grid!important;grid-template-columns:repeat(2,1fr)!important;gap:clamp(4px,1vw,12px)!important}
+.fl-gallery-header{text-align:center!important}
+.fl-letter{max-width:650px!important;margin-left:auto!important;margin-right:auto!important}
+.fl-letter-body{text-align:center!important}
+.fl-timeline{max-width:650px!important;margin-left:auto!important;margin-right:auto!important}
+.fl-quote{max-width:750px!important;margin-left:auto!important;margin-right:auto!important;text-align:center!important}
+.fl-countdown{max-width:600px!important;margin-left:auto!important;margin-right:auto!important;text-align:center!important}
+.fl-date{text-align:center!important}
+.fl-footer{text-align:center!important}
+@media(max-width:480px){.fl-gallery-grid{grid-template-columns:1fr!important}}`;
+
   return `<!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -647,6 +664,7 @@ ${sectionsCSS}
 ${entranceCSS}
 ${custom}
 ${safetyCSS}
+${structuralLocks}
 </style>
 </head>
 <body>
@@ -669,7 +687,7 @@ export const FALLBACK_RESPONSE: AITemplateResponse = {
   sections: ["hero", "gallery", "quotes", "love_letter", "timeline", "full_image", "footer"],
   animations: { hero: "fadeInUp", sections: "fadeIn" },
   bodyBackground: "#fafafa",
-  customCSS: `.fl-divider{display:block;width:40px;height:1px;background:var(--primary);opacity:0.2;margin:0 auto 32px}.fl-gallery-img{border-radius:4px;box-shadow:0 4px 20px rgba(0,0,0,0.06)}.fl-hero-overlay{background:linear-gradient(180deg,transparent 0%,rgba(0,0,0,0.55) 100%)}.fl-quote{border-top:1px solid rgba(0,0,0,0.06)}.fl-quote-deco{display:block;font-size:48px;color:var(--primary);opacity:0.12;margin-bottom:16px;font-family:Georgia,serif}.fl-quote-deco::before{content:"\\201C"}.fl-letter-text{font-style:italic}.fl-footer{background:var(--dark)}.fl-footer-message{color:rgba(255,255,255,0.6)}.fl-footer-names{color:rgba(255,255,255,0.3)}`,
+  customCSS: `.fl-divider{display:block;width:40px;height:1px;background:var(--primary);opacity:0.2;margin:0 auto 32px}.fl-gallery-img{border-radius:4px}.fl-hero-overlay{background:linear-gradient(180deg,transparent 0%,rgba(0,0,0,0.55) 100%)}.fl-hero-scroll{display:block}.fl-quote-deco{display:block}.fl-letter-deco{display:block}.fl-quote{border-top:1px solid rgba(0,0,0,0.06)}`,
   defaultTexts: {
     title: "Bizim Hikayemiz", subtitle: "Sana olan sevgim", special_date: "14.02.2024",
     gallery_subtitle: "Birlikte geçirdiğimiz en güzel anlar",

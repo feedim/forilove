@@ -49,10 +49,15 @@ export function HTMLTemplateRender({ project, musicUrl }: { project: any; musicU
     // Match data-editable elements and replace their content/attributes
     const regex = new RegExp(`(<[^>]*data-editable="${key}"[^>]*>)(.*?)(<\\/[^>]+>)`, 'gs');
     html = html.replace(regex, (match: string, openTag: string, content: string, closeTag: string) => {
-      // Check if it's an image or URL type
-      if (openTag.includes('data-type="image"') || openTag.includes('data-type="url"')) {
+      // Image: update src attribute
+      if (openTag.includes('data-type="image"')) {
         const sanitizedUrl = sanitizeUrl(stringValue);
         return openTag.replace(/src="[^"]*"/, `src="${sanitizedUrl}"`) + content + closeTag;
+      }
+      // URL: update href attribute
+      if (openTag.includes('data-type="url"')) {
+        const sanitizedUrl = sanitizeUrl(stringValue);
+        return openTag.replace(/href="[^"]*"/, `href="${sanitizedUrl}"`) + content + closeTag;
       }
       // Background-image: update style attribute, keep original content
       if (openTag.includes('data-type="background-image"')) {
@@ -63,15 +68,31 @@ export function HTMLTemplateRender({ project, musicUrl }: { project: any; musicU
         );
         return updatedTag + content + closeTag;
       }
+      // Color: update inline style with color value
+      if (openTag.includes('data-type="color"')) {
+        const safeColor = escapeHtml(stringValue);
+        const cssPropMatch = openTag.match(/data-css-property="([^"]*)"/);
+        const cssProp = cssPropMatch ? cssPropMatch[1] : 'background-color';
+        if (openTag.includes('style="')) {
+          const updatedTag = openTag.replace(
+            /style="([^"]*)"/,
+            (_, existingStyle: string) => `style="${existingStyle}; ${cssProp}: ${safeColor};"`
+          );
+          return updatedTag + content + closeTag;
+        } else {
+          const updatedTag = openTag.replace(/>/, ` style="${cssProp}: ${safeColor};">`);
+          return updatedTag + content + closeTag;
+        }
+      }
       // For text content - escape HTML to prevent XSS
       const sanitizedText = escapeHtml(stringValue);
       return openTag + sanitizedText + closeTag;
     });
 
     // Handle src attributes for images
-    const srcRegex = new RegExp(`(<img[^>]*data-editable="${key}"[^>]*src=")[^"]*"`, 'g');
+    const imgSrcRegex = new RegExp(`(<img[^>]*data-editable="${key}"[^>]*src=")[^"]*"`, 'g');
     const sanitizedUrl = sanitizeUrl(stringValue);
-    html = html.replace(srcRegex, `$1${sanitizedUrl}"`);
+    html = html.replace(imgSrcRegex, `$1${sanitizedUrl}"`);
   });
 
   // Remove hidden data-area sections

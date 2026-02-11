@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Menu } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+
 import DOMPurify from "isomorphic-dompurify";
 import toast from "react-hot-toast";
 

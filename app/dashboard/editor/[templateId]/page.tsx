@@ -18,7 +18,7 @@ function extractVideoId(url: string): string | null {
 
 interface TemplateHook {
   key: string;
-  type: 'text' | 'image' | 'textarea' | 'color' | 'date' | 'url' | 'background-image' | 'video';
+  type: 'text' | 'image' | 'textarea' | 'color' | 'date' | 'url' | 'background-image';
   label: string;
   defaultValue: string;
 }
@@ -482,6 +482,18 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
         let defaultValue = '';
         if (type === 'image') {
           defaultValue = element.getAttribute('src') || '';
+        } else if (type === 'color') {
+          // Extract color value from inline style
+          const style = element.getAttribute('style') || '';
+          const cssProp = element.getAttribute('data-css-property') || 'background-color';
+          const colorMatch = style.match(new RegExp(`${cssProp}\\s*:\\s*([^;]+)`));
+          defaultValue = colorMatch ? colorMatch[1].trim() : '#000000';
+        } else if (type === 'background-image') {
+          const style = element.getAttribute('style') || '';
+          const bgMatch = style.match(/url\(['"]?([^'")\s]+)['"]?\)/);
+          defaultValue = bgMatch ? bgMatch[1] : '';
+        } else if (type === 'url') {
+          defaultValue = element.getAttribute('href') || '';
         } else {
           defaultValue = element.textContent?.trim() || '';
         }
@@ -509,7 +521,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
   };
 
   const updatePreview = () => {
-    const htmlContent = template?.html_content || template?.html_content;
+    const htmlContent = template?.html_content;
     if (!htmlContent) return;
 
     let html = htmlContent;
@@ -570,8 +582,6 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
             const currentStyle = element.getAttribute('style') || '';
             element.setAttribute('style', `${currentStyle}; background-image: url('${value}');`);
           }
-        } else if (type === 'video') {
-          if (isSafeUrl(value)) element.setAttribute('src', value);
         } else if (type === 'color') {
           const safeVal = safeCssValue(value);
           const currentStyle = element.getAttribute('style') || '';
@@ -904,9 +914,10 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
 
       setCoinBalance(spendResult[0].new_balance);
 
-      // Filter out __area_* hooks — only send user-facing hooks
+      // Only send AI-fillable hooks (no images, no area toggles)
+      const fillableTypes = new Set(['text', 'textarea', 'color', 'date', 'url']);
       const userHooks = hooks
-        .filter(h => !h.key.startsWith('__'))
+        .filter(h => !h.key.startsWith('__') && fillableTypes.has(h.type))
         .map(h => ({ key: h.key, type: h.type, label: h.label, defaultValue: h.defaultValue }));
 
       const res = await fetch('/api/ai/generate', {
@@ -1076,7 +1087,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
             <ArrowLeft className="h-5 w-5" />
             <span className="font-medium">Geri</span>
           </button>
-          <h1 className="text-base sm:text-lg font-bold max-w-[200px] sm:max-w-[300px] truncate md:absolute md:left-[120px] md:border-l md:border-white/10 md:pl-4">{template?.name}</h1>
+          <h1 className="text-lg sm:text-xl font-bold max-w-[200px] sm:max-w-[300px] truncate md:absolute md:left-[120px] md:border-l md:border-white/10 md:pl-4">{template?.name}</h1>
           {/* Desktop buttons - hidden on mobile, max-width prevents overlap with absolute title */}
           <div className="hidden md:flex items-center gap-2 max-w-[calc(100vw-480px)]">
             {loading ? (
@@ -1100,8 +1111,8 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                       style={{
                         scrollbarWidth: 'none',
                         WebkitOverflowScrolling: 'touch',
-                        maskImage: 'linear-gradient(to right, black calc(100% - 40px), transparent)',
-                        WebkitMaskImage: 'linear-gradient(to right, black calc(100% - 40px), transparent)',
+                        maskImage: 'linear-gradient(to right, black calc(100% - 80px), transparent)',
+                        WebkitMaskImage: 'linear-gradient(to right, black calc(100% - 80px), transparent)',
                       }}
                     >
                       <div className="btn-secondary shrink-0 flex items-center rounded-full overflow-hidden" style={{ padding: '0 1rem' }}>
@@ -1729,19 +1740,6 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                           <p className="text-xs text-gray-400 mt-2">HEX renk kodu</p>
                         </div>
                       </div>
-                    </div>
-                  ) : currentHook.type === 'video' ? (
-                    <div className="space-y-3">
-                      <input
-                        type="url"
-                        value={draftValue}
-                        onChange={(e) => setDraftValue(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveEditModal(); } }}
-                        className="input-modern w-full text-base"
-                        placeholder="https://..."
-                        autoFocus
-                      />
-                      <p className="text-xs text-gray-400">YouTube, Vimeo veya video dosyası URL'si</p>
                     </div>
                   ) : currentHook.type === 'date' ? (
                     <div className="space-y-3">

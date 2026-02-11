@@ -36,22 +36,23 @@ function checkRateLimit(userId: string): boolean {
 // ♥ STEP 1 — DREAM: Design concept
 // ════════════════════════════════════════════════════════════
 
-const STEP1_PROMPT = `You are a world-class web design director. Create a UNIQUE design concept for a love/memory page. Return ONLY JSON.
+const STEP1_PROMPT = `You are a Da Vinci of web design — a master artist with a palette and brush. You love simplicity, elegance, and emotional resonance. Every design you create is a unique masterpiece. You know all Google Fonts, all color theory, all design techniques.
 
-CRITICAL COLOR RULES:
-- LIGHT THEME (white/cream body): text MUST be dark (#1a1a1a-#3a3a3a), textLight medium gray (#6b7280-#9ca3af), isDarkTheme=false
-- DARK THEME (black/dark body): text MUST be "rgba(255,255,255,0.85)", textLight "rgba(255,255,255,0.4)", isDarkTheme=true
-- primary: vibrant accent color
-- primaryLight: very pale version of primary (light theme) or very dark tone (dark theme)
-- dark: darkest tone (footer bg)
-- accent: complementary to primary, NEVER same as primary
+Create a UNIQUE design concept for a love/memory page. Return ONLY JSON.
 
-FONTS (Google Fonts, format "Name:wght@400;700"):
-Heading: Cormorant Garamond, Playfair Display, Bodoni Moda, Lora, Cinzel, Dancing Script, EB Garamond, Marcellus, Italiana, Spectral, Libre Baskerville, Crimson Text, Montserrat
-Body: Inter, Poppins, Lato, Nunito, Raleway
+YOUR PALETTE (choose ANY Google Fonts, ANY harmonious colors):
+- Pick fonts that MATCH the mood (elegant serif for romantic, clean sans for modern, handwritten for playful)
+- Format: "FontName:wght@400;700" (Google Fonts)
+- Create a HARMONIOUS color palette — colors that sing together
+- LIGHT THEME: text MUST be dark, textLight medium gray, isDarkTheme=false
+- DARK THEME: text MUST be light rgba, textLight dimmed rgba, isDarkTheme=true
+- primary: the soul color — vibrant, emotional
+- primaryLight: whisper of primary (very pale or very dark depending on theme)
+- dark: the anchor (deepest tone, footer bg)
+- accent: a complementary surprise, NEVER same as primary
 
 SECTIONS (pick 5-8, hero+footer required):
-hero, date, gallery, love_letter, timeline, countdown, quotes, full_image, video, footer
+hero, date, gallery, love_letter, timeline, countdown, quotes, full_image, footer
 
 coverPhotoMood: romantic, cinematic, nature, urban, minimal, nostalgic, moody, luxury
 
@@ -64,49 +65,51 @@ JSON:
 
 function buildStep2Prompt(concept: DesignConcept, userInput: string): string {
   const dark = concept.isDarkTheme;
-  return `You are a CSS master. Write customCSS overrides + default texts for a love page. Return ONLY JSON.
+  return `You are a Da Vinci of CSS — a master artist who paints with code. You love simplicity and elegance. Every detail matters. This is a PAID premium product.
 Write texts in THE SAME LANGUAGE as the user's input. If user writes Turkish, write Turkish. If English, write English.
+Return ONLY JSON.
 
 CONCEPT: ${concept.mood} / ${concept.architecture}
-COLORS: primary=${concept.colorPalette.primary} dark=${concept.colorPalette.dark} text=${concept.colorPalette.text}
+COLORS: primary=${concept.colorPalette.primary} primaryLight=${concept.colorPalette.primaryLight} dark=${concept.colorPalette.dark} text=${concept.colorPalette.text} accent=${concept.colorPalette.accent}
 BODY: ${concept.bodyBackground} | ${dark ? "DARK THEME" : "LIGHT THEME"}
 SECTIONS: ${concept.sections.join(",")}
 ANIMATION: ${concept.animationLevel}
 
-FORBIDDEN (NEVER DO THIS):
-- NEVER set background on .fl-hero or .fl-hero-bg (it's a user photo!)
-- NEVER make hero text dark (it's ALWAYS over a photo, must be white/light)
-- NEVER write animation:none
-- NEVER use same color for text and background
+ARCHITECTURE: The base template has perfect responsive layout (centered sections, 2-col gallery, consistent spacing). You ONLY add visual personality — like painting on a canvas.
 
-REQUIRED OVERRIDES:
-1. .fl-hero-overlay{background:linear-gradient(...)} — darken the photo
+FORBIDDEN — NEVER WRITE:
+- display, grid-template-columns, flex-direction, flex-wrap
+- max-width, min-width, width, height, min-height (on sections)
+- margin, padding (on section containers)
+- position, top, left, right, bottom, inset, float
+- align-items, justify-content, gap, overflow, text-align
+- background on .fl-hero or .fl-hero-bg (user's photo!)
+- dark hero text (ALWAYS white/light over photo)
+- !important
+
+YOUR BRUSH (visual properties you SHOULD use creatively):
+color, background, background-color, background-image, linear-gradient, border, border-color, border-radius, box-shadow, text-shadow, filter, opacity, backdrop-filter, font-size, font-weight, font-style, letter-spacing, line-height, text-transform, animation, transition, transform
+
+PAINT THESE (required):
+1. .fl-hero-overlay{background:linear-gradient(...)} — creative gradient
 2. .fl-divider{display:block;width:...;height:1px;background:...;margin:0 auto 32px}
-3. .fl-gallery-img — hover effect, border-radius, shadow
-4. .fl-footer{background:${dark ? concept.colorPalette.dark : "var(--dark)"}}.fl-footer-message{color:${dark ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.6)"}}.fl-footer-names{color:${dark ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.3)"}}
-${dark ? "5. body{color:rgba(255,255,255,0.85)}\n6. All section text colors: rgba(255,255,255,0.4-0.85)\n7. Borders: rgba(255,255,255,0.06-0.1)" : ""}
+3. .fl-gallery-img — border-radius, shadow, hover effect
+4. .fl-hero-scroll{display:block} .fl-quote-deco{display:block} .fl-letter-deco{display:block} .fl-hero-deco{display:block}
+${dark ? "5. body{color:rgba(255,255,255,0.85)} section text: rgba(255,255,255,0.4-0.85) borders: rgba(255,255,255,0.06-0.1)" : ""}
 
-AVAILABLE CSS CLASSES:
+CLASSES:
 .fl-hero-overlay .fl-hero-deco .fl-hero-subtitle .fl-hero-title .fl-hero-date .fl-hero-scroll
-.fl-gallery .fl-gallery-grid .fl-gallery-img .fl-gallery-subtitle
-.fl-quote .fl-quote-deco .fl-quote-text .fl-quote-author
-.fl-letter .fl-letter-deco .fl-letter-text
-.fl-timeline .fl-timeline-track::before .fl-timeline-dot .fl-timeline-title .fl-timeline-desc
-.fl-fullimg-photo .fl-fullimg-text
-.fl-countdown-date .fl-countdown-text
-.fl-date .fl-date-label .fl-date-value
-.fl-footer .fl-footer-message .fl-footer-names
-.fl-label .fl-divider body
-
-HIDDEN ELEMENTS (open with display:block):
-.fl-hero-deco .fl-letter-deco .fl-quote-deco .fl-divider .fl-hero-scroll
+.fl-gallery-img .fl-gallery-subtitle .fl-quote .fl-quote-deco .fl-quote-text .fl-quote-author
+.fl-letter .fl-letter-deco .fl-letter-text .fl-timeline .fl-timeline-track::before .fl-timeline-dot .fl-timeline-title .fl-timeline-desc
+.fl-fullimg-photo .fl-fullimg-text .fl-fullimg-overlay .fl-countdown-date .fl-countdown-text
+.fl-date .fl-date-label .fl-date-value .fl-footer .fl-footer-message .fl-footer-names .fl-label .fl-divider body
 
 ANIMATIONS: flFadeInUp flFadeIn flScaleIn flBounce flPulse flGlow flFloat flShimmer flZoomSlow flTextReveal flDotPulse
 
 USER INPUT: ${userInput}
 
 JSON:
-{"customCSS":"min 800 chars","defaultTexts":{"title":"","subtitle":"","special_date":"","gallery_subtitle":"","letter":"3+ paragraphs with \\n","quote_text":"","quote_author":"","milestone_1_title":"","milestone_1_text":"","milestone_2_title":"","milestone_2_text":"","full_image_text":"","countdown_date":"2025-02-14","countdown_label":"","footer_text":"","footer_names":"","video_caption":""}}`;
+{"customCSS":"min 800 chars of VISUAL overrides only","defaultTexts":{"title":"","subtitle":"","special_date":"","gallery_subtitle":"","letter":"3+ paragraphs with \\n","quote_text":"","quote_author":"","milestone_1_title":"","milestone_1_text":"","milestone_2_title":"","milestone_2_text":"","full_image_text":"","countdown_date":"2025-02-14","countdown_label":"","footer_text":"","footer_names":""}}`;
 }
 
 // ════════════════════════════════════════════════════════════
@@ -130,6 +133,8 @@ CHECK:
 4. Is .fl-divider set to display:block? If not, add it
 5. Does .fl-hero-overlay have a gradient? If not, add one
 6. Is footer text visible against footer background?
+7. REMOVE any structural properties: display, grid-template-columns, max-width, margin, padding, width, height, position, float, align-items, justify-content, gap, overflow, text-align on section elements. Keep ONLY visual properties (color, background, border, shadow, filter, font, animation, transform, opacity)
+8. REMOVE any !important declarations
 
 {"issues":["issue1"],"fixedCSS":"complete fixed CSS if issues found, empty string if OK"}`;
 }

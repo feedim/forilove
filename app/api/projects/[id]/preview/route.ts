@@ -81,15 +81,6 @@ export async function GET(
           `$1style="$2; background-image: url('${sanitizeUrl(value)}');"`
         );
 
-        // Handle video src
-        html = html.replace(
-          new RegExp(
-            `(<[^>]*data-editable="${escapeHtml(key)}"[^>]*data-type="video"[^>]*?)src="[^"]*"`,
-            "g"
-          ),
-          `$1src="${sanitizeUrl(value)}"`
-        );
-
         // Handle color — only allow valid CSS color values
         html = html.replace(
           new RegExp(

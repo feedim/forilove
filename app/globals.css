@@ -187,9 +187,8 @@ img, svg {
 
 .btn-primary:focus-visible,
 .btn-secondary:focus-visible {
-  outline: 2px solid lab(49.5493% 79.8381 2.31768);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(230, 62, 122, 0.25);
+  outline: none;
+  box-shadow: none;
 }
 
 /* Modern UI Design System - Lab Color Space */
