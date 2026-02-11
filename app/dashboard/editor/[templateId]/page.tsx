@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Eye, ChevronDown, ChevronUp, PanelLeftClose, PanelLeft, X, Heart, Coins, Upload, Music, Play, Pause, Globe, Lock, LayoutGrid, Undo2, Redo2 } from "lucide-react";
+import { ArrowLeft, Eye, ChevronDown, ChevronUp, PanelLeftClose, PanelLeft, X, Heart, Coins, Upload, Music, Play, Pause, Globe, Lock, LayoutGrid, Undo2, Redo2, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { compressImage, validateImageFile, getOptimizedFileName } from '@/lib/utils/imageCompression';
@@ -56,6 +56,9 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
   const [areas, setAreas] = useState<{ key: string; label: string }[]>([]);
   const [showSectionsModal, setShowSectionsModal] = useState(false);
   const [draftHiddenAreas, setDraftHiddenAreas] = useState<Set<string>>(new Set());
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [aiPrompt, setAIPrompt] = useState('');
+  const [aiLoading, setAILoading] = useState(false);
   const [selectedVisibility, setSelectedVisibility] = useState<boolean | null>(null);
   const router = useRouter();
   const supabase = createClient();
@@ -145,11 +148,13 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
   useEffect(() => {
     const handleKeydown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        if (aiLoading) return; // Don't close AI modal while loading
         setShowMusicModal(false);
         setShowDetailsModal(false);
         setShowVisibilityModal(false);
         setShowSectionsModal(false);
         setShowShareModal(false);
+        setShowAIModal(false);
         setEditingHook(null);
         setIsChangingImage(false);
       }
@@ -863,6 +868,39 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
     setIsChangingImage(false);
   };
 
+  const handleAIGenerate = async () => {
+    if (!aiPrompt.trim() || aiLoading) return;
+    setAILoading(true);
+    try {
+      // Filter out __area_* hooks — only send user-facing hooks
+      const userHooks = hooks
+        .filter(h => !h.key.startsWith('__'))
+        .map(h => ({ key: h.key, type: h.type, label: h.label, defaultValue: h.defaultValue }));
+
+      const res = await fetch('/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: aiPrompt.trim(), hooks: userHooks }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'AI hatası');
+
+      // Push undo snapshot before applying AI values
+      pushUndo({ ...valuesRef.current });
+
+      // Merge AI values with existing values (preserve area keys)
+      setValues(prev => ({ ...prev, ...data.values }));
+      toast.success('AI ile dolduruldu!');
+      setShowAIModal(false);
+      setAIPrompt('');
+    } catch (error: any) {
+      toast.error(error.message || 'AI oluşturma hatası');
+    } finally {
+      setAILoading(false);
+    }
+  };
+
   const closeEditModal = () => {
     setEditingHook(null);
     setIsChangingImage(false);
@@ -1095,7 +1133,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                         aria-label="Geri al"
                         title="Geri Al (Ctrl+Z)"
                       >
-                        <Undo2 className="h-5 w-5 text-white/70" />
+                        <Undo2 className="h-[25px] w-[25px] text-white/70" />
                       </button>
                       <div className="w-px h-5 bg-white/15 shrink-0" />
                       <button
@@ -1106,9 +1144,16 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                         aria-label="Yinele"
                         title="Yinele (Ctrl+Shift+Z)"
                       >
-                        <Redo2 className="h-5 w-5 text-white/70" />
+                        <Redo2 className="h-[25px] w-[25px] text-white/70" />
                       </button>
                     </div>
+                    <button
+                      onClick={() => setShowAIModal(true)}
+                      className="btn-secondary flex items-center gap-2 px-4 py-2 text-sm"
+                    >
+                      <Sparkles className="h-4 w-4" style={{ color: 'lab(49.5493% 79.8381 2.31768)' }} />
+                      AI ile Doldur
+                    </button>
                     <button
                       onClick={handlePreview}
                       className="btn-secondary flex items-center gap-2 px-4 py-2 text-sm"
@@ -1189,7 +1234,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                     style={{ height: 38 }}
                     aria-label="Geri al"
                   >
-                    <Undo2 className="h-5 w-5 text-white/70" />
+                    <Undo2 className="h-[25px] w-[25px] text-white/70" />
                   </button>
                   <div className="w-px h-5 bg-white/15 shrink-0" />
                   <button
@@ -1199,9 +1244,16 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                     style={{ height: 38 }}
                     aria-label="Yinele"
                   >
-                    <Redo2 className="h-5 w-5 text-white/70" />
+                    <Redo2 className="h-[25px] w-[25px] text-white/70" />
                   </button>
                 </div>
+                <button
+                  onClick={() => setShowAIModal(true)}
+                  className="btn-secondary shrink-0 flex items-center gap-2 px-4 py-2.5 text-sm whitespace-nowrap"
+                >
+                  <Sparkles className="h-4 w-4" style={{ color: 'lab(49.5493% 79.8381 2.31768)' }} />
+                  AI
+                </button>
                 {musicUrl ? (
                   <div className="btn-secondary shrink-0 flex items-center rounded-full overflow-hidden" style={{ padding: '0 1rem' }}>
                     {/* Play/Pause */}
@@ -1283,6 +1335,85 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                   : (project.is_published ? "Güncelle" : "Paylaş")
                 }
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* AI Modal */}
+        {showAIModal && (
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+            onClick={() => { if (!aiLoading) setShowAIModal(false); }}
+          >
+            <div
+              className="bg-zinc-900 w-full sm:w-[500px] rounded-t-3xl sm:rounded-4xl p-5 space-y-4 animate-slide-up sm:animate-scale-in"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {aiLoading ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-4">
+                  <Heart className="h-10 w-10 text-pink-500 fill-pink-500 animate-pulse" />
+                  <p className="text-white text-sm font-medium">Oluşturuluyor...</p>
+                  <p className="text-gray-500 text-xs">Bu işlem birkaç saniye sürebilir</p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                    <div>
+                      <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                        <Sparkles className="h-5 w-5" style={{ color: 'lab(49.5493% 79.8381 2.31768)' }} />
+                        AI ile Doldur
+                      </h3>
+                      <p className="text-xs text-gray-400">Tek cümleyle tüm alanları doldurun</p>
+                    </div>
+                    <button
+                      onClick={() => setShowAIModal(false)}
+                      aria-label="Kapat"
+                      className="rounded-full p-2 bg-white/10 text-gray-400 hover:text-white hover:bg-white/15 transition-all"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <textarea
+                        value={aiPrompt}
+                        onChange={(e) => setAIPrompt(e.target.value.slice(0, 500))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                            e.preventDefault();
+                            handleAIGenerate();
+                          }
+                        }}
+                        className="input-modern w-full min-h-[120px] resize-y text-base"
+                        placeholder="Örnek: 3 yıllık ilişkimiz için romantik bir sayfa, sevgilimin adı Elif..."
+                        maxLength={500}
+                        autoFocus
+                      />
+                      <p className="text-[11px] text-gray-500 mt-1 text-right">{aiPrompt.length}/500</p>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Geri Al ile değişiklikleri iptal edebilirsiniz
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => setShowAIModal(false)}
+                      className="flex-1 btn-secondary py-3"
+                    >
+                      İptal
+                    </button>
+                    <button
+                      onClick={handleAIGenerate}
+                      disabled={!aiPrompt.trim()}
+                      className="flex-1 btn-primary py-3 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Oluştur
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
