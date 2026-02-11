@@ -1445,7 +1445,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                           }
                         }}
                         className="input-modern w-full min-h-[120px] resize-y text-base"
-                        placeholder="Örnek: 3 yıllık ilişkimiz için romantik bir sayfa, sevgilimin adı Elif..."
+                        placeholder="Konu veya kişiyi kısaca anlat. Örnek: Elif için yıldönümü sayfası, 3 yıldır birlikteyiz / Annem için doğum günü sürprizi / En yakın arkadaşım Zeynep'e veda hediyesi"
                         maxLength={500}
                         autoFocus
                       />
