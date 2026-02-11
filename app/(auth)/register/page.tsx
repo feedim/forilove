@@ -38,6 +38,9 @@ function RegisterForm() {
   }, [searchParams]);
 
   const handleOAuthLogin = async (provider: 'google') => {
+    if (referralCode) {
+      sessionStorage.setItem('forilove_pending_referral', referralCode);
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {

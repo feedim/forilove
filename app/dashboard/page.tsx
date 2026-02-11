@@ -28,6 +28,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadData();
+    processOAuthReferral();
   }, []);
 
   useEffect(() => {
@@ -52,6 +53,26 @@ export default function DashboardPage() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, [loadingMore, hasMore]);
+
+  const processOAuthReferral = async () => {
+    try {
+      const pendingRef = sessionStorage.getItem('forilove_pending_referral');
+      if (!pendingRef) return;
+      sessionStorage.removeItem('forilove_pending_referral');
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: referralData } = await supabase.rpc('process_referral_signup', {
+        p_new_user_id: user.id,
+        p_referral_code: pendingRef,
+      });
+
+      if (referralData?.success) {
+        toast.success("Referans bağlantısı kaydedildi!");
+      }
+    } catch {}
+  };
 
   const loadData = async () => {
     try {

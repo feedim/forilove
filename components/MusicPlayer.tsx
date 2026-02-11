@@ -151,7 +151,6 @@ function ProgressBar({ progress, hoverProgress, onSeekAt, onHover, onLeave }: {
     return Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
   }, []);
 
-  // Mouse drag
   useEffect(() => {
     if (!dragging) return;
     const onMove = (e: MouseEvent) => {
@@ -175,7 +174,6 @@ function ProgressBar({ progress, hoverProgress, onSeekAt, onHover, onLeave }: {
     onSeekAt(getPercent(e.clientX));
   }, [getPercent, onSeekAt]);
 
-  // Touch drag
   const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     setActive(true);
     onSeekAt(getPercent(e.touches[0].clientX));
@@ -219,7 +217,6 @@ function ProgressBar({ progress, hoverProgress, onSeekAt, onHover, onLeave }: {
 
 // ─── Main Component ──────────────────────────────────────────
 export default function MusicPlayer({ musicUrl }: { musicUrl: string }) {
-  // State
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [hoverProgress, setHoverProgress] = useState<number | null>(null);
@@ -234,7 +231,6 @@ export default function MusicPlayer({ musicUrl }: { musicUrl: string }) {
   const [hasEnded, setHasEnded] = useState(false);
   const [minimized, setMinimized] = useState(false);
 
-  // Refs
   const playerRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -258,9 +254,7 @@ export default function MusicPlayer({ musicUrl }: { musicUrl: string }) {
     if (!videoId || !containerRef.current) return;
     destroyedRef.current = false;
 
-    // CRITICAL for iOS Safari: Create an <iframe> element with allow="autoplay"
-    // BEFORE it loads any YouTube content. Setting this attribute after load has
-    // no effect — Safari's permissions policy is locked at navigation time.
+    // iOS Safari: allow="autoplay" must be set BEFORE iframe loads content
     const iframe = document.createElement("iframe");
     const iframeId = `yt-music-${videoId}`;
     iframe.id = iframeId;
@@ -268,8 +262,6 @@ export default function MusicPlayer({ musicUrl }: { musicUrl: string }) {
     iframe.setAttribute("allowfullscreen", "");
     iframe.setAttribute("playsinline", "");
     iframe.style.cssText = "border:none;position:absolute;inset:0;width:100%;height:100%;";
-    // Set src explicitly so the embed loads even before YT API is ready.
-    // enablejsapi=1 allows YT.Player to wrap this iframe for programmatic control.
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=0&controls=0&disablekb=1&fs=0&modestbranding=1&playsinline=1&rel=0&origin=${encodeURIComponent(origin)}`;
     containerRef.current.appendChild(iframe);
@@ -284,9 +276,6 @@ export default function MusicPlayer({ musicUrl }: { musicUrl: string }) {
     const initPlayer = () => {
       if (destroyedRef.current || initDone) return;
       initDone = true;
-      // YT.Player wraps the existing iframe (matched by ID) that already has
-      // the embed src with enablejsapi=1. Don't pass videoId/playerVars
-      // since they're already encoded in the iframe src.
       playerRef.current = new window.YT.Player(iframeId, {
         events: {
           onReady: () => {
@@ -300,7 +289,6 @@ export default function MusicPlayer({ musicUrl }: { musicUrl: string }) {
             if (event.data === 1) {
               setIsPlaying(true);
               setHasEnded(false);
-              // iOS Safari: first play came from native iframe tap
               if (!hasInteractedRef.current) {
                 hasInteractedRef.current = true;
                 setHasInteracted(true);
@@ -329,7 +317,6 @@ export default function MusicPlayer({ musicUrl }: { musicUrl: string }) {
       });
     };
 
-    // Robust API detection: global callback + polling fallback
     let pollTimer: ReturnType<typeof setInterval> | null = null;
 
     if (window.YT?.Player) {
@@ -341,7 +328,6 @@ export default function MusicPlayer({ musicUrl }: { musicUrl: string }) {
         prevCallback?.();
         initPlayer();
       };
-      // Polling fallback: global callback can be overwritten by other scripts
       pollTimer = setInterval(() => {
         if (destroyedRef.current) { clearInterval(pollTimer!); pollTimer = null; return; }
         if (window.YT?.Player) {
@@ -394,7 +380,6 @@ export default function MusicPlayer({ musicUrl }: { musicUrl: string }) {
       return;
     }
 
-    // All calls below happen synchronously in the user gesture call stack.
     if (!hasInteracted) {
       hasInteractedRef.current = true;
       setHasInteracted(true);
@@ -454,8 +439,6 @@ export default function MusicPlayer({ musicUrl }: { musicUrl: string }) {
 
   return (
     <>
-      {/* Hidden YouTube iframe — ALWAYS in DOM so music survives mini/full toggle.
-          Managed outside React (document.createElement) so only the useEffect cleanup removes it. */}
       <div
         ref={containerRef}
         style={{
@@ -491,8 +474,8 @@ export default function MusicPlayer({ musicUrl }: { musicUrl: string }) {
 
       {/* ── Full Player ──────────────────────────────────── */}
       {!minimized && (
-        <div className="fixed bottom-0 left-0 right-0 z-[9999]" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999, display: 'block' }} suppressHydrationWarning>
-          <div style={{ background: '#181818', display: 'block', visibility: 'visible', opacity: 1 }}>
+        <div className="fixed bottom-0 left-0 right-0 z-[9999]">
+          <div style={{ background: '#181818' }}>
             <ProgressBar
               progress={progress}
               hoverProgress={hoverProgress}
@@ -501,7 +484,6 @@ export default function MusicPlayer({ musicUrl }: { musicUrl: string }) {
               onLeave={() => setHoverProgress(null)}
             />
 
-            {/* Controls grid */}
             <div className="grid grid-cols-[1fr_auto_1fr] items-center h-[72px] sm:h-[64px]" style={{ padding: "0 16px", gap: "12px" }}>
               {/* Left: Thumbnail + Song info */}
               <div className="flex items-center min-w-0" style={{ gap: "10px" }}>
