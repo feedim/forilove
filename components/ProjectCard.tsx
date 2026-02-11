@@ -59,7 +59,7 @@ export default function ProjectCard({
       {/* Content */}
       <div className="flex-1 min-w-0">
         {viewCount !== undefined && (
-          <span className="flex items-center gap-1 text-[11px] text-gray-500 mb-0.5">
+          <span className="flex items-center gap-1 text-[11px] text-gray-500 mb-1.5">
             <Eye className="h-3 w-3" />
             {formatCount(viewCount)} görüntülenme
           </span>
@@ -68,7 +68,7 @@ export default function ProjectCard({
         <h3 className="text-lg sm:text-xl font-semibold truncate">{title}</h3>
 
         {subtitle && (
-          <p className="text-xs text-gray-500 mb-2 truncate">{subtitle}</p>
+          <p className="text-xs text-gray-500 mt-1 mb-1.5 truncate">{subtitle}</p>
         )}
 
         {/* Actions */}
