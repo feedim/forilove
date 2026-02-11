@@ -1094,8 +1094,16 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
               <>
                 {project && (
                   <>
-                    {/* Scrollable tools area */}
-                    <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+                    {/* Scrollable tools area — same pattern as mobile */}
+                    <div
+                      className="flex-1 min-w-0 flex items-center gap-2 overflow-x-auto pr-6"
+                      style={{
+                        scrollbarWidth: 'none',
+                        WebkitOverflowScrolling: 'touch',
+                        maskImage: 'linear-gradient(to right, black calc(100% - 40px), transparent)',
+                        WebkitMaskImage: 'linear-gradient(to right, black calc(100% - 40px), transparent)',
+                      }}
+                    >
                       <div className="btn-secondary shrink-0 flex items-center rounded-full overflow-hidden" style={{ padding: '0 1rem' }}>
                         <button
                           onClick={undo}
@@ -1201,7 +1209,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                     <button
                       onClick={handlePublish}
                       disabled={saving}
-                      className="btn-primary shrink-0 px-4 py-2 text-sm whitespace-nowrap"
+                      className="btn-primary shrink-0 px-4 py-2 text-sm ml-2 whitespace-nowrap"
                     >
                       {saving
                         ? (project.is_published ? "Güncelleniyor..." : "Paylaşılıyor...")
