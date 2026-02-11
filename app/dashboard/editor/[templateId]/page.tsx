@@ -1059,11 +1059,11 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
         {/* Sections Modal */}
         {showSectionsModal && (
           <div
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
             onClick={() => setShowSectionsModal(false)}
           >
             <div
-              className="bg-zinc-900 w-full sm:w-[420px] rounded-4xl p-5 space-y-4 animate-scale-in max-h-[85vh] flex flex-col"
+              className="bg-zinc-900 w-full sm:w-[420px] rounded-t-3xl sm:rounded-4xl p-5 space-y-4 animate-scale-in max-h-[85vh] flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
@@ -1072,7 +1072,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                     <LayoutGrid className="h-5 w-5 text-pink-400" />
                     Bölümler
                   </h3>
-                  <p className="text-xs text-gray-400">Görünmesini istediğiniz bölümleri seçin</p>
+                  <p className="text-xs text-gray-400">Görünmesini istemediğiniz alanları kapatabilirsiniz</p>
                 </div>
                 <button
                   onClick={() => setShowSectionsModal(false)}
@@ -1151,12 +1151,12 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
           <>
             {/* Modal Overlay */}
             <div
-              className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
               onClick={closeEditModal}
             >
               {/* Modal Content */}
               <div
-                className="bg-zinc-900 w-full sm:w-[500px] rounded-4xl p-5 space-y-4 animate-scale-in max-h-[90vh] overflow-y-auto"
+                className="bg-zinc-900 w-full sm:w-[500px] rounded-t-3xl sm:rounded-4xl p-5 space-y-4 animate-scale-in max-h-[90vh] overflow-y-auto"
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Modal Header */}
@@ -1367,8 +1367,8 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
 
       {/* Music Modal */}
       {showMusicModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-zinc-900 w-full sm:w-[500px] rounded-4xl p-5 space-y-4 animate-scale-in"
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-zinc-900 w-full sm:w-[500px] rounded-t-3xl sm:rounded-4xl p-5 space-y-4 animate-scale-in"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
@@ -1463,8 +1463,8 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
 
       {/* Details Modal */}
       {showDetailsModal && project && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-zinc-900 w-full sm:w-[500px] rounded-4xl p-5 space-y-4 animate-scale-in">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-zinc-900 w-full sm:w-[500px] rounded-t-3xl sm:rounded-4xl p-5 space-y-4 animate-scale-in">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <div>
                 <h3 className="text-lg font-bold text-white">Sayfa Bilgileri</h3>
@@ -1548,8 +1548,8 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
 
       {/* Visibility Modal */}
       {showVisibilityModal && project && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-zinc-900 w-full sm:w-[500px] rounded-4xl p-5 space-y-4 animate-scale-in">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-zinc-900 w-full sm:w-[500px] rounded-t-3xl sm:rounded-4xl p-5 space-y-4 animate-scale-in">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <div>
                 <h3 className="text-lg font-bold text-white">Sayfa Görünürlüğü</h3>
