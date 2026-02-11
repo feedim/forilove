@@ -71,7 +71,7 @@ export function PurchaseConfirmProvider({ children }: { children: React.ReactNod
 
 /* ─── Bottom Sheet ─── */
 
-const COIN_YELLOW = "#EAB308";
+const BRAND_PINK = "lab(49.5493 79.8381 2.31768)";
 
 interface SheetProps {
   options: ConfirmOptions;
@@ -186,16 +186,6 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
           </button>
         </div>
 
-        {/* Item Info */}
-        <div style={{ textAlign: "center", padding: "4px 0" }}>
-          <p style={{ margin: 0, fontSize: 17, fontWeight: 600, color: "#fff" }}>
-            {options.itemName}
-          </p>
-          <p style={{ margin: 0, marginTop: 6, fontSize: 28, fontWeight: 800, color: COIN_YELLOW }}>
-            {options.coinCost} FL Coin
-          </p>
-        </div>
-
         {/* Balance Info */}
         <div
           style={{
@@ -220,7 +210,7 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
               style={{
                 fontSize: 14,
                 fontWeight: 600,
-                color: insufficientBalance ? "#ef4444" : COIN_YELLOW,
+                color: insufficientBalance ? "#ef4444" : "#22c55e",
                 margin: 0,
               }}
             >
@@ -239,8 +229,8 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
               padding: "14px 0",
               borderRadius: 12,
               border: "none",
-              background: insufficientBalance ? "#6366F1" : COIN_YELLOW,
-              color: insufficientBalance ? "#fff" : "#000",
+              background: insufficientBalance ? "#6366F1" : BRAND_PINK,
+              color: "#fff",
               fontSize: 16,
               fontWeight: 700,
               cursor: loading ? "not-allowed" : "pointer",
@@ -257,8 +247,8 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
                 style={{
                   width: 20,
                   height: 20,
-                  border: "2px solid rgba(0,0,0,0.2)",
-                  borderTopColor: "#000",
+                  border: "2px solid rgba(255,255,255,0.3)",
+                  borderTopColor: "#fff",
                   borderRadius: 9999,
                   display: "inline-block",
                   animation: "spin 0.6s linear infinite",
