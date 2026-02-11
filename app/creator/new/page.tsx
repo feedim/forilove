@@ -21,10 +21,7 @@ export default function NewŞablonPage() {
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   const [showAIModal, setShowAIModal] = useState(false);
   const [aiTopic, setAITopic] = useState('');
-  const [aiStyle, setAIStyle] = useState('');
-  const [aiSections, setAISections] = useState('');
-  const [aiColorScheme, setAIColorScheme] = useState('');
-  const [aiMood, setAIMood] = useState('');
+  const [aiDetails, setAIDetails] = useState('');
   const [aiLoading, setAILoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
@@ -167,10 +164,7 @@ export default function NewŞablonPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           topic: aiTopic.trim(),
-          style: aiStyle.trim(),
-          sections: aiSections.trim(),
-          colorScheme: aiColorScheme.trim(),
-          mood: aiMood.trim(),
+          details: aiDetails.trim(),
         }),
       });
       const data = await res.json();
@@ -372,69 +366,30 @@ export default function NewŞablonPage() {
                 </div>
 
                 <div className="space-y-3">
-                  {/* Konu */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1.5">Şablon Konusu *</label>
-                    <input
-                      type="text"
+                    <label className="block text-sm font-medium text-gray-300 mb-1.5">Ne oluşturmak istiyorsun? *</label>
+                    <textarea
                       value={aiTopic}
-                      onChange={(e) => setAITopic(e.target.value.slice(0, 200))}
-                      className="input-modern w-full text-base"
-                      placeholder="Örn: Sevgililer günü kartı, Yıldönümü sayfası, Evlilik teklifi..."
-                      maxLength={200}
+                      onChange={(e) => setAITopic(e.target.value.slice(0, 300))}
+                      className="input-modern w-full min-h-[80px] resize-y text-base"
+                      placeholder={"Örn:\n• Sevgililer günü için romantik bir sayfa\n• My anniversary page, dark elegant style\n• Anneme doğum günü sayfası, pastel renkler"}
+                      maxLength={300}
                       autoFocus
                     />
                   </div>
 
-                  {/* Tasarım Stili */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1.5">Tasarım Stili</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-1.5">
+                      Detaylar <span className="text-gray-500 font-normal">(opsiyonel)</span>
+                    </label>
                     <input
                       type="text"
-                      value={aiStyle}
-                      onChange={(e) => setAIStyle(e.target.value.slice(0, 100))}
-                      className="input-modern w-full text-base"
-                      placeholder="Örn: Minimalist, vintage, modern, elegant, neon..."
-                      maxLength={100}
-                    />
-                  </div>
-
-                  {/* Bölümler */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1.5">İstenen Bölümler</label>
-                    <textarea
-                      value={aiSections}
-                      onChange={(e) => setAISections(e.target.value.slice(0, 200))}
-                      className="input-modern w-full min-h-[80px] resize-y text-base"
-                      placeholder="Örn: Hero kapak, fotoğraf galerisi, aşk mektubu, timeline, sayaç..."
+                      value={aiDetails}
+                      onChange={(e) => setAIDetails(e.target.value.slice(0, 200))}
+                      className="input-modern w-full text-sm"
+                      placeholder="Stil, renk, atmosfer... Örn: dark theme, neon, minimal"
                       maxLength={200}
                     />
-                  </div>
-
-                  {/* Renk & Mood yan yana */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1.5">Renk Şeması</label>
-                      <input
-                        type="text"
-                        value={aiColorScheme}
-                        onChange={(e) => setAIColorScheme(e.target.value.slice(0, 100))}
-                        className="input-modern w-full text-sm"
-                        placeholder="Pembe-mor, altın..."
-                        maxLength={100}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1.5">Atmosfer</label>
-                      <input
-                        type="text"
-                        value={aiMood}
-                        onChange={(e) => setAIMood(e.target.value.slice(0, 100))}
-                        className="input-modern w-full text-sm"
-                        placeholder="Romantik, eğlenceli..."
-                        maxLength={100}
-                      />
-                    </div>
                   </div>
                 </div>
 

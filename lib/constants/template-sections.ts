@@ -613,6 +613,25 @@ img{max-width:100%;height:auto}
 
   const custom = ai.customCSS ? `\n/* ♥ Forilove — AI Theme */\n${ai.customCSS}` : "";
 
+  // ♥ Programmatic color safety — catches what AI misses
+  let safetyCSS = "\n/* ♥ Forilove — Safety Overrides */";
+  // Hero text ALWAYS white (it's over a photo)
+  safetyCSS += "\n.fl-hero-title{color:#fff!important}.fl-hero-subtitle{color:rgba(255,255,255,0.7)!important}.fl-hero-date{color:rgba(255,255,255,0.5)!important}";
+  // Hero overlay must exist (darken the photo)
+  if (!ai.customCSS?.includes(".fl-hero-overlay")) {
+    safetyCSS += "\n.fl-hero-overlay{background:linear-gradient(180deg,rgba(0,0,0,0.15) 0%,rgba(0,0,0,0.55) 100%)!important}";
+  }
+  // Strip any hero background override (protect user's photo)
+  safetyCSS += "\n.fl-hero-bg{background-color:transparent!important}";
+  // Ensure divider is visible
+  if (!ai.customCSS?.includes(".fl-divider")) {
+    safetyCSS += "\n.fl-divider{display:block;width:40px;height:1px;background:var(--primary);opacity:0.2;margin:0 auto 32px}";
+  }
+  // Dark theme: force light text on all sections
+  if (ai.isDarkTheme) {
+    safetyCSS += "\n.fl-timeline-title{color:rgba(255,255,255,0.8)}.fl-quote-text{color:rgba(255,255,255,0.75)}.fl-letter-text{color:rgba(255,255,255,0.6)}.fl-date-value{color:var(--primary)}.fl-date-label{color:rgba(255,255,255,0.3)}.fl-label{color:rgba(255,255,255,0.3)}";
+  }
+
   return `<!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -627,6 +646,7 @@ ${ANIMATION_LIBRARY}
 ${sectionsCSS}
 ${entranceCSS}
 ${custom}
+${safetyCSS}
 </style>
 </head>
 <body>
