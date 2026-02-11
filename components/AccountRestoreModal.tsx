@@ -53,8 +53,8 @@ export default function AccountRestoreModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <div className="bg-zinc-900 rounded-2xl p-8 max-w-md w-full border border-white/10">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-zinc-900 rounded-t-3xl sm:rounded-2xl p-8 max-w-md w-full border border-white/10 animate-slide-up sm:animate-scale-in">
         <h2 className="text-2xl font-bold mb-4 text-white">Hesabınız Silinmek Üzere</h2>
         <p className="text-gray-400 mb-6">
           Hesabınız silinme sürecinde. Hesabınız {daysRemaining} gün içinde kalıcı olarak
