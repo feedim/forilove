@@ -718,6 +718,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
       const reader = new FileReader();
       reader.onload = () => {
         setDraftValue(reader.result as string);
+        setIsChangingImage(false);
         // Store File for deferred upload at publish time
         pendingUploadsRef.current[editingHook] = compressedFile;
       };
@@ -1062,10 +1063,10 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
             onClick={() => setShowSectionsModal(false)}
           >
             <div
-              className="bg-zinc-900 w-full sm:w-[420px] rounded-4xl p-5 space-y-4 animate-scale-in"
+              className="bg-zinc-900 w-full sm:w-[420px] rounded-4xl p-5 space-y-4 animate-scale-in max-h-[85vh] flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
                 <div>
                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
                     <LayoutGrid className="h-5 w-5 text-pink-400" />
@@ -1082,7 +1083,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                 </button>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 overflow-y-auto flex-1 min-h-0">
                 {areas.map((area) => {
                   const isHidden = draftHiddenAreas.has(area.key);
                   return (
@@ -1137,7 +1138,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                   });
                   setShowSectionsModal(false);
                 }}
-                className="btn-primary w-full py-3"
+                className="btn-primary w-full py-3 shrink-0"
               >
                 Tamam
               </button>
