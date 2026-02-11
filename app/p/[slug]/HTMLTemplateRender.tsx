@@ -36,7 +36,16 @@ export function HTMLTemplateRender({ project, musicUrl }: { project: any; musicU
     };
 
     window.addEventListener("error", handleError);
-    return () => window.removeEventListener("error", handleError);
+
+    // Disable overscroll bounce on published pages
+    document.documentElement.style.overscrollBehavior = 'none';
+    document.body.style.overscrollBehavior = 'none';
+
+    return () => {
+      window.removeEventListener("error", handleError);
+      document.documentElement.style.overscrollBehavior = '';
+      document.body.style.overscrollBehavior = '';
+    };
   }, []);
 
   if (!template?.html_content) {

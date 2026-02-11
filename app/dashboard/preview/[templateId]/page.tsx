@@ -22,6 +22,16 @@ export default function PreviewPage() {
   const [musicUrl, setMusicUrl] = useState<string>("");
   const [loaded, setLoaded] = useState(false);
 
+  // Disable overscroll bounce
+  useEffect(() => {
+    document.documentElement.style.overscrollBehavior = 'none';
+    document.body.style.overscrollBehavior = 'none';
+    return () => {
+      document.documentElement.style.overscrollBehavior = '';
+      document.body.style.overscrollBehavior = '';
+    };
+  }, []);
+
   useEffect(() => {
     const raw = sessionStorage.getItem("forilove_preview");
     if (!raw) return;
