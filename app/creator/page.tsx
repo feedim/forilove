@@ -93,6 +93,45 @@ export default function CreatorDashboard() {
         return;
       }
 
+      // 1. Find all projects using this template
+      const { data: projects } = await supabase
+        .from("projects")
+        .select("id, hook_values")
+        .eq("template_id", templateId);
+
+      // 2. Delete R2 images from projects
+      if (projects && projects.length > 0) {
+        for (const project of projects) {
+          const hookValues = project.hook_values as Record<string, string> | null;
+          if (hookValues) {
+            const r2Urls = Object.values(hookValues).filter(
+              (v) => typeof v === 'string' && v.includes('.r2.dev/')
+            );
+            for (const url of r2Urls) {
+              fetch('/api/upload/image', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url }),
+              }).catch(() => {});
+            }
+          }
+        }
+
+        // 3. Delete all projects
+        const projectIds = projects.map(p => p.id);
+        await supabase
+          .from("projects")
+          .delete()
+          .in("id", projectIds);
+      }
+
+      // 4. Delete all purchases
+      await supabase
+        .from("purchases")
+        .delete()
+        .eq("template_id", templateId);
+
+      // 5. Delete template (saved_templates cascade automatically)
       const { error } = await supabase
         .from("templates")
         .delete()
@@ -100,8 +139,9 @@ export default function CreatorDashboard() {
 
       if (error) throw error;
 
-      toast.success("Sablon silindi");
+      toast.success("Sablon ve iliskili tum veriler silindi.");
       setTemplates(templates.filter(t => t.id !== templateId));
+      setUnpublishConfirm(null);
     } catch (error: any) {
       toast.error("Silme hatasi: " + error.message);
     }
