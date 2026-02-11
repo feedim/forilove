@@ -1105,7 +1105,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
             <ArrowLeft className="h-5 w-5" />
             <span className="font-medium">Geri</span>
           </button>
-          <h1 className="text-xl sm:text-2xl font-bold max-w-[200px] sm:max-w-[300px] truncate md:absolute md:left-[120px] md:border-l md:border-white/10 md:pl-4">{template?.name}</h1>
+          <h1 className="text-base sm:text-lg font-bold max-w-[200px] sm:max-w-[300px] truncate md:absolute md:left-[120px] md:border-l md:border-white/10 md:pl-4">{template?.name}</h1>
           {/* Desktop buttons - hidden on mobile, max-width prevents overlap with absolute title */}
           <div className="hidden md:flex items-center gap-2 max-w-[calc(100vw-480px)]">
             {loading ? (

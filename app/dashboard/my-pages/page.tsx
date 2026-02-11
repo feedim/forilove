@@ -202,7 +202,7 @@ export default function MyPagesPage() {
       <main className="container mx-auto px-3 sm:px-6 py-4 pb-24 md:pb-16 max-w-2xl">
 
         {projects && projects.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {projects.map((project) => (
               <ProjectCard
                 key={project.id}

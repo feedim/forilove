@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createRateLimiter } from '@/lib/utils/ai';
 import crypto from 'crypto';
+
+// Rate limit: 5 payment attempts per minute per user
+const checkPaymentLimit = createRateLimiter(5);
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,6 +15,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Yetkisiz erişim' },
         { status: 401 }
+      );
+    }
+
+    if (!checkPaymentLimit(user.id)) {
+      return NextResponse.json(
+        { success: false, error: 'Çok fazla ödeme denemesi. Lütfen bir dakika bekleyin.' },
+        { status: 429 }
       );
     }
 

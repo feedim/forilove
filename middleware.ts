@@ -1,7 +1,48 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
+// ♥ Global IP-based rate limiter for API routes
+const apiRateMap = new Map<string, { count: number; resetAt: number }>()
+const API_RATE_LIMIT = 60      // requests per window
+const API_RATE_WINDOW = 60_000 // 1 minute
+
+function checkApiRateLimit(ip: string): boolean {
+  const now = Date.now()
+  const entry = apiRateMap.get(ip)
+  if (!entry || now > entry.resetAt) {
+    apiRateMap.set(ip, { count: 1, resetAt: now + API_RATE_WINDOW })
+    return true
+  }
+  if (entry.count >= API_RATE_LIMIT) return false
+  entry.count++
+  return true
+}
+
+// Prevent unbounded memory growth — clean stale entries every 5 minutes
+let lastCleanup = Date.now()
+function cleanupRateMap() {
+  const now = Date.now()
+  if (now - lastCleanup < 300_000) return
+  lastCleanup = now
+  for (const [key, entry] of apiRateMap) {
+    if (now > entry.resetAt) apiRateMap.delete(key)
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // ♥ API Rate Limiting — applies to all /api/* routes
+  if (pathname.startsWith('/api/')) {
+    cleanupRateMap()
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    if (!checkApiRateLimit(ip)) {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': '60' } }
+      )
+    }
+    return NextResponse.next()
+  }
 
   const isHomePage = pathname === '/'
   const isProtected = pathname.startsWith('/dashboard') || pathname.startsWith('/admin') || pathname.startsWith('/creator')
@@ -108,6 +149,7 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/',
+    '/api/:path*',
     '/dashboard/:path*',
     '/admin/:path*',
     '/creator/:path*',

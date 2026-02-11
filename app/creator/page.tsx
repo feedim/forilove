@@ -211,7 +211,7 @@ export default function CreatorDashboard() {
           </div>
         ) : (
           <>
-            <div>
+            <div className="space-y-2">
               {templates.map((template) => (
                 <ProjectCard
                   key={template.id}
