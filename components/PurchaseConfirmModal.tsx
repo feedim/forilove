@@ -71,7 +71,7 @@ export function PurchaseConfirmProvider({ children }: { children: React.ReactNod
 
 /* ─── Bottom Sheet ─── */
 
-const BRAND_PINK = "lab(49.5493 79.8381 2.31768)";
+const COIN_YELLOW = "var(--color-yellow-500)";
 
 interface SheetProps {
   options: ConfirmOptions;
@@ -189,8 +189,8 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
         {/* Balance Info */}
         <div
           style={{
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            background: "rgba(234,179,8,0.08)",
+            border: "1px solid rgba(234,179,8,0.2)",
             borderRadius: 12,
             padding: 16,
             display: "flex",
@@ -200,7 +200,7 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: 14, color: "#9ca3af", margin: 0 }}>Mevcut bakiye:</span>
-            <span style={{ fontSize: 14, fontWeight: 600, color: "#fff", margin: 0 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: COIN_YELLOW, margin: 0 }}>
               {options.currentBalance} FL
             </span>
           </div>
@@ -210,7 +210,7 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
               style={{
                 fontSize: 14,
                 fontWeight: 600,
-                color: insufficientBalance ? "#ef4444" : "#22c55e",
+                color: insufficientBalance ? "#ef4444" : COIN_YELLOW,
                 margin: 0,
               }}
             >
@@ -227,6 +227,8 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
             className="btn-primary"
             style={{
               width: "100%",
+              background: COIN_YELLOW,
+              color: "black",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -238,8 +240,8 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
                 style={{
                   width: 20,
                   height: 20,
-                  border: "2px solid rgba(255,255,255,0.3)",
-                  borderTopColor: "#fff",
+                  border: "2px solid rgba(0,0,0,0.2)",
+                  borderTopColor: "#000",
                   borderRadius: 9999,
                   display: "inline-block",
                   animation: "spin 0.6s linear infinite",
