@@ -2,13 +2,10 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { ArrowLeft, Heart, Menu } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-
 import DOMPurify from "isomorphic-dompurify";
 import toast from "react-hot-toast";
-import { AI_PROMPT } from "@/lib/constants/ai-prompt";
 
 export default function EditŞablonPage({ params }: { params: Promise<{ templateId: string }> }) {
   const resolvedParams = use(params);
@@ -290,27 +287,6 @@ export default function EditŞablonPage({ params }: { params: Promise<{ template
             />
           </div>
 
-          {/* AI Prompt */}
-          <div className="border-t border-white/10 p-4 bg-zinc-900/50 max-h-[500px] overflow-y-auto">
-            <p className="text-xs font-semibold text-gray-300 mb-2">Yapay Zeka ile Oluştur (Kopyala & Yapıştır):</p>
-            <div className="relative">
-              <textarea
-                readOnly
-                className="w-full bg-black/30 p-3 rounded text-[11px] leading-relaxed text-gray-300 resize-none focus:outline-none cursor-text select-all ai-prompt-area"
-                rows={32}
-                value={AI_PROMPT}
-                onClick={(e) => (e.target as HTMLTextAreaElement).select()}
-              />
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(AI_PROMPT).then(() => toast.success("Prompt kopyalandi!")).catch(() => {});
-                }}
-                className="absolute top-2 right-2 px-2 py-1 text-[10px] bg-zinc-700 hover:bg-zinc-600 rounded text-gray-300 hover:text-white transition-all"
-              >
-                Kopyala
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Right: Live Preview */}

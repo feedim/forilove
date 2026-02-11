@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft, Heart, Menu, Sparkles, X } from "lucide-react";
+import { ArrowLeft, Menu } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-
 import DOMPurify from "isomorphic-dompurify";
 import toast from "react-hot-toast";
 
@@ -19,10 +17,6 @@ export default function NewŞablonPage() {
   const [saving, setSaving] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
-  const [showAIModal, setShowAIModal] = useState(false);
-  const [aiTopic, setAITopic] = useState('');
-  const [aiDetails, setAIDetails] = useState('');
-  const [aiLoading, setAILoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -155,36 +149,10 @@ export default function NewŞablonPage() {
     }
   };
 
-  const handleAITemplate = async () => {
-    if (!aiTopic.trim() || aiLoading) return;
-    setAILoading(true);
-    try {
-      const res = await fetch('/api/ai/template', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          topic: aiTopic.trim(),
-          details: aiDetails.trim(),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'AI hatası');
-
-      setHtmlContent(data.html);
-      if (!name.trim()) setName(aiTopic.trim().slice(0, 60));
-      toast.success('Şablon oluşturuldu!');
-      setShowAIModal(false);
-    } catch (error: any) {
-      toast.error(error.message || 'Şablon oluşturma hatası');
-    } finally {
-      setAILoading(false);
-    }
-  };
-
   const handlePreview = () => {
     const previewWindow = window.open("", "_blank");
     if (previewWindow) {
-      const sanitized = DOMPurify.sanitize(htmlContent, { WHOLE_DOCUMENT: true, ADD_TAGS: ["style", "link", "meta", "title"], ADD_ATTR: ["target", "data-editable", "data-type", "data-hook"] });
+      const sanitized = DOMPurify.sanitize(htmlContent, { WHOLE_DOCUMENT: true, ADD_TAGS: ["style", "link", "meta", "title"], ADD_ATTR: ["target", "data-editable", "data-type", "data-label", "data-css-property", "data-hook", "data-area", "data-area-label"], ALLOW_DATA_ATTR: true });
       previewWindow.document.write(sanitized);
       previewWindow.document.close();
     }
@@ -211,13 +179,6 @@ export default function NewŞablonPage() {
           </div>
           <h1 className="text-lg font-semibold flex-1 ml-3">Yeni Şablon Oluştur</h1>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowAIModal(true)}
-              className="btn-secondary px-4 py-2 text-sm flex items-center gap-2"
-            >
-              <Sparkles className="h-4 w-4" style={{ color: 'lab(49.5493% 79.8381 2.31768)' }} />
-              AI ile Oluştur
-            </button>
             <button
               onClick={handlePreview}
               className="btn-secondary px-4 py-2 text-sm"
@@ -313,8 +274,6 @@ export default function NewŞablonPage() {
               placeholder="HTML kodunuzu buraya yazın..."
             />
           </div>
-
-          {/* AI Prompt removed — integrated into AI modal */}
         </div>
 
         {/* Right: Live Preview */}
@@ -329,97 +288,6 @@ export default function NewŞablonPage() {
           </div>
         </div>
       </div>
-
-      {/* AI Template Modal */}
-      {showAIModal && (
-        <div
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-          onClick={() => { if (!aiLoading) setShowAIModal(false); }}
-        >
-          <div
-            className="bg-zinc-900 w-full sm:w-[550px] rounded-t-3xl sm:rounded-4xl p-5 space-y-4 animate-slide-up sm:animate-scale-in max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {aiLoading ? (
-              <div className="flex flex-col items-center justify-center py-16 gap-4">
-                <Heart className="h-10 w-10 text-pink-500 fill-pink-500 animate-pulse" />
-                <p className="text-white text-sm font-medium">Şablon oluşturuluyor...</p>
-                <p className="text-gray-500 text-xs">Bu işlem 10-20 saniye sürebilir</p>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                  <div>
-                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                      <Sparkles className="h-5 w-5" style={{ color: 'lab(49.5493% 79.8381 2.31768)' }} />
-                      AI ile Şablon Oluştur
-                    </h3>
-                    <p className="text-xs text-gray-400">Şablon detaylarını girin, AI tasarlasın</p>
-                  </div>
-                  <button
-                    onClick={() => setShowAIModal(false)}
-                    aria-label="Kapat"
-                    className="rounded-full p-2 bg-white/10 text-gray-400 hover:text-white hover:bg-white/15 transition-all"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1.5">Ne oluşturmak istiyorsun? *</label>
-                    <textarea
-                      value={aiTopic}
-                      onChange={(e) => setAITopic(e.target.value.slice(0, 300))}
-                      className="input-modern w-full min-h-[80px] resize-y text-base"
-                      placeholder={"Örn:\n• Sevgililer günü için romantik bir sayfa\n• My anniversary page, dark elegant style\n• Anneme doğum günü sayfası, pastel renkler"}
-                      maxLength={300}
-                      autoFocus
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1.5">
-                      Detaylar <span className="text-gray-500 font-normal">(opsiyonel)</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={aiDetails}
-                      onChange={(e) => setAIDetails(e.target.value.slice(0, 200))}
-                      className="input-modern w-full text-sm"
-                      placeholder="Stil, renk, atmosfer... Örn: dark theme, neon, minimal"
-                      maxLength={200}
-                    />
-                  </div>
-                </div>
-
-                {htmlContent.trim() && (
-                  <p className="text-xs text-yellow-400/80">
-                    Mevcut HTML kodunuzun üzerine yazılacak
-                  </p>
-                )}
-
-                <div className="flex gap-3 pt-2">
-                  <button
-                    onClick={() => setShowAIModal(false)}
-                    className="flex-1 btn-secondary py-3"
-                  >
-                    İptal
-                  </button>
-                  <button
-                    onClick={handleAITemplate}
-                    disabled={!aiTopic.trim()}
-                    className="flex-1 btn-primary py-3 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    Oluştur
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
