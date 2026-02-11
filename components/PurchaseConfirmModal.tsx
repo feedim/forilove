@@ -186,31 +186,40 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
           </button>
         </div>
 
+        {/* Coin Cost */}
+        <div style={{ textAlign: "center", padding: "4px 0 0" }}>
+          <p style={{ margin: 0, fontSize: 14, color: "#9ca3af" }}>{options.itemName}</p>
+          <p style={{ margin: "6px 0 0", fontSize: 32, fontWeight: 800, color: "#EAB308", letterSpacing: "-0.02em" }}>
+            {options.coinCost} FL
+          </p>
+        </div>
+
         {/* Balance Info */}
         <div
           style={{
-            background: "rgba(234,179,8,0.08)",
-            border: "1px solid rgba(234,179,8,0.2)",
+            background: "rgba(234,179,8,0.06)",
+            border: "1px solid rgba(234,179,8,0.15)",
             borderRadius: 12,
-            padding: 16,
+            padding: 14,
             display: "flex",
             flexDirection: "column",
-            gap: 8,
+            gap: 6,
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: 14, color: "#9ca3af", margin: 0 }}>Mevcut bakiye:</span>
-            <span style={{ fontSize: 14, fontWeight: 600, color: COIN_YELLOW, margin: 0 }}>
+            <span style={{ fontSize: 13, color: "#9ca3af", margin: 0 }}>Mevcut bakiye:</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#EAB308", margin: 0 }}>
               {options.currentBalance} FL
             </span>
           </div>
+          <div style={{ height: 1, background: "rgba(234,179,8,0.1)", margin: 0 }} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: 14, color: "#9ca3af", margin: 0 }}>İşlem sonrası:</span>
+            <span style={{ fontSize: 13, color: "#9ca3af", margin: 0 }}>İşlem sonrası:</span>
             <span
               style={{
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: 600,
-                color: insufficientBalance ? "#ef4444" : COIN_YELLOW,
+                color: insufficientBalance ? "#ef4444" : "#EAB308",
                 margin: 0,
               }}
             >
