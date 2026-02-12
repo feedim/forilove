@@ -1693,11 +1693,11 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
             >
               {/* Modal Content */}
               <div
-                className="bg-zinc-900 w-full sm:w-[500px] rounded-t-3xl sm:rounded-4xl p-5 space-y-4 animate-slide-up sm:animate-scale-in max-h-[90vh] overflow-y-auto"
+                className="bg-zinc-900 w-full sm:w-[500px] rounded-t-3xl sm:rounded-4xl p-5 space-y-4 animate-slide-up sm:animate-scale-in max-h-[90vh] flex flex-col"
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Modal Header */}
-                <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
                   <div>
                     <h3 className="text-lg font-bold text-white truncate max-w-[200px]">{currentHook.label}</h3>
                     <p className="text-xs text-gray-400">Düzenle</p>
@@ -1712,7 +1712,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                 </div>
 
                 {/* Edit Field */}
-                <div className="space-y-3">
+                <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
                   {currentHook.type === 'list' ? (
                     <div className="space-y-3">
                       {draftListItems.map((item, idx) => (
@@ -1938,7 +1938,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-3 pt-2">
+                <div className="flex gap-3 pt-2 shrink-0">
                   <button
                     onClick={closeEditModal}
                     className="flex-1 btn-secondary py-3"
