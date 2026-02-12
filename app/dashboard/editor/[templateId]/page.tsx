@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Eye, ChevronDown, ChevronUp, PanelLeftClose, PanelLeft, X, Heart, Coins, Upload, Music, Play, Pause, Globe, Lock, LayoutGrid, Undo2, Redo2, Sparkles } from "lucide-react";
+import { ArrowLeft, Eye, ChevronDown, ChevronUp, PanelLeftClose, PanelLeft, X, Heart, Coins, Upload, Music, Play, Pause, Globe, Lock, LayoutGrid, Undo2, Redo2, Sparkles, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { compressImage, validateImageFile, getOptimizedFileName } from '@/lib/utils/imageCompression';
@@ -1744,10 +1744,10 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                           {draftListItems.length > 1 && (
                             <button
                               onClick={() => setDraftListItems(prev => prev.filter((_, i) => i !== idx))}
-                              className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:text-red-400 hover:bg-white/10 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                              className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:text-red-400 hover:bg-white/10 transition-all"
                               aria-label="Sil"
                             >
-                              <X className="h-4 w-4" />
+                              <Trash2 className="h-4 w-4" />
                             </button>
                           )}
                           {draftListItems.length <= 1 && <div className="w-8 shrink-0" />}
