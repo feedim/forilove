@@ -90,18 +90,18 @@ export default function ReferralSection({ userId }: { userId: string }) {
 
   return (
     <details className="bg-gradient-to-br from-pink-500/10 to-purple-500/10 rounded-xl border border-pink-500/20 group">
-      <summary className="flex items-center justify-between p-4 sm:p-6 cursor-pointer list-none">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-pink-500/20 rounded-lg">
+      <summary className="flex items-center justify-between p-4 sm:p-6 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+        <div className="flex items-center gap-3 text-left min-w-0">
+          <div className="p-2 bg-pink-500/20 rounded-lg shrink-0">
             <Gift className="h-6 w-6 text-pink-500" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h3 className="font-bold text-lg">Arkadaşlarını Davet Et</h3>
             <p className="text-sm text-gray-400">Arkadaşların şablon satın alırsa %5 komisyon kazan.</p>
           </div>
         </div>
         <svg
-          className="h-5 w-5 text-gray-400 transition-transform group-open:rotate-180"
+          className="h-5 w-5 text-gray-400 transition-transform group-open:rotate-180 shrink-0 ml-2"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
