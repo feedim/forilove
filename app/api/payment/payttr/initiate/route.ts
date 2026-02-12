@@ -197,7 +197,19 @@ export async function POST(request: NextRequest) {
       body: params.toString(),
     });
 
-    const payttrResult = await payttrResponse.json();
+    const payttrText = await payttrResponse.text();
+    console.log('[PayTR] Response status:', payttrResponse.status, 'body:', payttrText.substring(0, 500));
+
+    let payttrResult: any;
+    try {
+      payttrResult = JSON.parse(payttrText);
+    } catch {
+      console.error('[PayTR] Invalid JSON response:', payttrText.substring(0, 500));
+      return NextResponse.json(
+        { success: false, error: `PayTR yanıt hatası: ${payttrText.substring(0, 200)}` },
+        { status: 502 }
+      );
+    }
 
     if (payttrResult.status === 'success') {
       return NextResponse.json({
