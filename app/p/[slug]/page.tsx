@@ -14,7 +14,7 @@ export async function generateMetadata({
 
   const { data: project } = await supabase
     .from("projects")
-    .select("title, slug, description, is_published, hook_values, templates(html_content)")
+    .select("title, slug, description, is_published, hook_values")
     .eq("slug", slug)
     .single();
 
@@ -26,17 +26,11 @@ export async function generateMetadata({
   const title = `${project.title} - Forilove`;
   const description = project.description || `${project.title} - Forilove ile oluşturuldu.`;
 
-  // Extract first image from hook_values for OG thumbnail
+  // Extract first image URL from hook_values for OG thumbnail
   let ogImage = `${baseUrl}/icon.png`;
   const hookValues = (project.hook_values || {}) as Record<string, string>;
-  const htmlContent = (project.templates as any)?.html_content || (project.templates as any)?.[0]?.html_content || '';
-
-  // Find image-type keys from template HTML
-  const imageKeyMatch = htmlContent.matchAll(/data-editable="([^"]+)"[^>]*data-type="image"/g);
-  for (const match of imageKeyMatch) {
-    const key = match[1];
-    const val = hookValues[key];
-    if (val && /^https?:\/\//.test(val) && !val.startsWith('data:')) {
+  for (const val of Object.values(hookValues)) {
+    if (typeof val === 'string' && /^https?:\/\/.+\.(jpg|jpeg|png|webp|gif|avif)/i.test(val)) {
       ogImage = val;
       break;
     }
