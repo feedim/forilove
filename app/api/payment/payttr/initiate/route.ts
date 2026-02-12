@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { package_id, card } = body;
+    const { package_id } = body;
 
     if (!package_id) {
       return NextResponse.json(
@@ -41,28 +41,6 @@ export async function POST(request: NextRequest) {
     if (typeof package_id !== 'string' || !uuidRegex.test(package_id)) {
       return NextResponse.json(
         { success: false, error: 'Geçersiz paket ID formatı' },
-        { status: 400 }
-      );
-    }
-
-    // Validate card details
-    if (!card || !card.number || !card.expiry_month || !card.expiry_year || !card.cvv || !card.owner) {
-      return NextResponse.json(
-        { success: false, error: 'Kart bilgileri eksik' },
-        { status: 400 }
-      );
-    }
-
-    // Sanitize card inputs
-    const cardNumber = card.number.replace(/\D/g, '');
-    const expiryMonth = card.expiry_month.replace(/\D/g, '').slice(0, 2);
-    const expiryYear = card.expiry_year.replace(/\D/g, '').slice(0, 2);
-    const cvv = card.cvv.replace(/\D/g, '').slice(0, 4);
-    const cardOwner = card.owner.replace(/[^a-zA-ZçğıöşüÇĞİÖŞÜ\s]/g, '').slice(0, 50);
-
-    if (cardNumber.length < 15 || expiryMonth.length !== 2 || expiryYear.length !== 2 || cvv.length < 3) {
-      return NextResponse.json(
-        { success: false, error: 'Kart bilgileri geçersiz' },
         { status: 400 }
       );
     }
@@ -111,7 +89,7 @@ export async function POST(request: NextRequest) {
     // PayTR parametreleri
     const email = user.email || 'noreply@forilove.com';
     const payment_amount = (pkg.price_try * 100).toString();
-    const user_name = profile?.full_name || cardOwner || 'Forilove Kullanıcısı';
+    const user_name = profile?.full_name || 'Forilove Kullanıcısı';
     const user_address = 'Dijital Urun - Forilove';
     const user_phone = '8508400000';
 
@@ -126,37 +104,38 @@ export async function POST(request: NextRequest) {
     const merchant_ok_url = `${appUrl}/payment/success`;
     const merchant_fail_url = `${appUrl}/payment/failed`;
 
-    // PayTR token oluşturma
-    const hashSTR = `${merchant_id}${user.id.substring(0, 20)}${merchant_oid}${email}${payment_amount}${user_basket}no_installment0${merchant_ok_url}${merchant_fail_url}${merchant_salt}`;
-    const paytr_token = crypto.createHmac('sha256', merchant_key).update(hashSTR).digest('base64');
+    // PayTR iFrame API parametreleri
+    const user_ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || '127.0.0.1';
+    const no_installment = '0';
+    const max_installment = '0';
+    const currency = 'TL';
+    const test_mode = process.env.PAYTTR_TEST_MODE === 'true' ? '1' : '0';
 
-    // PayTR'ye gönderilecek parametreler (kart bilgileri dahil)
+    // PayTR token oluşturma — iFrame API hash formatı
+    const hashSTR = `${merchant_id}${user_ip}${merchant_oid}${email}${payment_amount}${user_basket}${no_installment}${max_installment}${currency}${test_mode}`;
+    const paytr_token = crypto.createHmac('sha256', merchant_key).update(hashSTR + merchant_salt).digest('base64');
+
+    // PayTR'ye gönderilecek parametreler (iFrame API — kart bilgisi gönderilmez)
     const params = new URLSearchParams({
       merchant_id,
-      user_ip: request.headers.get('x-forwarded-for') || '127.0.0.1',
+      user_ip,
       merchant_oid,
       email,
       payment_amount,
       paytr_token,
       user_basket,
-      debug_on: process.env.NODE_ENV === 'development' ? '1' : '0',
-      no_installment: '0',
-      max_installment: '0',
+      debug_on: '1',
+      no_installment,
+      max_installment,
       user_name,
       user_address,
       user_phone,
       merchant_ok_url,
       merchant_fail_url,
       timeout_limit: '30',
-      currency: 'TL',
-      test_mode: process.env.PAYTTR_TEST_MODE === 'true' ? '1' : '0',
+      currency,
+      test_mode,
       lang: 'tr',
-      // Kart bilgileri — PayTR'ye iletilir, sunucuda saklanmaz
-      cc_owner: cardOwner,
-      card_number: cardNumber,
-      expiry_month: expiryMonth,
-      expiry_year: expiryYear,
-      cvv,
     });
 
     // Admin client — RLS bypass (ödeme kayıtları için gerekli)
