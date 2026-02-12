@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import crypto from 'crypto';
 
 /**
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       return new NextResponse('OK', { status: 200 });
     }
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // Ödeme kaydını bul
     const { data: payment, error: paymentError } = await supabase

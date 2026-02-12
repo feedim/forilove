@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createRateLimiter } from '@/lib/utils/ai';
 import crypto from 'crypto';
 
@@ -66,8 +67,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Admin client — RLS bypass (ödeme kayıtları için gerekli)
+    const adminDb = createAdminClient();
+
     // Paketi veritabanından al
-    const { data: pkg, error: pkgError } = await supabase
+    const { data: pkg, error: pkgError } = await adminDb
       .from('coin_packages')
       .select('id, name, coins, price_try, bonus_coins')
       .eq('id', package_id)
@@ -81,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Kullanıcı bilgilerini al
-    const { data: profile } = await supabase
+    const { data: profile } = await adminDb
       .from('profiles')
       .select('full_name, email')
       .eq('user_id', user.id)
@@ -159,7 +163,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Pending ödeme kaydı oluştur (kart bilgisi SAKLANMAZ)
-    const { data: payment, error: paymentError } = await supabase
+    const { data: payment, error: paymentError } = await adminDb
       .from('coin_payments')
       .insert({
         user_id: user.id,
@@ -179,6 +183,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (paymentError) {
+      console.error('[PayTR] Payment insert failed:', paymentError.message, paymentError.details);
       return NextResponse.json(
         { success: false, error: 'Ödeme kaydı oluşturulamadı' },
         { status: 500 }
