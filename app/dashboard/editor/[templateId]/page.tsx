@@ -688,6 +688,18 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
               el.style.boxShadow = 'none';
             });
 
+            // Color indicator badge for color-editable fields
+            if (el.getAttribute('data-type') === 'color') {
+              el.style.position = el.style.position || 'relative';
+              var dot = document.createElement('span');
+              dot.style.cssText = 'position:absolute;top:-4px;right:-4px;width:14px;height:14px;border-radius:50%;border:2px solid rgba(0,0,0,0.5);pointer-events:none;z-index:1;box-shadow:0 1px 3px rgba(0,0,0,0.3)';
+              var cssProp = el.getAttribute('data-css-property') || 'background-color';
+              var style = el.getAttribute('style') || '';
+              var colorMatch = style.match(new RegExp(cssProp + '\\\\s*:\\\\s*([^;]+)'));
+              dot.style.background = colorMatch ? colorMatch[1].trim() : '#ec4899';
+              el.appendChild(dot);
+            }
+
             // For list containers, also add click handlers to child elements
             if (el.getAttribute('data-type') === 'list') {
               Array.from(el.children).forEach(function(child) {

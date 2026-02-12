@@ -14,7 +14,7 @@ export async function generateMetadata({
 
   const { data: project } = await supabase
     .from("projects")
-    .select("title, slug, description, is_published")
+    .select("title, slug, description, is_published, hook_values, templates(html_content)")
     .eq("slug", slug)
     .single();
 
@@ -26,6 +26,22 @@ export async function generateMetadata({
   const title = `${project.title} - Forilove`;
   const description = project.description || `${project.title} - Forilove ile oluşturuldu.`;
 
+  // Extract first image from hook_values for OG thumbnail
+  let ogImage = `${baseUrl}/icon.png`;
+  const hookValues = (project.hook_values || {}) as Record<string, string>;
+  const htmlContent = (project.templates as any)?.html_content || (project.templates as any)?.[0]?.html_content || '';
+
+  // Find image-type keys from template HTML
+  const imageKeyMatch = htmlContent.matchAll(/data-editable="([^"]+)"[^>]*data-type="image"/g);
+  for (const match of imageKeyMatch) {
+    const key = match[1];
+    const val = hookValues[key];
+    if (val && /^https?:\/\//.test(val) && !val.startsWith('data:')) {
+      ogImage = val;
+      break;
+    }
+  }
+
   return {
     title,
     description,
@@ -36,13 +52,13 @@ export async function generateMetadata({
       type: "website",
       siteName: "Forilove",
       locale: "tr_TR",
-      images: [`${baseUrl}/icon.png`],
+      images: [{ url: ogImage, width: 1200, height: 630, alt: project.title }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: [`${baseUrl}/icon.png`],
+      images: [ogImage],
     },
     alternates: {
       canonical: pageUrl,
