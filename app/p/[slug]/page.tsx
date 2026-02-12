@@ -70,9 +70,9 @@ export default async function PublishedPage({
   }
 
   // Increment view count (fire-and-forget — don't block page render)
-  supabase.rpc('increment_view_count', {
+  Promise.resolve(supabase.rpc('increment_view_count', {
     p_project_id: project.id
-  });
+  })).catch(() => {});
 
   return <HTMLTemplateRender project={project} musicUrl={project.music_url} />;
 }

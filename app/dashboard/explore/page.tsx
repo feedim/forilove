@@ -78,7 +78,7 @@ export default function ExplorePage() {
         const map = await res.json();
         setCreatorNames(prev => ({ ...prev, ...map }));
       }
-    } catch { /* silent */ }
+    } catch (e) { if (process.env.NODE_ENV === 'development') console.warn('Operation failed:', e); }
   };
 
   const loadData = async () => {
@@ -104,7 +104,7 @@ export default function ExplorePage() {
           .eq("user_id", user.id);
         setSavedProjects(savedData?.map(s => s.project_id) || []);
       }
-    } catch { /* silent */ } finally { setLoading(false); }
+    } catch (e) { if (process.env.NODE_ENV === 'development') console.warn('Operation failed:', e); } finally { setLoading(false); }
   };
 
   const loadMore = async () => {
@@ -122,7 +122,7 @@ export default function ExplorePage() {
       setProjects((prev) => [...prev, ...(data || [])]);
       setHasMore((data?.length || 0) === ITEMS_PER_PAGE);
       if (data?.length) fetchCreatorNames(data);
-    } catch { /* silent */ } finally { setLoadingMore(false); }
+    } catch (e) { if (process.env.NODE_ENV === 'development') console.warn('Operation failed:', e); } finally { setLoadingMore(false); }
   };
 
   const getTemplateName = (project: PublicProject) => {

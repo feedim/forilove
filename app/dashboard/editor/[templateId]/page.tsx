@@ -121,6 +121,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -128,6 +129,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
       const timer = setTimeout(() => updatePreview(), 200);
       return () => clearTimeout(timer);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values, template]);
 
   useEffect(() => {
@@ -177,6 +179,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
     };
     document.addEventListener('keydown', handleKeydown);
     return () => document.removeEventListener('keydown', handleKeydown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // YouTube IFrame API player for editor music with real progress tracking
@@ -220,7 +223,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
     iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&loop=1&playlist=${videoId}&controls=0&disablekb=1&fs=0&modestbranding=1&playsinline=1&rel=0&origin=${encodeURIComponent(origin)}`;
     container.appendChild(iframe);
 
-    if (!window.YT) {
+    if (!window.YT && !document.querySelector('script[src*="youtube.com/iframe_api"]')) {
       const tag = document.createElement('script');
       tag.src = 'https://www.youtube.com/iframe_api';
       document.body.appendChild(tag);
@@ -283,17 +286,20 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
         supabase.from("templates").select("id, name, slug, coin_price, html_content, created_by").eq("id", resolvedParams.templateId).single(),
       ]);
 
+      if (!profileRes.data || !templateRes.data) {
+        if (!templateRes.data) {
+          toast.error("Şablon bulunamadı");
+          router.push("/dashboard");
+        }
+        return;
+      }
+
       setCoinBalance(profileRes.data?.coin_balance || 0);
 
       const purchaseData = purchaseRes.data;
       setIsPurchased(!!purchaseData);
 
       const templateData = templateRes.data;
-      if (!templateData) {
-        toast.error("Şablon bulunamadı");
-        router.push("/dashboard");
-        return;
-      }
 
       setTemplate(templateData);
 
@@ -522,6 +528,13 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
     return defaults;
   };
 
+  const isValidCssColor = (color: string): boolean => {
+    if (!color) return false;
+    return /^#([0-9A-Fa-f]{3,8})$/.test(color) ||
+           /^(rgb|hsl)a?\s*\(/.test(color) ||
+           /^[a-zA-Z]+$/.test(color);
+  };
+
   const updatePreview = () => {
     const htmlContent = template?.html_content;
     if (!htmlContent) return;
@@ -585,6 +598,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
             element.setAttribute('style', `${currentStyle}; background-image: url('${value}');`);
           }
         } else if (type === 'color') {
+          if (!isValidCssColor(value)) return;
           const safeVal = safeCssValue(value);
           const currentStyle = element.getAttribute('style') || '';
           if (cssProperty) {

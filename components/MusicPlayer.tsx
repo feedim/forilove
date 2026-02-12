@@ -266,7 +266,7 @@ export default function MusicPlayer({ musicUrl }: { musicUrl: string }) {
     iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=0&controls=0&disablekb=1&fs=0&modestbranding=1&playsinline=1&rel=0&origin=${encodeURIComponent(origin)}`;
     containerRef.current.appendChild(iframe);
 
-    if (!window.YT) {
+    if (!window.YT && !document.querySelector('script[src*="youtube.com/iframe_api"]')) {
       const tag = document.createElement("script");
       tag.src = "https://www.youtube.com/iframe_api";
       document.body.appendChild(tag);

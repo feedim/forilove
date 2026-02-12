@@ -22,7 +22,8 @@ export default function SavedTemplatesPage() {
 
   useEffect(() => {
     loadSavedTemplates();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadSavedTemplates = async () => {
     try {

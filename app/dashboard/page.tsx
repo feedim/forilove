@@ -29,12 +29,14 @@ export default function DashboardPage() {
   useEffect(() => {
     loadData();
     processOAuthReferral();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (page > 0) {
       loadMoreTemplates();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
   useEffect(() => {
@@ -71,7 +73,7 @@ export default function DashboardPage() {
       if (referralData?.success) {
         toast.success("Referans bağlantısı kaydedildi!");
       }
-    } catch {}
+    } catch (e) { if (process.env.NODE_ENV === 'development') console.warn('Operation failed:', e); }
   };
 
   const loadData = async () => {
@@ -100,7 +102,7 @@ export default function DashboardPage() {
           const firstName = parts[0] || '';
           const lastName = parts.slice(1).join(' ') || '';
           if (firstName) {
-            supabase.from('profiles').update({ name: firstName, surname: lastName }).eq('user_id', user.id).then(() => {});
+            Promise.resolve(supabase.from('profiles').update({ name: firstName, surname: lastName }).eq('user_id', user.id)).catch(() => {});
           }
         }
       }
@@ -110,6 +112,13 @@ export default function DashboardPage() {
         supabase.from("purchases").select("template_id").eq("user_id", user.id).eq("payment_status", "completed"),
         supabase.from("saved_templates").select("template_id").eq("user_id", user.id),
       ]);
+
+      if (purchasesResult.error) {
+        console.warn('Failed to load purchases:', purchasesResult.error.message);
+      }
+      if (savedResult.error) {
+        console.warn('Failed to load saved templates:', savedResult.error.message);
+      }
 
       const purchasedTemplateIds = purchasesResult.data?.map(p => p.template_id) || [];
       setPurchases(purchasedTemplateIds);

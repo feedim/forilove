@@ -8,6 +8,7 @@ import { PurchaseConfirmProvider } from "@/components/PurchaseConfirmModal";
 const inter = Inter({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const viewport: Viewport = {
@@ -24,17 +25,22 @@ export const metadata: Metadata = {
     yandex: "e8b54ef0d0f19431",
   },
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
+  icons: {
+    icon: "/favicon.png?v=2",
+  },
   openGraph: {
     title: "Forilove - Sevginizi Ölümsüzleştirin",
     description: "Sevginizi ölümsüzleştirin. Kod bilgisi olmadan sevgilinize özel romantik web sayfaları oluşturun.",
     type: "website",
     locale: "tr_TR",
     siteName: "Forilove",
+    images: ["/icon.png"],
   },
   twitter: {
     card: "summary_large_image",
     title: "Forilove - Sevginizi Ölümsüzleştirin",
     description: "Sevginizi ölümsüzleştirin. Kod bilgisi olmadan sevgilinize özel romantik web sayfaları oluşturun.",
+    images: ["/icon.png"],
   },
 };
 
@@ -47,6 +53,10 @@ export default function RootLayout({
     <html lang="tr" suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
+        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+        <link rel="dns-prefetch" href="https://www.youtube.com" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

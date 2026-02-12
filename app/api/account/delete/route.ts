@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     // 0. CSRF protection — verify request origin
     const origin = request.headers.get('origin') || '';
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
-    if (!origin || !siteUrl || !origin.startsWith(siteUrl.replace(/\/$/, ''))) {
+    if (!origin || !siteUrl || origin !== siteUrl.replace(/\/$/, '')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

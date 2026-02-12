@@ -26,11 +26,13 @@ export async function GET(
 
     const bytes = await response.Body.transformToByteArray();
 
+    const allowedOrigin = process.env.NEXT_PUBLIC_SITE_URL || 'https://forilove.com';
+
     return new NextResponse(Buffer.from(bytes), {
       headers: {
         'Content-Type': response.ContentType || 'image/jpeg',
         'Cache-Control': 'public, max-age=31536000, immutable',
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': allowedOrigin,
       },
     });
   } catch (error: any) {
