@@ -70,6 +70,10 @@ export function HTMLTemplateRender({ project, musicUrl }: { project: any; musicU
     // Match data-editable elements and replace their content/attributes
     const regex = new RegExp(`(<[^>]*data-editable="${key}"[^>]*>)(.*?)(<\\/[^>]+>)`, 'gs');
     html = html.replace(regex, (match: string, openTag: string, content: string, closeTag: string) => {
+      // List: skip in regex pass, handled by DOMParser below
+      if (openTag.includes('data-type="list"')) {
+        return match;
+      }
       // Image: update src attribute
       if (openTag.includes('data-type="image"')) {
         const sanitizedUrl = sanitizeUrl(stringValue);
@@ -116,6 +120,43 @@ export function HTMLTemplateRender({ project, musicUrl }: { project: any; musicU
     html = html.replace(imgSrcRegex, `$1${sanitizedUrl}"`);
   });
 
+  // Process list types via DOMParser
+  const listKeys = Object.entries(htmlData).filter(([key]) => {
+    return html.includes(`data-editable="${key}"`) && html.includes('data-type="list"');
+  });
+
+  if (listKeys.length > 0) {
+    const listParser = new DOMParser();
+    const listDoc = listParser.parseFromString(html, 'text/html');
+
+    listKeys.forEach(([key, value]) => {
+      const el = listDoc.querySelector(`[data-editable="${key}"]`);
+      if (!el || el.getAttribute('data-type') !== 'list') return;
+
+      try {
+        const items = JSON.parse(String(value));
+        if (!Array.isArray(items)) return;
+
+        const itemClass = el.getAttribute('data-list-item-class') || '';
+        const sepClass = el.getAttribute('data-list-sep-class') || '';
+        const sepHtml = el.getAttribute('data-list-sep-html') || '';
+        const duplicate = el.getAttribute('data-list-duplicate') === 'true';
+
+        const buildItems = (arr: string[]) => arr.map(text => {
+          let s = `<span class="${escapeHtml(itemClass)}">${escapeHtml(text)}</span>`;
+          if (sepClass) s += `<span class="${escapeHtml(sepClass)}">${sepHtml}</span>`;
+          return s;
+        }).join('');
+
+        let inner = buildItems(items);
+        if (duplicate) inner += buildItems(items);
+        el.innerHTML = inner;
+      } catch {}
+    });
+
+    html = listDoc.documentElement.outerHTML;
+  }
+
   // Remove hidden data-area sections
   const hiddenAreas = Object.entries(htmlData)
     .filter(([key, value]) => key.startsWith('__area_') && value === 'hidden')
@@ -138,7 +179,7 @@ export function HTMLTemplateRender({ project, musicUrl }: { project: any; musicU
   const sanitizedHtml = DOMPurify.sanitize(cleanHtml, {
     WHOLE_DOCUMENT: true,
     ADD_TAGS: ['iframe', 'video', 'audio', 'source', 'style', 'link'],
-    ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'target', 'data-editable', 'data-type', 'data-label', 'media'],
+    ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'target', 'data-editable', 'data-type', 'data-label', 'media', 'data-list-item-class', 'data-list-sep-class', 'data-list-sep-html', 'data-list-duplicate'],
     ALLOW_DATA_ATTR: true,
   });
 

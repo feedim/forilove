@@ -19,7 +19,7 @@ function extractVideoId(url: string): string | null {
 
 interface TemplateHook {
   key: string;
-  type: 'text' | 'image' | 'textarea' | 'color' | 'date' | 'url' | 'background-image';
+  type: 'text' | 'image' | 'textarea' | 'color' | 'date' | 'url' | 'background-image' | 'list';
   label: string;
   defaultValue: string;
 }
@@ -481,14 +481,29 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, 'text/html');
       const editableElements = doc.querySelectorAll('[data-editable]');
+      const seenKeys = new Set<string>();
 
       editableElements.forEach((element) => {
         const key = element.getAttribute('data-editable');
+        if (!key || seenKeys.has(key)) return;
+        seenKeys.add(key);
+
         const type = element.getAttribute('data-type') || 'text';
         const label = element.getAttribute('data-label') || key;
 
         let defaultValue = '';
-        if (type === 'image') {
+        if (type === 'list') {
+          const itemClass = element.getAttribute('data-list-item-class') || '';
+          const duplicate = element.getAttribute('data-list-duplicate') === 'true';
+          const items: string[] = [];
+          if (itemClass) {
+            element.querySelectorAll(`.${itemClass}`).forEach(child => {
+              items.push(child.textContent?.trim() || '');
+            });
+          }
+          const finalItems = duplicate && items.length > 0 ? items.slice(0, Math.ceil(items.length / 2)) : items;
+          defaultValue = JSON.stringify(finalItems.length > 0 ? finalItems : ['']);
+        } else if (type === 'image') {
           defaultValue = element.getAttribute('src') || '';
         } else if (type === 'color') {
           // Extract color value from inline style
@@ -506,14 +521,12 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
           defaultValue = element.textContent?.trim() || '';
         }
 
-        if (key) {
-          hooks.push({
-            key,
-            type: type as TemplateHook['type'],
-            label: label || key,
-            defaultValue,
-          });
-        }
+        hooks.push({
+          key,
+          type: type as TemplateHook['type'],
+          label: label || key,
+          defaultValue,
+        });
       });
     }
 
@@ -608,6 +621,23 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
           }
         } else if (type === 'url') {
           if (isSafeUrl(value)) element.setAttribute('href', value);
+        } else if (type === 'list') {
+          try {
+            const items = JSON.parse(value);
+            if (!Array.isArray(items)) return;
+            const itemClass = element.getAttribute('data-list-item-class') || '';
+            const sepClass = element.getAttribute('data-list-sep-class') || '';
+            const sepHtml = element.getAttribute('data-list-sep-html') || '';
+            const duplicate = element.getAttribute('data-list-duplicate') === 'true';
+            const buildListItems = (arr: string[]) => arr.map(text => {
+              let s = `<span class="${itemClass}">${text}</span>`;
+              if (sepClass) s += `<span class="${sepClass}">${sepHtml}</span>`;
+              return s;
+            }).join('');
+            let inner = buildListItems(items);
+            if (duplicate) inner += buildListItems(items);
+            element.innerHTML = inner;
+          } catch {}
         } else {
           element.textContent = value;
         }
@@ -657,6 +687,19 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
               el.style.outline = '2px solid transparent';
               el.style.boxShadow = 'none';
             });
+
+            // For list containers, also add click handlers to child elements
+            if (el.getAttribute('data-type') === 'list') {
+              Array.from(el.children).forEach(function(child) {
+                child.style.cursor = 'pointer';
+                child.addEventListener('click', function(e) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  var key = el.getAttribute('data-editable');
+                  window.parent.postMessage({ type: 'EDIT_HOOK', key: key }, '*');
+                });
+              });
+            }
           });
         });
       `;
@@ -810,6 +853,17 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
 
   const [editingHook, setEditingHook] = useState<string | null>(null);
   const [draftValue, setDraftValue] = useState<string>("");
+  const [draftListItems, setDraftListItems] = useState<string[]>([]);
+
+  // Populate draftListItems when a list-type hook is opened (covers iframe postMessage path)
+  useEffect(() => {
+    if (!editingHook) return;
+    const hook = hooks.find(h => h.key === editingHook);
+    if (hook?.type === 'list') {
+      const val = valuesRef.current[editingHook] || hook.defaultValue || '[]';
+      try { setDraftListItems(JSON.parse(val)); } catch { setDraftListItems(['']); }
+    }
+  }, [editingHook, hooks]);
 
   const handlePreview = () => {
     // Save current editor state to sessionStorage and open preview page
@@ -838,9 +892,14 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
   };
 
   const openEditModal = (hookKey: string) => {
-    setDraftValue(values[hookKey] || '');
+    const val = values[hookKey] || '';
+    setDraftValue(val);
     setIsChangingImage(false);
-    oldImageUrlRef.current = values[hookKey] || '';
+    oldImageUrlRef.current = val;
+    const hook = hooks.find(h => h.key === hookKey);
+    if (hook?.type === 'list') {
+      try { setDraftListItems(JSON.parse(val || '[]')); } catch { setDraftListItems(['']); }
+    }
     setEditingHook(hookKey);
   };
 
@@ -849,6 +908,12 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
 
     const hook = hooks.find(h => h.key === editingHook);
     let finalValue = draftValue;
+
+    // List type: serialize filtered items
+    if (hook?.type === 'list') {
+      const filtered = draftListItems.filter(item => item.trim());
+      finalValue = JSON.stringify(filtered.length > 0 ? filtered : ['']);
+    }
 
     // R2 cleanup: if image changed and old was on R2, delete it
     const oldUrl = oldImageUrlRef.current;
@@ -1648,7 +1713,45 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
 
                 {/* Edit Field */}
                 <div className="space-y-3">
-                  {currentHook.type === 'textarea' ? (
+                  {currentHook.type === 'list' ? (
+                    <div className="space-y-2">
+                      {draftListItems.map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={item}
+                            onChange={(e) => {
+                              const next = [...draftListItems];
+                              next[idx] = e.target.value.slice(0, 200);
+                              setDraftListItems(next);
+                            }}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveEditModal(); } }}
+                            className="input-modern flex-1 text-base"
+                            placeholder={`Öğe ${idx + 1}`}
+                            maxLength={200}
+                            autoFocus={idx === 0}
+                          />
+                          {draftListItems.length > 1 && (
+                            <button
+                              onClick={() => setDraftListItems(prev => prev.filter((_, i) => i !== idx))}
+                              className="shrink-0 rounded-full p-2 bg-white/10 text-gray-400 hover:text-red-400 hover:bg-white/15 transition-all"
+                              aria-label="Öğeyi sil"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      {draftListItems.length < 20 && (
+                        <button
+                          onClick={() => setDraftListItems(prev => [...prev, ''])}
+                          className="w-full py-3 border-2 border-dashed border-white/20 rounded-xl text-sm text-gray-400 hover:border-pink-500/50 hover:text-white transition-all"
+                        >
+                          + Yeni Öğe Ekle
+                        </button>
+                      )}
+                    </div>
+                  ) : currentHook.type === 'textarea' ? (
                     <div>
                       <textarea
                         value={draftValue}
