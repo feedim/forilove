@@ -15,11 +15,13 @@ export async function POST(request: NextRequest) {
     const total_amount = formData.get('total_amount') as string;
     const hash = formData.get('hash') as string;
 
+    console.log('[PayTR CB] Received:', { merchant_oid, status, total_amount, hash: hash?.substring(0, 10) + '...' });
+
     const merchant_key = (process.env.PAYTTR_MERCHANT_KEY || '').trim();
     const merchant_salt = (process.env.PAYTTR_MERCHANT_SALT || '').trim();
 
     if (!merchant_key || !merchant_salt) {
-      console.error('[PayTR] CRITICAL: PAYTTR_MERCHANT_KEY or PAYTTR_MERCHANT_SALT not configured, skipping payment:', merchant_oid);
+      console.error('[PayTR CB] CRITICAL: env vars missing');
       return new NextResponse('OK', { status: 200 });
     }
 
@@ -31,9 +33,11 @@ export async function POST(request: NextRequest) {
     const hashBuffer = Buffer.from(hash || '', 'utf8');
     const calculatedBuffer = Buffer.from(calculatedHash, 'utf8');
     if (hashBuffer.length !== calculatedBuffer.length || !crypto.timingSafeEqual(hashBuffer, calculatedBuffer)) {
-      console.error('[PayTR] Hash mismatch for merchant_oid:', merchant_oid);
+      console.error('[PayTR CB] Hash mismatch:', { merchant_oid, received: hash, calculated: calculatedHash });
       return new NextResponse('OK', { status: 200 });
     }
+
+    console.log('[PayTR CB] Hash OK for:', merchant_oid);
 
     const supabase = createAdminClient();
 
@@ -45,12 +49,15 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (paymentError || !payment) {
-      console.error('[PayTR] Payment not found:', merchant_oid, paymentError?.message);
+      console.error('[PayTR CB] Payment not found:', merchant_oid, paymentError?.message);
       return new NextResponse('OK', { status: 200 });
     }
 
+    console.log('[PayTR CB] Payment found:', { id: payment.id, status: payment.status, price_paid: payment.price_paid, coins: payment.coins_purchased });
+
     // Zaten işlenmiş mi kontrol et
     if (payment.status === 'completed') {
+      console.log('[PayTR CB] Already completed, skipping:', merchant_oid);
       return new NextResponse('OK', { status: 200 });
     }
 
@@ -58,6 +65,7 @@ export async function POST(request: NextRequest) {
     const expectedAmountKurus = Math.round(payment.price_paid * 100);
     const receivedAmountKurus = parseInt(total_amount, 10);
     if (expectedAmountKurus !== receivedAmountKurus) {
+      console.error('[PayTR CB] Amount mismatch:', { expected: expectedAmountKurus, received: receivedAmountKurus });
       await supabase
         .from('coin_payments')
         .update({
@@ -71,6 +79,8 @@ export async function POST(request: NextRequest) {
 
     // Ödeme başarılı mı?
     if (status === 'success') {
+      console.log('[PayTR CB] Payment success, adding coins:', payment.coins_purchased);
+
       // Atomic coin ekleme
       const totalCoins = payment.coins_purchased;
 
@@ -78,13 +88,13 @@ export async function POST(request: NextRequest) {
         p_user_id: payment.user_id,
         p_amount: totalCoins,
         p_type: 'purchase',
-        p_description: `${payment.coin_packages.name} satın alındı`,
+        p_description: `${payment.coin_packages?.name || 'Paket'} satın alındı`,
         p_reference_id: payment.id,
         p_reference_type: 'payment'
       });
 
       if (coinsError) {
-        console.error('[PayTR] CRITICAL: Coin addition failed for payment:', payment.id, coinsError.message);
+        console.error('[PayTR CB] CRITICAL: Coin addition failed:', payment.id, coinsError.message, coinsError.details, coinsError.hint);
         await supabase
           .from('coin_payments')
           .update({
@@ -97,6 +107,8 @@ export async function POST(request: NextRequest) {
         return new NextResponse('OK', { status: 200 });
       }
 
+      console.log('[PayTR CB] Coins added, marking completed:', payment.id);
+
       // Ödemeyi completed olarak işaretle
       await supabase
         .from('coin_payments')
@@ -106,7 +118,10 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', payment.id);
 
+      console.log('[PayTR CB] DONE — payment completed:', merchant_oid);
+
     } else {
+      console.log('[PayTR CB] Payment failed by PayTR:', merchant_oid);
       // Ödeme başarısız
       await supabase
         .from('coin_payments')
@@ -116,12 +131,11 @@ export async function POST(request: NextRequest) {
           completed_at: new Date().toISOString(),
         })
         .eq('id', payment.id);
-
     }
 
     return new NextResponse('OK', { status: 200 });
   } catch (error) {
-    console.error('[PayTR] Unexpected callback error:', error);
+    console.error('[PayTR CB] Unexpected error:', error);
     return new NextResponse('OK', { status: 200 });
   }
 }
