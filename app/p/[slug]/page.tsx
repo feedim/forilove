@@ -23,10 +23,12 @@ export async function generateMetadata({
   }
 
   const pageUrl = `${baseUrl}/p/${project.slug}`;
-  const title = `${project.title} - Forilove`;
-  const description = project.description || `${project.title} - Forilove ile oluşturuldu.`;
+  const rawTitle = project.title || 'Sayfa';
+  const title = `${rawTitle} - Forilove`;
+  const description = project.description || `${rawTitle} - Forilove ile oluşturuldu`;
+  const longDescription = `${description}. Sevdiklerinize özel dijital sayfalar oluşturun.`;
 
-  // Extract first image URL from hook_values for OG thumbnail
+  // Extract first real image URL from hook_values for social thumbnail
   let ogImage = `${baseUrl}/icon.png`;
   const hookValues = (project.hook_values || {}) as Record<string, string>;
   for (const val of Object.values(hookValues)) {
@@ -37,23 +39,64 @@ export async function generateMetadata({
   }
 
   return {
+    // Base
     title,
-    description,
+    description: longDescription,
+    applicationName: 'Forilove',
+    authors: [{ name: 'Forilove', url: baseUrl }],
+    creator: 'Forilove',
+    publisher: 'Forilove',
+    keywords: ['sevgiliye hediye', 'aşk sayfası', 'dijital hediye', 'forilove', rawTitle],
+    category: 'lifestyle',
+    robots: { index: true, follow: true },
+
+    // OpenGraph — Facebook, LinkedIn, WhatsApp, Telegram, Discord, Slack, iMessage
     openGraph: {
-      title,
+      title: rawTitle,
       description,
       url: pageUrl,
-      type: "website",
-      siteName: "Forilove",
-      locale: "tr_TR",
-      images: [{ url: ogImage, width: 1200, height: 630, alt: project.title }],
+      type: 'website',
+      siteName: 'Forilove',
+      locale: 'tr_TR',
+      images: [{
+        url: ogImage,
+        width: 1200,
+        height: 630,
+        alt: rawTitle,
+        type: 'image/jpeg',
+      }],
     },
+
+    // Twitter/X
     twitter: {
-      card: "summary_large_image",
-      title,
+      card: 'summary_large_image',
+      site: '@forilovecom',
+      creator: '@forilovecom',
+      title: rawTitle,
       description,
-      images: [ogImage],
+      images: [{
+        url: ogImage,
+        alt: rawTitle,
+      }],
     },
+
+    // Discord, Slack theme color
+    other: {
+      'theme-color': '#ec4899',
+      'msapplication-TileColor': '#ec4899',
+      // Pinterest
+      'pinterest-rich-pin': 'true',
+      // Telegram
+      'telegram:channel': '@forilove',
+    },
+
+    // Icons — iMessage, bookmarks, PWA
+    icons: {
+      icon: `${baseUrl}/icon.png`,
+      apple: `${baseUrl}/icon.png`,
+    },
+
+    // Canonical + languages
     alternates: {
       canonical: pageUrl,
     },
