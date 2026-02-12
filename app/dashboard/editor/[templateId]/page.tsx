@@ -1115,16 +1115,18 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
           <h1 className="text-lg sm:text-xl font-bold max-w-[200px] sm:max-w-[300px] truncate md:absolute md:left-[120px] md:border-l md:border-white/10 md:pl-4">{template?.name}</h1>
           {/* Mobile: Paylaş button in header */}
           {isPurchased && project && (
-            <button
-              onClick={handlePublish}
-              disabled={saving}
-              className="md:hidden btn-primary shrink-0 px-4 py-2 text-sm whitespace-nowrap"
-            >
-              {saving
-                ? (project.is_published ? "Güncelleniyor..." : "Paylaşılıyor...")
-                : (project.is_published ? "Güncelle" : "Paylaş")
-              }
-            </button>
+            <div className="md:hidden">
+              <button
+                onClick={handlePublish}
+                disabled={saving}
+                className="btn-primary shrink-0 px-4 py-2 text-sm whitespace-nowrap"
+              >
+                {saving
+                  ? (project.is_published ? "Güncelleniyor..." : "Paylaşılıyor...")
+                  : (project.is_published ? "Güncelle" : "Paylaş")
+                }
+              </button>
+            </div>
           )}
           {/* Desktop buttons - hidden on mobile, max-width prevents overlap with absolute title */}
           <div className="hidden md:flex items-center gap-2 max-w-[calc(100vw-480px)]">
