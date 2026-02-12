@@ -15,16 +15,18 @@ export async function POST(request: NextRequest) {
     const total_amount = formData.get('total_amount') as string;
     const hash = formData.get('hash') as string;
 
-    const merchant_salt = process.env.PAYTTR_MERCHANT_SALT || '';
+    const merchant_key = (process.env.PAYTTR_MERCHANT_KEY || '').trim();
+    const merchant_salt = (process.env.PAYTTR_MERCHANT_SALT || '').trim();
 
-    if (!merchant_salt) {
-      console.error('[PayTR] CRITICAL: PAYTTR_MERCHANT_SALT not configured, skipping payment:', merchant_oid);
+    if (!merchant_key || !merchant_salt) {
+      console.error('[PayTR] CRITICAL: PAYTTR_MERCHANT_KEY or PAYTTR_MERCHANT_SALT not configured, skipping payment:', merchant_oid);
       return new NextResponse('OK', { status: 200 });
     }
 
     // Hash doğrulama (timing-safe comparison)
+    // PayTR callback hash: HMAC-SHA256(merchant_key, merchant_oid + merchant_salt + status + total_amount)
     const hashSTR = `${merchant_oid}${merchant_salt}${status}${total_amount}`;
-    const calculatedHash = crypto.createHmac('sha256', merchant_salt).update(hashSTR).digest('base64');
+    const calculatedHash = crypto.createHmac('sha256', merchant_key).update(hashSTR).digest('base64');
 
     const hashBuffer = Buffer.from(hash || '', 'utf8');
     const calculatedBuffer = Buffer.from(calculatedHash, 'utf8');

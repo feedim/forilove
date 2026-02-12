@@ -66,10 +66,10 @@ export async function POST(request: NextRequest) {
       .eq('user_id', user.id)
       .single();
 
-    // PayTR merchant bilgileri
-    const merchant_id = process.env.PAYTTR_MERCHANT_ID || '';
-    const merchant_key = process.env.PAYTTR_MERCHANT_KEY || '';
-    const merchant_salt = process.env.PAYTTR_MERCHANT_SALT || '';
+    // PayTR merchant bilgileri — .trim() ile olası whitespace/newline temizliği
+    const merchant_id = (process.env.PAYTTR_MERCHANT_ID || '').trim();
+    const merchant_key = (process.env.PAYTTR_MERCHANT_KEY || '').trim();
+    const merchant_salt = (process.env.PAYTTR_MERCHANT_SALT || '').trim();
 
     if (!merchant_id || !merchant_key || !merchant_salt) {
       return NextResponse.json(
@@ -80,6 +80,12 @@ export async function POST(request: NextRequest) {
 
     // Benzersiz sipariş ID oluştur
     const merchant_oid = `FL${Date.now()}${user.id.replace(/-/g, '').substring(0, 8)}`;
+
+    // Kullanıcı IP — x-forwarded-for ilk IP veya x-real-ip fallback
+    const forwardedFor = request.headers.get('x-forwarded-for');
+    const user_ip = forwardedFor
+      ? forwardedFor.split(',')[0].trim()
+      : request.headers.get('x-real-ip') || '127.0.0.1';
 
     // Kullanıcı sepeti (PayTR formatı — base64 encoded JSON)
     const user_basket = Buffer.from(JSON.stringify([
@@ -92,8 +98,12 @@ export async function POST(request: NextRequest) {
     const user_name = profile?.full_name || 'Forilove Kullanıcısı';
     const user_address = 'Dijital Urun - Forilove';
     const user_phone = '8508400000';
+    const no_installment = '1';
+    const max_installment = '0';
+    const currency = 'TL';
+    const test_mode = (process.env.PAYTTR_TEST_MODE || '').trim() === 'true' ? '1' : '0';
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || '').trim();
     if (!appUrl) {
       return NextResponse.json(
         { success: false, error: 'Ödeme sistemi yapılandırması eksik. Lütfen daha sonra tekrar deneyin.' },
@@ -104,54 +114,14 @@ export async function POST(request: NextRequest) {
     const merchant_ok_url = `${appUrl}/payment/success`;
     const merchant_fail_url = `${appUrl}/payment/failed`;
 
-    // PayTR iFrame API parametreleri
-    const user_ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || '127.0.0.1';
-    const no_installment = '0';
-    const max_installment = '0';
-    const currency = 'TL';
-    const test_mode = process.env.PAYTTR_TEST_MODE === 'true' ? '1' : '0';
-
-    // PayTR token oluşturma — iFrame API hash formatı
+    // PayTR iFrame API token oluşturma
     const hashSTR = `${merchant_id}${user_ip}${merchant_oid}${email}${payment_amount}${user_basket}${no_installment}${max_installment}${currency}${test_mode}`;
     const paytr_token = crypto.createHmac('sha256', merchant_key).update(hashSTR + merchant_salt).digest('base64');
-
-    // DEBUG — geçici log
-    console.log('[PayTR DEBUG]', JSON.stringify({
-      merchant_id, user_ip, merchant_oid, email, payment_amount,
-      user_basket: user_basket.substring(0, 50),
-      no_installment, max_installment, currency, test_mode,
-      merchant_ok_url, merchant_fail_url,
-      token_length: paytr_token.length,
-      hash_input_length: (hashSTR + merchant_salt).length,
-    }));
-
-    // PayTR'ye gönderilecek parametreler (iFrame API — kart bilgisi gönderilmez)
-    const params = new URLSearchParams({
-      merchant_id,
-      user_ip,
-      merchant_oid,
-      email,
-      payment_amount,
-      paytr_token,
-      user_basket,
-      debug_on: '1',
-      no_installment,
-      max_installment,
-      user_name,
-      user_address,
-      user_phone,
-      merchant_ok_url,
-      merchant_fail_url,
-      timeout_limit: '30',
-      currency,
-      test_mode,
-      lang: 'tr',
-    });
 
     // Admin client — RLS bypass (ödeme kayıtları için gerekli)
     const adminDb = createAdminClient();
 
-    // Pending ödeme kaydı oluştur (kart bilgisi SAKLANMAZ)
+    // Pending ödeme kaydı oluştur
     const { data: payment, error: paymentError } = await adminDb
       .from('coin_payments')
       .insert({
@@ -179,45 +149,52 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // PayTR API — token al
+    // PayTR API — iFrame token al
+    const params = new URLSearchParams({
+      merchant_id,
+      user_ip,
+      merchant_oid,
+      email,
+      payment_amount,
+      paytr_token,
+      user_basket,
+      debug_on: test_mode === '1' ? '1' : '0',
+      no_installment,
+      max_installment,
+      user_name,
+      user_address,
+      user_phone,
+      merchant_ok_url,
+      merchant_fail_url,
+      timeout_limit: '30',
+      currency,
+      test_mode,
+      lang: 'tr',
+    });
+
     const payttrResponse = await fetch('https://www.paytr.com/odeme/api/get-token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params.toString(),
     });
 
-    const payttrText = await payttrResponse.text();
-    console.log('[PayTR] Response status:', payttrResponse.status, 'body:', payttrText.substring(0, 500));
-
-    let payttrResult: any;
-    try {
-      payttrResult = JSON.parse(payttrText);
-    } catch {
-      console.error('[PayTR] Invalid JSON response:', payttrText.substring(0, 500));
-      return NextResponse.json(
-        { success: false, error: `PayTR yanıt hatası: ${payttrText.substring(0, 200)}` },
-        { status: 502 }
-      );
-    }
-
-    console.log('[PayTR] Full response:', JSON.stringify(payttrResult));
+    const payttrResult = await payttrResponse.json();
 
     if (payttrResult.status === 'success') {
       return NextResponse.json({
         success: true,
-        payment_url: `https://www.paytr.com/odeme/guvenli/${payttrResult.token}`,
+        token: payttrResult.token,
         merchant_oid,
       });
     } else {
       return NextResponse.json(
-        { success: false, error: payttrResult.reason || 'Ödeme başlatılamadı.', debug: { merchant_id, user_ip, merchant_oid, email, payment_amount, user_basket: user_basket.substring(0, 60), no_installment, max_installment, currency, test_mode, paytr_token: paytr_token.substring(0, 20) + '...' } },
+        { success: false, error: payttrResult.reason || 'Ödeme başlatılamadı. Lütfen tekrar deneyin.' },
         { status: 400 }
       );
     }
   } catch (error: any) {
-    console.error('[PayTR] Unhandled error:', error?.message, error?.stack);
     return NextResponse.json(
-      { success: false, error: `Sunucu hatası: ${error?.message || 'Bilinmeyen hata'}` },
+      { success: false, error: 'Sunucu hatası' },
       { status: 500 }
     );
   }
