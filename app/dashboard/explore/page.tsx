@@ -261,7 +261,7 @@ export default function ExplorePage() {
                 <div className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center active:scale-95 transition border border-white/10">
                   <Search className="h-5 w-5 text-white" />
                 </div>
-                <span className="text-[10px] font-medium text-white/70 drop-shadow-lg">İncele</span>
+                <span className="text-[10px] font-semibold" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.5)' }}>İncele</span>
               </button>
 
               {/* Use template */}
@@ -270,7 +270,7 @@ export default function ExplorePage() {
                   <div className="w-12 h-12 rounded-full bg-pink-500/80 backdrop-blur-md flex items-center justify-center active:scale-95 transition border border-pink-500/30">
                     <Wand2 className="h-5 w-5 text-white" />
                   </div>
-                  <span className="text-[10px] font-medium text-white/70 drop-shadow-lg">Kullan</span>
+                  <span className="text-[10px] font-semibold" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.5)' }}>Kullan</span>
                 </Link>
               )}
 
@@ -279,7 +279,7 @@ export default function ExplorePage() {
                 <div className={`w-12 h-12 rounded-full backdrop-blur-md flex items-center justify-center active:scale-95 transition border ${savedProjects.includes(project.id) ? 'bg-pink-500/80 border-pink-500/30' : 'bg-black/50 border-white/10'}`}>
                   <Bookmark className={`h-5 w-5 ${savedProjects.includes(project.id) ? 'text-white fill-white' : 'text-white'}`} />
                 </div>
-                <span className="text-[10px] font-medium text-white/70 drop-shadow-lg">Kaydet</span>
+                <span className="text-[10px] font-semibold" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.5)' }}>Kaydet</span>
               </button>
 
               {/* Share */}
@@ -287,7 +287,7 @@ export default function ExplorePage() {
                 <div className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center active:scale-95 transition border border-white/10">
                   <Share2 className="h-5 w-5 text-white" />
                 </div>
-                <span className="text-[10px] font-medium text-white/70 drop-shadow-lg">Paylaş</span>
+                <span className="text-[10px] font-semibold" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.5)' }}>Paylaş</span>
               </button>
             </div>
 
