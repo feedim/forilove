@@ -13,6 +13,10 @@ export default function EditŞablonPage({ params }: { params: Promise<{ template
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
   const [coinPrice, setCoinPrice] = useState(100);
+  const [discountPrice, setDiscountPrice] = useState<number | null>(null);
+  const [discountLabel, setDiscountLabel] = useState("");
+  const [discountDuration, setDiscountDuration] = useState<number | null>(null);
+  const [discountExpiresAt, setDiscountExpiresAt] = useState<string | null>(null);
   const [htmlContent, setHtmlContent] = useState("");
   const [previewHtml, setPreviewHtml] = useState("");
   const [loading, setLoading] = useState(true);
@@ -82,6 +86,9 @@ export default function EditŞablonPage({ params }: { params: Promise<{ template
       setSlug(template.slug || "");
       setDescription(template.description || "");
       setCoinPrice(template.coin_price || 100);
+      setDiscountPrice(template.discount_price || null);
+      setDiscountLabel(template.discount_label || "");
+      setDiscountExpiresAt(template.discount_expires_at || null);
       setHtmlContent(template.html_content || "");
       setPreviewHtml(template.html_content || "");
     } catch (error) {
@@ -133,6 +140,14 @@ export default function EditŞablonPage({ params }: { params: Promise<{ template
       const safeSlug = trimmedSlug.replace(/[^a-z0-9-]/g, '').substring(0, 40);
       const safeDescription = trimmedDesc.substring(0, 50);
 
+      // Calculate discount_expires_at from duration if setting new discount
+      let expiresAt = discountExpiresAt;
+      if (discountPrice && discountDuration) {
+        const expires = new Date();
+        expires.setHours(expires.getHours() + discountDuration);
+        expiresAt = expires.toISOString();
+      }
+
       const { error } = await supabase
         .from("templates")
         .update({
@@ -140,6 +155,9 @@ export default function EditŞablonPage({ params }: { params: Promise<{ template
           slug: safeSlug,
           description: safeDescription,
           coin_price: Math.max(0, Math.min(9999, coinPrice)),
+          discount_price: discountPrice || null,
+          discount_label: discountPrice ? (discountLabel.trim() || null) : null,
+          discount_expires_at: discountPrice ? expiresAt : null,
           html_content: htmlContent,
         })
         .eq("id", resolvedParams.templateId);
@@ -273,6 +291,96 @@ export default function EditŞablonPage({ params }: { params: Promise<{ template
                 min="0"
                 max="9999"
               />
+            </div>
+
+            {/* Discount Section */}
+            <div className="border border-white/10 rounded-xl p-4 space-y-3 bg-white/[0.02]">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-pink-400">İndirim</label>
+                {discountPrice ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDiscountPrice(null);
+                      setDiscountLabel("");
+                      setDiscountDuration(null);
+                      setDiscountExpiresAt(null);
+                    }}
+                    className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                  >
+                    İndirimi Kaldır
+                  </button>
+                ) : null}
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">İndirimli Fiyat (FL)</label>
+                <input
+                  type="number"
+                  value={discountPrice ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value === "" ? null : Math.min(coinPrice - 1, Math.max(0, parseInt(e.target.value) || 0));
+                    setDiscountPrice(val);
+                  }}
+                  placeholder="Örn: 99"
+                  className="input-modern w-full"
+                  min="0"
+                  max={coinPrice - 1}
+                />
+              </div>
+
+              {discountPrice !== null && (
+                <>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">İndirim Nedeni</label>
+                    <input
+                      type="text"
+                      value={discountLabel}
+                      onChange={(e) => setDiscountLabel(e.target.value.slice(0, 30))}
+                      placeholder="Örn: Sınırlı Süre, 14 Şubat'a Özel"
+                      className="input-modern w-full"
+                      maxLength={30}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">İndirim Süresi</label>
+                    <select
+                      value={discountDuration ?? ""}
+                      onChange={(e) => {
+                        const val = e.target.value === "" ? null : parseInt(e.target.value);
+                        setDiscountDuration(val);
+                        if (!val) setDiscountExpiresAt(null);
+                      }}
+                      className="input-modern w-full"
+                    >
+                      <option value="">Süresiz</option>
+                      <option value="6">6 Saat</option>
+                      <option value="12">12 Saat</option>
+                      <option value="24">24 Saat</option>
+                      <option value="48">48 Saat</option>
+                      <option value="72">72 Saat (3 Gün)</option>
+                      <option value="168">1 Hafta</option>
+                      <option value="720">1 Ay</option>
+                    </select>
+                  </div>
+
+                  {discountExpiresAt && (
+                    <p className="text-xs text-yellow-500/80">
+                      Mevcut bitiş: {new Date(discountExpiresAt).toLocaleString('tr-TR')}
+                    </p>
+                  )}
+
+                  <div className="bg-pink-500/10 border border-pink-500/20 rounded-lg px-3 py-2">
+                    <p className="text-xs text-pink-300">
+                      <span className="line-through text-gray-500">{coinPrice} FL</span>
+                      {" → "}
+                      <span className="font-bold text-yellow-500">{discountPrice} FL</span>
+                      {discountLabel && <span className="ml-1 text-pink-400">({discountLabel})</span>}
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

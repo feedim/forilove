@@ -1,6 +1,7 @@
 -- Add discount columns to templates table
 ALTER TABLE templates ADD COLUMN IF NOT EXISTS discount_price integer;
 ALTER TABLE templates ADD COLUMN IF NOT EXISTS discount_label text;
+ALTER TABLE templates ADD COLUMN IF NOT EXISTS discount_expires_at timestamptz;
 
 -- Update template prices: Premium templates (179 FL)
 UPDATE templates SET coin_price = 179, discount_price = 99, discount_label = 'Sınırlı Süre'

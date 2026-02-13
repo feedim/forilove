@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 import { compressImage, validateImageFile, getOptimizedFileName } from '@/lib/utils/imageCompression';
 import { ShareSheet } from '@/components/ShareIconButton';
 import { usePurchaseConfirm } from '@/components/PurchaseConfirmModal';
+import { getActivePrice, isDiscountActive } from '@/lib/discount';
 
 declare global { interface Window { YT: any; onYouTubeIframeAPIReady: (() => void) | undefined; } }
 
@@ -304,7 +305,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
       const [profileRes, purchaseRes, templateRes] = await Promise.all([
         supabase.from('profiles').select('coin_balance').eq('user_id', user.id).single(),
         supabase.from("purchases").select("id, template_id, payment_status").eq("user_id", user.id).eq("template_id", resolvedParams.templateId).eq("payment_status", "completed").maybeSingle(),
-        supabase.from("templates").select("id, name, slug, coin_price, discount_price, discount_label, html_content, created_by").eq("id", resolvedParams.templateId).single(),
+        supabase.from("templates").select("id, name, slug, coin_price, discount_price, discount_label, discount_expires_at, html_content, created_by").eq("id", resolvedParams.templateId).single(),
       ]);
 
       if (!profileRes.data || !templateRes.data) {
@@ -1098,14 +1099,14 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
   };
 
   const handlePurchase = async () => {
-    const coinPrice = template.discount_price ?? template.coin_price ?? 0;
+    const coinPrice = getActivePrice(template);
 
     const result = await confirm({
       itemName: template.name,
       description: "Şablonu satın alıp düzenlemeye başlayın",
       coinCost: coinPrice,
-      originalPrice: template.discount_price ? template.coin_price : undefined,
-      discountLabel: template.discount_label || undefined,
+      originalPrice: isDiscountActive(template) ? template.coin_price : undefined,
+      discountLabel: isDiscountActive(template) ? template.discount_label : undefined,
       currentBalance: coinBalance,
       icon: 'template',
       onConfirm: async () => {
@@ -1115,7 +1116,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
         // Verify template is still active before purchase
         const { data: freshTemplate } = await supabase
           .from('templates')
-          .select('is_active, coin_price, discount_price')
+          .select('is_active, coin_price, discount_price, discount_expires_at')
           .eq('id', template.id)
           .single();
 
@@ -1123,8 +1124,8 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
           return { success: false, error: 'Bu şablon artık satışta değil.' };
         }
 
-        // Use fresh price from DB (prefer discount_price, prevent client-side manipulation)
-        const verifiedPrice = freshTemplate.discount_price ?? freshTemplate.coin_price ?? coinPrice;
+        // Use fresh price from DB (expiry-aware, prevent client-side manipulation)
+        const verifiedPrice = getActivePrice(freshTemplate);
 
         // Spend coins using database function
         const { data: spendResult, error: spendError } = await supabase.rpc('spend_coins', {
@@ -1236,7 +1237,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                 className="btn-primary px-6 py-2 text-sm flex items-center gap-2"
               >
                 <Coins className="h-4 w-4 text-yellow-300" />
-                {purchasing ? "..." : `${template?.discount_price ?? template?.coin_price ?? 0} FL`}
+                {purchasing ? "..." : `${getActivePrice(template)} FL`}
               </button>
             ) : (
               <>
@@ -1423,7 +1424,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                 className="btn-primary flex-1 py-2.5 text-sm flex items-center justify-center gap-2 whitespace-nowrap truncate"
               >
                 <Coins className="h-4 w-4 text-yellow-300" />
-                {purchasing ? "..." : `${template?.discount_price ?? template?.coin_price ?? 0} FL`}
+                {purchasing ? "..." : `${getActivePrice(template)} FL`}
               </button>
             </div>
           </div>

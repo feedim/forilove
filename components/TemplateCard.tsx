@@ -2,6 +2,7 @@ import Link from "next/link";
 import DOMPurify from "isomorphic-dompurify";
 import { Heart, Coins, Bookmark, Eye } from "lucide-react";
 import { useRef } from "react";
+import { isDiscountActive } from "@/lib/discount";
 
 interface TemplateCardProps {
   template: any;
@@ -34,6 +35,7 @@ export default function TemplateCard({
 }: TemplateCardProps) {
   const isPublished = template.projectStatus === 'published';
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const hasDiscount = isDiscountActive(template);
 
   const handleSaveClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -99,7 +101,7 @@ export default function TemplateCard({
       <div className="absolute inset-0 p-6 flex flex-col justify-between bg-gradient-to-t from-black via-black/50 to-transparent">
         <div className="flex items-start">
           <div className="flex items-center gap-2">
-            {template.discount_label && !isPurchased && !isPublished && (
+            {hasDiscount && template.discount_label && !isPurchased && !isPublished && (
               <span className="bg-pink-600 text-white text-xs font-bold px-3 py-1.5 rounded-full uppercase">
                 {template.discount_label}
               </span>
@@ -172,7 +174,7 @@ export default function TemplateCard({
                 <>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <Coins className="h-6 w-6 text-yellow-500" />
-                    {template.discount_price ? (
+                    {hasDiscount ? (
                       <>
                         <span className="text-base font-bold text-gray-500 line-through decoration-red-500/70 decoration-2">
                           {template.coin_price}

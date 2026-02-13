@@ -10,6 +10,7 @@ import toast from "react-hot-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import TemplateCard from "@/components/TemplateCard";
 import { usePurchaseConfirm } from "@/components/PurchaseConfirmModal";
+import { getActivePrice, isDiscountActive } from "@/lib/discount";
 
 export default function SavedTemplatesPage() {
   const [templates, setTemplates] = useState<any[]>([]);
@@ -47,7 +48,7 @@ export default function SavedTemplatesPage() {
         .from("saved_templates")
         .select(`
           template_id,
-          templates (id, name, slug, coin_price, discount_price, discount_label, description, html_content)
+          templates (id, name, slug, coin_price, discount_price, discount_label, discount_expires_at, description, html_content)
         `)
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
@@ -138,14 +139,14 @@ export default function SavedTemplatesPage() {
   }, [purchases, router]);
 
   const handlePurchase = async (template: any) => {
-    const coinPrice = template.discount_price ?? template.coin_price ?? 0;
+    const coinPrice = getActivePrice(template);
 
     const confirmResult = await confirm({
       itemName: template.name,
       description: "Şablonu satın alıp düzenlemeye başlayın",
       coinCost: coinPrice,
-      originalPrice: template.discount_price ? template.coin_price : undefined,
-      discountLabel: template.discount_label || undefined,
+      originalPrice: isDiscountActive(template) ? template.coin_price : undefined,
+      discountLabel: isDiscountActive(template) ? template.discount_label : undefined,
       currentBalance: coinBalance,
       icon: 'template',
       onConfirm: async () => {
