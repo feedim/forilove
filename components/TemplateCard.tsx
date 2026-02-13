@@ -1,7 +1,7 @@
 import Link from "next/link";
 import DOMPurify from "isomorphic-dompurify";
 import { Heart, Coins, Bookmark, Eye } from "lucide-react";
-import { useRef, useCallback, useEffect, useState } from "react";
+import { useRef, useCallback, useEffect } from "react";
 
 interface TemplateCardProps {
   template: any;
@@ -35,18 +35,20 @@ export default function TemplateCard({
   const isPublished = template.projectStatus === 'published';
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
+  const isHoveredRef = useRef(false);
+  const isMobileRef = useRef(false);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)');
-    setIsMobile(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    isMobileRef.current = mq.matches;
+    const handler = (e: MediaQueryListEvent) => { isMobileRef.current = e.matches; };
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   }, []);
 
-  const startAutoScroll = useCallback(() => {
-    if (isMobile) return;
+  const kickScroll = useCallback(() => {
+    if (isMobileRef.current || !isHoveredRef.current) return;
+    if (scrollTimerRef.current) return; // already running
     const iframe = iframeRef.current;
     if (!iframe) return;
     try {
@@ -55,7 +57,6 @@ export default function TemplateCard({
       const maxScroll = doc.documentElement.scrollHeight - doc.documentElement.clientHeight;
       if (maxScroll <= 0) return;
 
-      // Calculate jump positions based on content length
       const steps = maxScroll > 3000 ? 5 : maxScroll > 1500 ? 4 : 3;
       const positions: number[] = [];
       for (let i = 0; i < steps; i++) {
@@ -64,21 +65,32 @@ export default function TemplateCard({
 
       doc.documentElement.style.scrollBehavior = 'smooth';
       let idx = 0;
+      doc.documentElement.scrollTop = 0;
 
       const jumpNext = () => {
+        if (!isHoveredRef.current) return;
         idx++;
         if (idx >= positions.length) idx = 0;
         doc.documentElement.scrollTop = positions[idx];
         scrollTimerRef.current = setTimeout(jumpNext, 1800);
       };
 
-      // Start from top, wait a bit, then jump
-      doc.documentElement.scrollTop = 0;
-      scrollTimerRef.current = setTimeout(jumpNext, 1200);
+      scrollTimerRef.current = setTimeout(jumpNext, 1000);
     } catch { /* cross-origin, skip */ }
-  }, [isMobile]);
+  }, []);
+
+  const handleMouseEnter = useCallback(() => {
+    isHoveredRef.current = true;
+    kickScroll();
+  }, [kickScroll]);
+
+  const handleIframeLoad = useCallback(() => {
+    // iframe just loaded — if already hovered, start scrolling
+    if (isHoveredRef.current) kickScroll();
+  }, [kickScroll]);
 
   const stopAutoScroll = useCallback(() => {
+    isHoveredRef.current = false;
     if (scrollTimerRef.current) {
       clearTimeout(scrollTimerRef.current);
       scrollTimerRef.current = null;
@@ -104,7 +116,7 @@ export default function TemplateCard({
   return (
     <div
       onClick={onClick}
-      onMouseEnter={startAutoScroll}
+      onMouseEnter={handleMouseEnter}
       onMouseLeave={stopAutoScroll}
       className="group relative aspect-[3/4] bg-zinc-900 overflow-hidden border border-white/10 hover:border-pink-500/30 transition-all cursor-pointer"
       style={{ borderRadius: '29px' }}
@@ -115,6 +127,7 @@ export default function TemplateCard({
           <iframe
             ref={iframeRef}
             src={previewUrl}
+            onLoad={handleIframeLoad}
             className="w-full h-full pointer-events-none scale-[0.3] origin-top-left"
             style={{ width: '333%', height: '333%' }}
             sandbox="allow-same-origin"
@@ -124,6 +137,7 @@ export default function TemplateCard({
           <iframe
             ref={iframeRef}
             srcDoc={DOMPurify.sanitize(template.html_content, { WHOLE_DOCUMENT: true, ADD_TAGS: ['style', 'link'], ADD_ATTR: ['data-editable', 'data-type', 'data-label'] })}
+            onLoad={handleIframeLoad}
             className="w-full h-full pointer-events-none scale-[0.3] origin-top-left"
             style={{ width: '333%', height: '333%' }}
             sandbox="allow-same-origin"
