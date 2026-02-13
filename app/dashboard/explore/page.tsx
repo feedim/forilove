@@ -255,7 +255,7 @@ export default function ExplorePage() {
             <div className="absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-none z-10" />
 
             {/* Right side actions */}
-            <div className="absolute right-3 bottom-32 sm:bottom-20 z-20 flex flex-col items-center gap-5">
+            <div className="absolute right-3 bottom-32 sm:bottom-20 z-20 flex flex-col items-center gap-5 bg-black/30 backdrop-blur-sm rounded-3xl py-3 px-1.5">
               {/* Inspect */}
               <button onClick={() => setInspectingProject(project)} className="flex flex-col items-center gap-1" aria-label="Sayfayı incele">
                 <div className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-md flex items-center justify-center active:scale-95 transition border border-white/10">
@@ -328,8 +328,8 @@ export default function ExplorePage() {
 
       {/* Inspect Modal */}
       {inspectingProject && (
-        <div className="fixed inset-0 z-50 bg-black">
-          <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent">
+        <div className="fixed inset-0 z-[9999] bg-black">
+          <div className="absolute top-0 left-0 right-0 z-[10000] flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent">
             <button
               onClick={() => setInspectingProject(null)}
               className="flex items-center gap-2 text-white/80 hover:text-white transition"
