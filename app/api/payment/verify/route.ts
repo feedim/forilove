@@ -64,42 +64,58 @@ export async function POST(request: NextRequest) {
     const totalCoins = payment.coins_purchased;
     const packageName = payment.metadata?.package_name || 'Paket';
 
-    // 5a. Bakiyeyi al
-    const { data: profile, error: profileError } = await adminClient
-      .from('profiles')
-      .select('coin_balance')
-      .eq('user_id', user.id)
-      .single();
+    // 5a. ATOMIC CLAIM: Sadece bir işlem bu ödemeyi alabilir (double-spend önleme)
+    const { data: claimed, error: claimError } = await adminClient
+      .from('coin_payments')
+      .update({ status: 'processing' })
+      .eq('id', payment.id)
+      .eq('status', 'pending')
+      .select('id');
 
-    if (profileError || !profile) {
+    if (claimError || !claimed || claimed.length === 0) {
+      // Başka bir işlem zaten claim etti — ödemeyi tekrar sorgula
+      const { data: freshPayment } = await adminClient
+        .from('coin_payments')
+        .select('status, coins_purchased')
+        .eq('id', payment.id)
+        .single();
+
+      if (freshPayment?.status === 'completed') {
+        const { data: profile } = await adminClient
+          .from('profiles')
+          .select('coin_balance')
+          .eq('user_id', user.id)
+          .single();
+
+        return NextResponse.json({
+          status: 'completed',
+          coin_balance: profile?.coin_balance ?? 0,
+          coins_added: freshPayment.coins_purchased,
+        });
+      }
+
+      return NextResponse.json({ status: 'processing' });
+    }
+
+    // 5b. ATOMIC COIN ADD: Bakiye + transaction tek seferde (race condition önleme)
+    const { data: newBalance, error: rpcError } = await adminClient.rpc('add_coins_atomic', {
+      p_user_id: user.id,
+      p_amount: totalCoins,
+      p_payment_id: payment.id,
+      p_description: `${packageName} satın alındı`,
+    });
+
+    if (rpcError) {
+      console.error('[Verify] add_coins_atomic failed:', rpcError.message);
+      // Rollback: status'u pending'e geri al
+      await adminClient
+        .from('coin_payments')
+        .update({ status: 'pending' })
+        .eq('id', payment.id);
       return NextResponse.json({ status: 'error' }, { status: 500 });
     }
 
-    const newBalance = (profile.coin_balance || 0) + totalCoins;
-
-    // 5b. Bakiyeyi güncelle
-    const { error: updateError } = await adminClient
-      .from('profiles')
-      .update({ coin_balance: newBalance })
-      .eq('user_id', user.id);
-
-    if (updateError) {
-      return NextResponse.json({ status: 'error' }, { status: 500 });
-    }
-
-    // 5c. Transaction kaydı
-    await adminClient
-      .from('coin_transactions')
-      .insert({
-        user_id: user.id,
-        amount: totalCoins,
-        type: 'purchase',
-        description: `${packageName} satın alındı`,
-        reference_id: payment.id,
-        reference_type: 'payment',
-      });
-
-    // 5d. Ödemeyi completed yap
+    // 5c. MARK COMPLETED
     await adminClient
       .from('coin_payments')
       .update({
@@ -109,20 +125,27 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', payment.id);
 
-    // 5e. Referans komisyonu (kritik değil)
+    // 5d. REFERRAL COMMISSION (kritik değil)
     try {
-      await adminClient.rpc('process_referral_commission', {
-        buyer_user_id: user.id,
-        purchase_id_param: payment.id,
-        purchase_amount: totalCoins,
+      await adminClient.rpc('process_coin_referral_commission', {
+        p_buyer_user_id: user.id,
+        p_coin_payment_id: payment.id,
+        p_purchase_amount: totalCoins,
       });
     } catch {
       // Referans hatası ödemeyi engellemez
     }
 
+    // 5e. Taze bakiyeyi DB'den oku
+    const { data: freshProfile } = await adminClient
+      .from('profiles')
+      .select('coin_balance')
+      .eq('user_id', user.id)
+      .single();
+
     return NextResponse.json({
       status: 'completed',
-      coin_balance: newBalance,
+      coin_balance: freshProfile?.coin_balance ?? newBalance ?? 0,
       coins_added: totalCoins,
     });
 
