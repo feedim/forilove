@@ -27,6 +27,10 @@ export default function ProfilePage() {
   const [coupons, setCoupons] = useState<any[]>([]);
   const [couponForm, setCouponForm] = useState({ code: '', discountPercent: 15, maxUses: 100, expiryHours: 720 });
   const [couponCreating, setCouponCreating] = useState(false);
+  const [promos, setPromos] = useState<any[]>([]);
+  const [promoForm, setPromoForm] = useState({ code: '', discountPercent: 15, maxSignups: 500, expiryHours: 720 });
+  const [promoCreating, setPromoCreating] = useState(false);
+  const [copiedPromo, setCopiedPromo] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
 
@@ -56,9 +60,10 @@ export default function ProfilePage() {
 
       if (profileData?.role === 'admin') {
         try {
-          const [statsRes, couponsRes] = await Promise.all([
+          const [statsRes, couponsRes, promosRes] = await Promise.all([
             fetch('/api/admin/stats'),
             fetch('/api/admin/coupons'),
+            fetch('/api/admin/coupons?type=promo'),
           ]);
           if (statsRes.ok) {
             setAdminStats(await statsRes.json());
@@ -66,6 +71,10 @@ export default function ProfilePage() {
           if (couponsRes.ok) {
             const couponsData = await couponsRes.json();
             setCoupons(couponsData.coupons || []);
+          }
+          if (promosRes.ok) {
+            const promosData = await promosRes.json();
+            setPromos(promosData.promos || []);
           }
         } catch { /* silent */ }
       }
@@ -186,7 +195,70 @@ export default function ProfilePage() {
       setCoupons(coupons.map(c => c.id === couponId ? { ...c, is_active: false } : c));
       toast.success('Kupon deaktif edildi');
     } catch {
-      toast.error('Bir hata oluştu');
+      toast.error('Bir hata olustu');
+    }
+  };
+
+  const handleCreatePromo = async () => {
+    if (!promoForm.code.trim()) {
+      toast.error("Promo kodu girin");
+      return;
+    }
+    setPromoCreating(true);
+    try {
+      const res = await fetch('/api/admin/coupons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'promo',
+          code: promoForm.code,
+          discountPercent: promoForm.discountPercent,
+          maxSignups: promoForm.maxSignups,
+          expiryHours: promoForm.expiryHours,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Promo olusturulamadi');
+        return;
+      }
+      toast.success(`Promo linki olusturuldu: ${data.promo.code}`);
+      setPromos([data.promo, ...promos]);
+      setPromoForm({ code: '', discountPercent: 15, maxSignups: 500, expiryHours: 720 });
+    } catch {
+      toast.error('Bir hata olustu');
+    } finally {
+      setPromoCreating(false);
+    }
+  };
+
+  const handleDeactivatePromo = async (promoId: string) => {
+    try {
+      const res = await fetch('/api/admin/coupons', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ promoId }),
+      });
+      if (!res.ok) {
+        toast.error('Promo deaktif edilemedi');
+        return;
+      }
+      setPromos(promos.map(p => p.id === promoId ? { ...p, is_active: false } : p));
+      toast.success('Promo deaktif edildi');
+    } catch {
+      toast.error('Bir hata olustu');
+    }
+  };
+
+  const copyPromoLink = async (code: string) => {
+    const url = `${window.location.origin}/register?promo=${code}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedPromo(code);
+      setTimeout(() => setCopiedPromo(null), 2000);
+    } catch {
+      setCopiedPromo(code);
+      setTimeout(() => setCopiedPromo(null), 2000);
     }
   };
 
@@ -415,7 +487,7 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Admin: Kupon Yönetimi */}
+        {/* Admin: Kupon Yonetimi */}
         {profile?.role === 'admin' && (
           <div className="bg-zinc-900 rounded-2xl p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
@@ -427,14 +499,14 @@ export default function ProfilePage() {
             <div className="space-y-3 mb-5">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Kupon Kodu</label>
+                  <label className="block text-xs text-gray-400 mb-1">Kupon Kodu (max 9)</label>
                   <input
                     type="text"
                     value={couponForm.code}
-                    onChange={(e) => setCouponForm({ ...couponForm, code: e.target.value.toUpperCase() })}
-                    placeholder="YILBASI50"
-                    maxLength={30}
-                    className="input-modern w-full text-sm"
+                    onChange={(e) => setCouponForm({ ...couponForm, code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })}
+                    placeholder="YENI2026"
+                    maxLength={9}
+                    className="input-modern w-full text-sm font-mono tracking-wider"
                   />
                 </div>
                 <div>
@@ -473,7 +545,7 @@ export default function ProfilePage() {
               </div>
               <button
                 onClick={handleCreateCoupon}
-                disabled={couponCreating || !couponForm.code.trim()}
+                disabled={couponCreating || couponForm.code.trim().length < 3}
                 className="btn-primary w-full py-2.5 text-sm flex items-center justify-center gap-2"
               >
                 <Plus className="h-4 w-4" />
@@ -482,27 +554,16 @@ export default function ProfilePage() {
             </div>
 
             {/* Coupons List */}
-            {coupons.length > 0 && (
+            {coupons.filter(c => c.coupon_type === 'general').length > 0 && (
               <div className="space-y-2">
                 <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Mevcut Kuponlar</p>
-                {coupons.map((coupon) => (
+                {coupons.filter(c => c.coupon_type === 'general').map((coupon) => (
                   <div key={coupon.id} className={`flex items-center justify-between p-3 rounded-xl ${coupon.is_active ? 'bg-white/5' : 'bg-white/[0.02] opacity-50'}`}>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-yellow-500">{coupon.code}</span>
-                        <span className="text-xs bg-pink-600/20 text-pink-400 px-2 py-0.5 rounded-full">
-                          %{coupon.discount_percent}
-                        </span>
-                        {coupon.coupon_type === 'welcome' && (
-                          <span className="text-xs bg-blue-600/20 text-blue-400 px-2 py-0.5 rounded-full">
-                            hosgeldin
-                          </span>
-                        )}
-                        {!coupon.is_active && (
-                          <span className="text-xs bg-red-600/20 text-red-400 px-2 py-0.5 rounded-full">
-                            deaktif
-                          </span>
-                        )}
+                        <span className="text-sm font-bold text-yellow-500 font-mono">{coupon.code}</span>
+                        <span className="text-xs bg-pink-600/20 text-pink-400 px-2 py-0.5 rounded-full">%{coupon.discount_percent}</span>
+                        {!coupon.is_active && <span className="text-xs bg-red-600/20 text-red-400 px-2 py-0.5 rounded-full">deaktif</span>}
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
                         {coupon.current_uses}/{coupon.max_uses || '∞'} kullanim
@@ -510,14 +571,118 @@ export default function ProfilePage() {
                       </p>
                     </div>
                     {coupon.is_active && (
-                      <button
-                        onClick={() => handleDeactivateCoupon(coupon.id)}
-                        className="p-2 text-gray-500 hover:text-red-400 transition shrink-0"
-                        title="Deaktif et"
-                      >
+                      <button onClick={() => handleDeactivateCoupon(coupon.id)} className="p-2 text-gray-500 hover:text-red-400 transition shrink-0" title="Deaktif et">
                         <X className="h-4 w-4" />
                       </button>
                     )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Admin: Promo Linkleri */}
+        {profile?.role === 'admin' && (
+          <div className="bg-zinc-900 rounded-2xl p-6 mb-6">
+            <div className="flex items-center gap-2 mb-1">
+              <Globe className="h-5 w-5 text-pink-500" />
+              <h3 className="font-semibold">Indirim Linkleri</h3>
+            </div>
+            <p className="text-xs text-gray-500 mb-4">Kayit linklerinden gelen kullanicilar otomatik kupon alir.</p>
+
+            {/* Create Promo Form */}
+            <div className="space-y-3 mb-5">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Promo Kodu</label>
+                  <input
+                    type="text"
+                    value={promoForm.code}
+                    onChange={(e) => setPromoForm({ ...promoForm, code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })}
+                    placeholder="SEVGILI14"
+                    maxLength={20}
+                    className="input-modern w-full text-sm font-mono tracking-wider"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Indirim %</label>
+                  <input
+                    type="number"
+                    value={promoForm.discountPercent}
+                    onChange={(e) => setPromoForm({ ...promoForm, discountPercent: Math.min(100, Math.max(1, parseInt(e.target.value) || 1)) })}
+                    min={1}
+                    max={100}
+                    className="input-modern w-full text-sm"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Max Kayit</label>
+                  <input
+                    type="number"
+                    value={promoForm.maxSignups}
+                    onChange={(e) => setPromoForm({ ...promoForm, maxSignups: Math.max(1, parseInt(e.target.value) || 1) })}
+                    min={1}
+                    className="input-modern w-full text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Sure (saat)</label>
+                  <input
+                    type="number"
+                    value={promoForm.expiryHours}
+                    onChange={(e) => setPromoForm({ ...promoForm, expiryHours: Math.max(1, parseInt(e.target.value) || 1) })}
+                    min={1}
+                    className="input-modern w-full text-sm"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={handleCreatePromo}
+                disabled={promoCreating || promoForm.code.trim().length < 3}
+                className="btn-primary w-full py-2.5 text-sm flex items-center justify-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                {promoCreating ? "Olusturuluyor..." : "Promo Linki Olustur"}
+              </button>
+            </div>
+
+            {/* Promo Links List */}
+            {promos.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Aktif Promolar</p>
+                {promos.map((promo) => (
+                  <div key={promo.id} className={`p-3 rounded-xl ${promo.is_active ? 'bg-white/5' : 'bg-white/[0.02] opacity-50'}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-yellow-500 font-mono">{promo.code}</span>
+                          <span className="text-xs bg-pink-600/20 text-pink-400 px-2 py-0.5 rounded-full">%{promo.discount_percent}</span>
+                          {!promo.is_active && <span className="text-xs bg-red-600/20 text-red-400 px-2 py-0.5 rounded-full">deaktif</span>}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {promo.current_signups}/{promo.max_signups || '∞'} kayit
+                          {promo.expires_at && ` · ${new Date(promo.expires_at) > new Date() ? `${Math.ceil((new Date(promo.expires_at).getTime() - Date.now()) / (1000 * 60 * 60))}s kaldi` : 'suresi dolmus'}`}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {promo.is_active && (
+                          <button
+                            onClick={() => copyPromoLink(promo.code)}
+                            className="px-3 py-1.5 text-xs bg-white/10 text-gray-300 hover:text-white rounded-lg transition"
+                          >
+                            {copiedPromo === promo.code ? 'Kopyalandi!' : 'Linki Kopyala'}
+                          </button>
+                        )}
+                        {promo.is_active && (
+                          <button onClick={() => handleDeactivatePromo(promo.id)} className="p-2 text-gray-500 hover:text-red-400 transition" title="Deaktif et">
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

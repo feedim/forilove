@@ -106,7 +106,8 @@ export default function DashboardPage() {
   useEffect(() => {
     loadData();
     processOAuthReferral();
-    checkWelcomeCoupon();
+    // Process promo signup first, then check for coupon to display
+    processPromoSignup().then(() => checkWelcomeCoupon());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -152,6 +153,28 @@ export default function DashboardPage() {
         toast.success("Referans bağlantısı kaydedildi!");
       }
     } catch (e) { if (process.env.NODE_ENV === 'development') console.warn('Operation failed:', e); }
+  };
+
+  const processPromoSignup = async () => {
+    try {
+      const pendingPromo = sessionStorage.getItem('forilove_pending_promo');
+      if (!pendingPromo) return;
+      sessionStorage.removeItem('forilove_pending_promo');
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase.rpc('process_promo_signup', {
+        p_promo_code: pendingPromo,
+        p_user_id: user.id,
+      });
+
+      if (data?.success) {
+        // Promo coupon created, will be shown via checkWelcomeCoupon
+        // Set flag to trigger welcome coupon modal
+        sessionStorage.setItem('forilove_show_welcome_coupon', 'true');
+      }
+    } catch (e) { if (process.env.NODE_ENV === 'development') console.warn('Promo signup failed:', e); }
   };
 
   const checkWelcomeCoupon = async () => {

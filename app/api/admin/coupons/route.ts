@@ -16,7 +16,7 @@ async function verifyAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
   return user;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
     const user = await verifyAdmin(supabase);
@@ -25,6 +25,47 @@ export async function GET() {
     }
 
     const admin = createAdminClient();
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get("type");
+
+    // If type=promo, return promo links with signup stats
+    if (type === "promo") {
+      const { data, error } = await admin
+        .from("promo_links")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      // Get signup details for each promo
+      const promoIds = (data || []).map((p: any) => p.id);
+      let signupsByPromo: Record<string, any[]> = {};
+
+      if (promoIds.length > 0) {
+        const { data: signups } = await admin
+          .from("promo_signups")
+          .select("promo_link_id, user_id, signed_up_at, coupon_id")
+          .in("promo_link_id", promoIds)
+          .order("signed_up_at", { ascending: false });
+
+        if (signups) {
+          for (const s of signups) {
+            if (!signupsByPromo[s.promo_link_id]) signupsByPromo[s.promo_link_id] = [];
+            signupsByPromo[s.promo_link_id].push(s);
+          }
+        }
+      }
+
+      const promos = (data || []).map((p: any) => ({
+        ...p,
+        signups: signupsByPromo[p.id] || [],
+      }));
+
+      return NextResponse.json({ promos });
+    }
+
+    // Default: return coupons
     const { data, error } = await admin
       .from("coupons")
       .select("*")
@@ -49,26 +90,84 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { code, discountPercent, maxUses, expiryHours } = body;
-
-    // Validate
-    if (!code || typeof code !== "string" || code.trim().length < 3 || code.trim().length > 30) {
-      return NextResponse.json({ error: "Kupon kodu 3-30 karakter olmalı" }, { status: 400 });
-    }
-    if (!discountPercent || discountPercent < 1 || discountPercent > 100) {
-      return NextResponse.json({ error: "İndirim %1-%100 arası olmalı" }, { status: 400 });
-    }
-    if (maxUses !== null && maxUses !== undefined && maxUses < 1) {
-      return NextResponse.json({ error: "Max kullanım en az 1 olmalı" }, { status: 400 });
-    }
+    const { type } = body;
 
     const admin = createAdminClient();
 
-    // Check if code already exists
+    // Create promo link
+    if (type === "promo") {
+      const { code, discountPercent, maxSignups, expiryHours } = body;
+
+      if (!code || typeof code !== "string" || code.trim().length < 3 || code.trim().length > 20) {
+        return NextResponse.json({ error: "Promo kodu 3-20 karakter olmali" }, { status: 400 });
+      }
+      if (!discountPercent || discountPercent < 1 || discountPercent > 100) {
+        return NextResponse.json({ error: "Indirim %1-%100 arasi olmali" }, { status: 400 });
+      }
+
+      // Only allow alphanumeric
+      const cleanCode = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (cleanCode.length < 3) {
+        return NextResponse.json({ error: "Promo kodu en az 3 harf/rakam olmali" }, { status: 400 });
+      }
+
+      // Check duplicate
+      const { data: existing } = await admin
+        .from("promo_links")
+        .select("id")
+        .ilike("code", cleanCode)
+        .maybeSingle();
+
+      if (existing) {
+        return NextResponse.json({ error: "Bu promo kodu zaten mevcut" }, { status: 400 });
+      }
+
+      const expiresAt = expiryHours
+        ? new Date(Date.now() + expiryHours * 60 * 60 * 1000).toISOString()
+        : null;
+
+      const { data, error } = await admin
+        .from("promo_links")
+        .insert({
+          code: cleanCode,
+          discount_percent: discountPercent,
+          max_signups: maxSignups || null,
+          expires_at: expiresAt,
+          is_active: true,
+          created_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return NextResponse.json({ promo: data });
+    }
+
+    // Create coupon
+    const { code, discountPercent, maxUses, expiryHours } = body;
+
+    if (!code || typeof code !== "string") {
+      return NextResponse.json({ error: "Kupon kodu gerekli" }, { status: 400 });
+    }
+
+    // Only allow alphanumeric, max 9
+    const cleanCode = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (cleanCode.length < 3 || cleanCode.length > 9) {
+      return NextResponse.json({ error: "Kupon kodu 3-9 karakter olmali (harf/rakam)" }, { status: 400 });
+    }
+    if (!discountPercent || discountPercent < 1 || discountPercent > 100) {
+      return NextResponse.json({ error: "Indirim %1-%100 arasi olmali" }, { status: 400 });
+    }
+    if (maxUses !== null && maxUses !== undefined && maxUses < 1) {
+      return NextResponse.json({ error: "Max kullanim en az 1 olmali" }, { status: 400 });
+    }
+
+    // Check duplicate
     const { data: existing } = await admin
       .from("coupons")
       .select("id")
-      .ilike("code", code.trim())
+      .ilike("code", cleanCode)
       .maybeSingle();
 
     if (existing) {
@@ -82,7 +181,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await admin
       .from("coupons")
       .insert({
-        code: code.trim().toUpperCase(),
+        code: cleanCode,
         discount_percent: discountPercent,
         max_uses: maxUses || null,
         expires_at: expiresAt,
@@ -110,20 +209,31 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    const { couponId } = await request.json();
-    if (!couponId) {
-      return NextResponse.json({ error: "Missing couponId" }, { status: 400 });
-    }
+    const { couponId, promoId } = await request.json();
 
     const admin = createAdminClient();
-    const { error } = await admin
-      .from("coupons")
-      .update({ is_active: false })
-      .eq("id", couponId);
 
-    if (error) throw error;
+    if (promoId) {
+      const { error } = await admin
+        .from("promo_links")
+        .update({ is_active: false })
+        .eq("id", promoId);
 
-    return NextResponse.json({ success: true });
+      if (error) throw error;
+      return NextResponse.json({ success: true });
+    }
+
+    if (couponId) {
+      const { error } = await admin
+        .from("coupons")
+        .update({ is_active: false })
+        .eq("id", couponId);
+
+      if (error) throw error;
+      return NextResponse.json({ success: true });
+    }
+
+    return NextResponse.json({ error: "Missing ID" }, { status: 400 });
   } catch (error) {
     console.error("Admin coupons DELETE error:", error);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
