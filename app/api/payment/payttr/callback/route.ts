@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const total_amount = formData.get('total_amount') as string;
     const hash = formData.get('hash') as string;
 
-    // Alan validasyonu — eksik alan varsa geçersiz request, retry gereksiz
+    // Alan validasyonu — eksik alan varsa muhtemel geçici/parsing hatası → retry etsin
     if (!merchant_oid || !status || !total_amount || !hash) {
       console.error('[PayTR Callback] Missing required fields:', {
         merchant_oid: !!merchant_oid,
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
         total_amount: !!total_amount,
         hash: !!hash,
       });
-      return new NextResponse('OK', { status: 200 });
+      return new NextResponse('FAIL', { status: 500 });
     }
 
     console.log('[PayTR Callback] merchant_oid:', merchant_oid, 'status:', status, 'amount:', total_amount);
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     if (!merchant_key || !merchant_salt) {
       console.error('[PayTR Callback] Missing env vars');
-      return new NextResponse('OK', { status: 200 });
+      return new NextResponse('FAIL', { status: 500 });
     }
 
     // Hash doğrulama — HMAC key = merchant_key
@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
     const calculatedBuffer = Buffer.from(calculatedHash, 'utf8');
     if (hashBuffer.length !== calculatedBuffer.length || !crypto.timingSafeEqual(hashBuffer, calculatedBuffer)) {
       console.error('[PayTR Callback] Hash mismatch for', merchant_oid);
+      // Hatalı/tamper edilmiş istek — retry faydasız, 200 OK dönerek durdur.
       return new NextResponse('OK', { status: 200 });
     }
 
@@ -70,8 +71,9 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (paymentError || !payment) {
-      console.error('[PayTR Callback] Payment not found:', merchant_oid, paymentError?.message);
-      return new NextResponse('OK', { status: 200 });
+      console.error('[PayTR Callback] Payment not found (will retry):', merchant_oid, paymentError?.message);
+      // Olası yarış/gecikme — retry ile yeniden denesin
+      return new NextResponse('FAIL', { status: 500 });
     }
 
     // Zaten işlenmiş mi kontrol et (idempotency)

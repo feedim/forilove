@@ -190,6 +190,23 @@ export async function POST(request: NextRequest) {
         merchant_oid,
       });
     } else {
+      // PayTR token alınamadı — pending kaydı 'failed' olarak işaretle
+      try {
+        await adminDb
+          .from('coin_payments')
+          .update({
+            status: 'failed',
+            metadata: {
+              package_name: pkg.name,
+              bonus_coins: pkg.bonus_coins || 0,
+              error: payttrResult.reason || 'Token alınamadı',
+            },
+            completed_at: new Date().toISOString(),
+          })
+          .eq('payment_id', merchant_oid);
+      } catch (e) {
+        // sessiz geç — kullanıcıya hata zaten dönecek
+      }
       return NextResponse.json(
         { success: false, error: payttrResult.reason || 'Ödeme başlatılamadı. Lütfen tekrar deneyin.' },
         { status: 400 }
