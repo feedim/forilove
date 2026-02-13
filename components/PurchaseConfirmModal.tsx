@@ -95,6 +95,7 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
   const [couponLoading, setCouponLoading] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<CouponInfo | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponOpen, setCouponOpen] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -235,7 +236,6 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
             </div>
           )}
           <div className="flex items-center justify-center gap-2 mt-1.5">
-            {/* Show original price crossed out if there's any discount */}
             {(options.originalPrice && options.originalPrice !== options.coinCost) || appliedCoupon ? (
               <span className="text-xl font-bold text-gray-500 line-through decoration-red-500/70 decoration-2">
                 {appliedCoupon ? options.coinCost : options.originalPrice} FL
@@ -247,56 +247,6 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
           </div>
           <p className="text-sm text-gray-400">{options.itemName}</p>
         </div>
-
-        {/* Coupon Input */}
-        {options.allowCoupon && !appliedCoupon && (
-          <div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={couponCode}
-                onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(null); }}
-                placeholder="Kupon kodu girin"
-                maxLength={30}
-                className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50 transition"
-              />
-              <button
-                onClick={handleApplyCoupon}
-                disabled={couponLoading || !couponCode.trim()}
-                className="px-4 py-2.5 bg-yellow-500 text-black text-sm font-semibold rounded-lg hover:bg-yellow-400 transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-              >
-                {couponLoading ? (
-                  <span className="inline-block w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                ) : (
-                  "Uygula"
-                )}
-              </button>
-            </div>
-            {couponError && (
-              <p className="text-xs text-red-500 mt-1.5">{couponError}</p>
-            )}
-          </div>
-        )}
-
-        {/* Applied Coupon Badge */}
-        {options.allowCoupon && appliedCoupon && (
-          <div className="flex items-center justify-between bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
-            <div className="flex items-center gap-2">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500">
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
-              <span className="text-sm font-medium text-green-400">
-                {appliedCoupon.code} (-%{appliedCoupon.discountPercent})
-              </span>
-            </div>
-            <button
-              onClick={handleRemoveCoupon}
-              className="text-xs text-gray-400 hover:text-white transition"
-            >
-              Kaldır
-            </button>
-          </div>
-        )}
 
         {/* Balance Info */}
         <div className="border border-white/10 rounded-xl p-3.5 flex flex-col gap-1.5">
@@ -337,6 +287,70 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
             Vazgeç
           </button>
         </div>
+
+        {/* Coupon Section - collapsible, below buttons */}
+        {options.allowCoupon && (
+          <div className="pt-1">
+            {!appliedCoupon ? (
+              <>
+                {!couponOpen ? (
+                  <button
+                    onClick={() => setCouponOpen(true)}
+                    className="w-full text-center text-sm text-gray-500 hover:text-gray-300 transition-colors py-1"
+                  >
+                    Kupon kodum var
+                  </button>
+                ) : (
+                  <div className="space-y-2.5">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={couponCode}
+                        onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(null); }}
+                        placeholder="Kupon kodunu girin"
+                        maxLength={30}
+                        autoFocus
+                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/25 transition"
+                      />
+                      <button
+                        onClick={handleApplyCoupon}
+                        disabled={couponLoading || !couponCode.trim()}
+                        className="px-4 py-2.5 bg-white/10 text-white text-sm font-medium rounded-lg hover:bg-white/15 transition disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                      >
+                        {couponLoading ? (
+                          <span className="inline-block w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          "Uygula"
+                        )}
+                      </button>
+                    </div>
+                    {couponError && (
+                      <p className="text-xs text-red-500">{couponError}</p>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex items-center justify-between bg-green-500/10 border border-green-500/20 rounded-xl px-3.5 py-2.5">
+                <div className="flex items-center gap-2">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-green-500 shrink-0">
+                    <path d="M20 6 9 17l-5-5" />
+                  </svg>
+                  <span className="text-sm font-medium text-green-400">
+                    {appliedCoupon.code}
+                  </span>
+                  <span className="text-xs text-green-500/70">-%{appliedCoupon.discountPercent}</span>
+                </div>
+                <button
+                  onClick={handleRemoveCoupon}
+                  className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                >
+                  Kaldır
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Error */}
         {error && (
