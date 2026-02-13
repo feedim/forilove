@@ -182,7 +182,11 @@ export async function POST(request: NextRequest) {
     try {
       const payttrResponse = await fetch('https://www.paytr.com/odeme/api/get-token', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json,text/plain,*/*',
+          'User-Agent': 'forilove/1.0 (+https://www.forilove.com)'
+        },
         body: params.toString(),
         signal: controller.signal,
       });
@@ -190,6 +194,7 @@ export async function POST(request: NextRequest) {
       try {
         payttrResult = JSON.parse(text);
       } catch {
+        console.error('[PayTR Initiate] Non-JSON response from PayTR:', text.substring(0, 500));
         // Bazı hatalarda düz metin gelebilir
         return NextResponse.json(
           { success: false, error: `PayTR yanıt hatası: ${text.substring(0, 200)}` },
