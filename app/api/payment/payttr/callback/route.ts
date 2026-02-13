@@ -122,6 +122,17 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', payment.id);
 
+      // 5. Referans komisyonu (kritik değil — hata olursa ödemeyi engellemez)
+      try {
+        await supabase.rpc('process_referral_commission', {
+          buyer_user_id: payment.user_id,
+          purchase_id_param: payment.id,
+          purchase_amount: totalCoins,
+        });
+      } catch {
+        // Referans hatası ödemeyi engellemez
+      }
+
       console.warn('[PayTR Callback] ✓ Completed:', merchant_oid, 'coins:', totalCoins, 'balance:', newBalance);
 
     } else {

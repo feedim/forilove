@@ -109,6 +109,17 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', payment.id);
 
+    // 5e. Referans komisyonu (kritik değil)
+    try {
+      await adminClient.rpc('process_referral_commission', {
+        buyer_user_id: user.id,
+        purchase_id_param: payment.id,
+        purchase_amount: totalCoins,
+      });
+    } catch {
+      // Referans hatası ödemeyi engellemez
+    }
+
     return NextResponse.json({
       status: 'completed',
       coin_balance: newBalance,
