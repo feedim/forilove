@@ -44,12 +44,13 @@ export default function TemplateCard({
       if (!doc) return;
       let scrollPos = 0;
       scrollTimerRef.current = setInterval(() => {
-        scrollPos += 1;
+        scrollPos += 2;
         doc.documentElement.scrollTop = scrollPos;
-        if (scrollPos >= doc.documentElement.scrollHeight - doc.documentElement.clientHeight) {
+        const maxScroll = doc.documentElement.scrollHeight - doc.documentElement.clientHeight;
+        if (maxScroll > 0 && scrollPos >= maxScroll) {
           scrollPos = 0;
         }
-      }, 20);
+      }, 16);
     } catch { /* cross-origin, skip */ }
   }, []);
 
@@ -89,7 +90,7 @@ export default function TemplateCard({
             src={previewUrl}
             className="w-full h-full pointer-events-none scale-[0.3] origin-top-left"
             style={{ width: '333%', height: '333%' }}
-            sandbox=""
+            sandbox="allow-same-origin"
             loading="lazy"
           />
         ) : template.html_content ? (
@@ -98,7 +99,7 @@ export default function TemplateCard({
             srcDoc={DOMPurify.sanitize(template.html_content, { WHOLE_DOCUMENT: true, ADD_TAGS: ['style', 'link'], ADD_ATTR: ['data-editable', 'data-type', 'data-label'] })}
             className="w-full h-full pointer-events-none scale-[0.3] origin-top-left"
             style={{ width: '333%', height: '333%' }}
-            sandbox=""
+            sandbox="allow-same-origin"
             loading="lazy"
           />
         ) : (
