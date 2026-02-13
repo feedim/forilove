@@ -125,8 +125,12 @@ export default function EditŞablonPage({ params }: { params: Promise<{ template
       toast.error("Aciklama en fazla 50 karakter olabilir");
       return;
     }
-    if (coinPrice < 0 || coinPrice > 9999) {
-      toast.error("Fiyat 0-9999 arasinda olmali");
+    if (coinPrice < 1 || coinPrice > 9999) {
+      toast.error("Fiyat 1-9999 arasinda olmali");
+      return;
+    }
+    if (discountPrice !== null && (discountPrice < 1 || discountPrice >= coinPrice)) {
+      toast.error("Indirimli fiyat 1 ile orijinal fiyat arasinda olmali");
       return;
     }
     if (!htmlContent || htmlContent.trim() === "") {
@@ -139,10 +143,13 @@ export default function EditŞablonPage({ params }: { params: Promise<{ template
       const safeName = trimmedName.substring(0, 60);
       const safeSlug = trimmedSlug.replace(/[^a-z0-9-]/g, '').substring(0, 40);
       const safeDescription = trimmedDesc.substring(0, 50);
+      const safeDiscountLabel = discountLabel.trim().substring(0, 20);
+      const safeCoinPrice = Math.max(1, Math.min(9999, coinPrice));
+      const safeDiscountPrice = discountPrice ? Math.max(1, Math.min(safeCoinPrice - 1, discountPrice)) : null;
 
       // Calculate discount_expires_at from duration if setting new discount
       let expiresAt = discountExpiresAt;
-      if (discountPrice && discountDuration) {
+      if (safeDiscountPrice && discountDuration) {
         const expires = new Date();
         expires.setHours(expires.getHours() + discountDuration);
         expiresAt = expires.toISOString();
@@ -154,10 +161,10 @@ export default function EditŞablonPage({ params }: { params: Promise<{ template
           name: safeName,
           slug: safeSlug,
           description: safeDescription,
-          coin_price: Math.max(0, Math.min(9999, coinPrice)),
-          discount_price: discountPrice || null,
-          discount_label: discountPrice ? (discountLabel.trim() || null) : null,
-          discount_expires_at: discountPrice ? expiresAt : null,
+          coin_price: safeCoinPrice,
+          discount_price: safeDiscountPrice,
+          discount_label: safeDiscountPrice ? (safeDiscountLabel || null) : null,
+          discount_expires_at: safeDiscountPrice ? expiresAt : null,
           html_content: htmlContent,
         })
         .eq("id", resolvedParams.templateId);
@@ -319,12 +326,12 @@ export default function EditŞablonPage({ params }: { params: Promise<{ template
                   type="number"
                   value={discountPrice ?? ""}
                   onChange={(e) => {
-                    const val = e.target.value === "" ? null : Math.min(coinPrice - 1, Math.max(0, parseInt(e.target.value) || 0));
+                    const val = e.target.value === "" ? null : Math.min(coinPrice - 1, Math.max(1, parseInt(e.target.value) || 0));
                     setDiscountPrice(val);
                   }}
                   placeholder="Örn: 99"
                   className="input-modern w-full"
-                  min="0"
+                  min="1"
                   max={coinPrice - 1}
                 />
               </div>
@@ -336,10 +343,10 @@ export default function EditŞablonPage({ params }: { params: Promise<{ template
                     <input
                       type="text"
                       value={discountLabel}
-                      onChange={(e) => setDiscountLabel(e.target.value.slice(0, 30))}
-                      placeholder="Örn: Sınırlı Süre, 14 Şubat'a Özel"
+                      onChange={(e) => setDiscountLabel(e.target.value.slice(0, 20))}
+                      placeholder="Örn: Sınırlı Süre"
                       className="input-modern w-full"
-                      maxLength={30}
+                      maxLength={20}
                     />
                   </div>
 
