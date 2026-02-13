@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
  * 1. Ödeme durumunu doğrular
  * 2. Callback çalışmadıysa coin'leri ekler (fallback)
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
     // Auth: kullanıcıyı doğrula
     const supabase = await createClient();
@@ -30,7 +30,7 @@ export async function POST() {
       .in('status', ['pending', 'completed'])
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (paymentError || !payment) {
       return NextResponse.json({
@@ -96,10 +96,11 @@ export async function POST() {
     });
 
   } catch (error: any) {
-    console.error('[Verify Payment] Exception:', error?.message);
+    console.error('[Verify Payment] Exception:', error?.message, error?.stack);
     return NextResponse.json({
       status: 'error',
       message: 'Doğrulama sırasında hata oluştu',
+      debug: process.env.NODE_ENV !== 'production' ? error?.message : undefined,
     }, { status: 500 });
   }
 }
