@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       const totalCoins = payment.coins_purchased;
       const packageName = payment.metadata?.package_name || 'Paket';
 
-      // 1. ATOMIC CLAIM: pending → completed (double-spend önleme)
+      // 1. ATOMIC CLAIM: pending → completed (sadece bir işlem alabilir)
       const { data: claimed, error: claimError } = await supabase
         .from('coin_payments')
         .update({
@@ -88,38 +88,56 @@ export async function POST(request: NextRequest) {
         .select('id');
 
       if (claimError || !claimed || claimed.length === 0) {
-        // Başka bir işlem zaten tamamladı — OK dön
         return new NextResponse('OK', { status: 200 });
       }
 
-      // 2. ATOMIC COIN ADD: Bakiye + transaction tek seferde
-      const { data: newBalance, error: rpcError } = await supabase.rpc('add_coins_atomic', {
-        p_user_id: payment.user_id,
-        p_amount: totalCoins,
-        p_payment_id: payment.id,
-        p_description: `${packageName} satın alındı`,
-      });
+      // 2. Bakiyeyi oku ve güncelle (claim sayesinde sadece 1 işlem buraya ulaşır)
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('coin_balance')
+        .eq('user_id', payment.user_id)
+        .single();
 
-      if (rpcError) {
-        console.error('[PayTR Callback] add_coins_atomic failed:', rpcError.message);
-        // Rollback: status'u pending'e geri al → PayTR retry edebilir
-        await supabase
-          .from('coin_payments')
-          .update({ status: 'pending', completed_at: null })
-          .eq('id', payment.id);
+      if (profileError || !profile) {
+        console.error('[PayTR Callback] Profile not found:', payment.user_id);
+        // Rollback
+        await supabase.from('coin_payments').update({ status: 'pending', completed_at: null }).eq('id', payment.id);
         return new NextResponse('FAIL', { status: 500 });
       }
 
-      // 3. REFERRAL COMMISSION (kritik değil — hata olursa ödemeyi engellemez)
+      const newBalance = (profile.coin_balance || 0) + totalCoins;
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ coin_balance: newBalance })
+        .eq('user_id', payment.user_id);
+
+      if (updateError) {
+        console.error('[PayTR Callback] Balance update failed:', updateError.message);
+        await supabase.from('coin_payments').update({ status: 'pending', completed_at: null }).eq('id', payment.id);
+        return new NextResponse('FAIL', { status: 500 });
+      }
+
+      // 3. Transaction kaydı
+      await supabase
+        .from('coin_transactions')
+        .insert({
+          user_id: payment.user_id,
+          amount: totalCoins,
+          type: 'purchase',
+          description: `${packageName} satın alındı`,
+          reference_id: payment.id,
+          reference_type: 'payment',
+        });
+
+      // 4. Referans komisyonu (kritik değil)
       try {
-        const { error: commissionError } = await supabase.rpc('process_coin_referral_commission', {
+        const { error: commErr } = await supabase.rpc('process_coin_referral_commission', {
           p_buyer_user_id: payment.user_id,
           p_coin_payment_id: payment.id,
           p_purchase_amount: totalCoins,
         });
-        if (commissionError) {
-          console.warn('[PayTR Callback] Commission RPC error:', commissionError.message);
-        }
+        if (commErr) console.warn('[PayTR Callback] Commission error:', commErr.message);
       } catch (e: any) {
         console.warn('[PayTR Callback] Commission exception:', e?.message);
       }

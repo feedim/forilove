@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     const totalCoins = payment.coins_purchased;
     const packageName = payment.metadata?.package_name || 'Paket';
 
-    // 5a. ATOMIC CLAIM: pending → completed (double-spend önleme)
+    // 5a. ATOMIC CLAIM: pending → completed (sadece bir işlem alabilir)
     const { data: claimed, error: claimError } = await adminClient
       .from('coin_payments')
       .update({
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       .select('id');
 
     if (claimError || !claimed || claimed.length === 0) {
-      // Başka bir işlem zaten tamamladı — taze bakiyeyi döndür
+      // Başka bir işlem tamamladı — taze bakiyeyi döndür
       const { data: profile } = await adminClient
         .from('profiles')
         .select('coin_balance')
@@ -91,48 +91,58 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 5b. ATOMIC COIN ADD: Bakiye + transaction tek seferde
-    const { data: newBalance, error: rpcError } = await adminClient.rpc('add_coins_atomic', {
-      p_user_id: user.id,
-      p_amount: totalCoins,
-      p_payment_id: payment.id,
-      p_description: `${packageName} satın alındı`,
-    });
-
-    if (rpcError) {
-      console.error('[Verify] add_coins_atomic failed:', rpcError.message);
-      // Rollback: status'u pending'e geri al
-      await adminClient
-        .from('coin_payments')
-        .update({ status: 'pending', completed_at: null })
-        .eq('id', payment.id);
-      return NextResponse.json({ status: 'error' }, { status: 500 });
-    }
-
-    // 5c. REFERRAL COMMISSION (kritik değil)
-    try {
-      const { error: commissionError } = await adminClient.rpc('process_coin_referral_commission', {
-        p_buyer_user_id: user.id,
-        p_coin_payment_id: payment.id,
-        p_purchase_amount: totalCoins,
-      });
-      if (commissionError) {
-        console.warn('[Verify] Commission RPC error:', commissionError.message);
-      }
-    } catch (e: any) {
-      console.warn('[Verify] Commission exception:', e?.message);
-    }
-
-    // 5d. Taze bakiyeyi DB'den oku
-    const { data: freshProfile } = await adminClient
+    // 5b. Bakiyeyi oku ve güncelle (claim sayesinde sadece 1 işlem buraya ulaşır)
+    const { data: profile, error: profileError } = await adminClient
       .from('profiles')
       .select('coin_balance')
       .eq('user_id', user.id)
       .single();
 
+    if (profileError || !profile) {
+      // Rollback
+      await adminClient.from('coin_payments').update({ status: 'pending', completed_at: null }).eq('id', payment.id);
+      return NextResponse.json({ status: 'error' }, { status: 500 });
+    }
+
+    const newBalance = (profile.coin_balance || 0) + totalCoins;
+
+    const { error: updateError } = await adminClient
+      .from('profiles')
+      .update({ coin_balance: newBalance })
+      .eq('user_id', user.id);
+
+    if (updateError) {
+      await adminClient.from('coin_payments').update({ status: 'pending', completed_at: null }).eq('id', payment.id);
+      return NextResponse.json({ status: 'error' }, { status: 500 });
+    }
+
+    // 5c. Transaction kaydı
+    await adminClient
+      .from('coin_transactions')
+      .insert({
+        user_id: user.id,
+        amount: totalCoins,
+        type: 'purchase',
+        description: `${packageName} satın alındı`,
+        reference_id: payment.id,
+        reference_type: 'payment',
+      });
+
+    // 5d. Referans komisyonu (kritik değil)
+    try {
+      const { error: commErr } = await adminClient.rpc('process_coin_referral_commission', {
+        p_buyer_user_id: user.id,
+        p_coin_payment_id: payment.id,
+        p_purchase_amount: totalCoins,
+      });
+      if (commErr) console.warn('[Verify] Commission error:', commErr.message);
+    } catch (e: any) {
+      console.warn('[Verify] Commission exception:', e?.message);
+    }
+
     return NextResponse.json({
       status: 'completed',
-      coin_balance: freshProfile?.coin_balance ?? newBalance ?? 0,
+      coin_balance: newBalance,
       coins_added: totalCoins,
     });
 
