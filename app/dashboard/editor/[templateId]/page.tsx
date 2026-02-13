@@ -1226,16 +1226,16 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                     <button
                       onClick={() => {
                         const el = document.getElementById('editor-toolbar-scroll');
-                        if (el) el.scrollBy({ left: -150, behavior: 'smooth' });
+                        if (el) el.scrollBy({ left: -200, behavior: 'smooth' });
                       }}
-                      className="hidden md:flex shrink-0 items-center justify-center w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 transition"
+                      className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 transition active:scale-95"
                       aria-label="Sola kaydır"
                     >
-                      <ChevronDown className="h-4 w-4 -rotate-90" />
+                      <ArrowLeft className="h-4 w-4" />
                     </button>
                     <div
                       id="editor-toolbar-scroll"
-                      className="flex-1 min-w-0 flex items-center gap-2 overflow-x-auto pr-6"
+                      className="flex-1 min-w-0 flex items-center gap-2 overflow-x-auto"
                       style={{
                         scrollbarWidth: 'none',
                         WebkitOverflowScrolling: 'touch',
@@ -1345,12 +1345,12 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                     <button
                       onClick={() => {
                         const el = document.getElementById('editor-toolbar-scroll');
-                        if (el) el.scrollBy({ left: 150, behavior: 'smooth' });
+                        if (el) el.scrollBy({ left: 200, behavior: 'smooth' });
                       }}
-                      className="hidden md:flex shrink-0 items-center justify-center w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 transition"
+                      className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 transition active:scale-95"
                       aria-label="Sağa kaydır"
                     >
-                      <ChevronDown className="h-4 w-4 rotate-90" />
+                      <ArrowLeft className="h-4 w-4 rotate-180" />
                     </button>
                     {/* Publish button - always visible */}
                     <button
