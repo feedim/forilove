@@ -285,12 +285,13 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
                         placeholder="9 haneli kod"
                         maxLength={9}
                         autoFocus
-                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/25 transition tracking-widest font-mono"
+                        className="flex-1 bg-transparent border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/25 transition tracking-widest font-mono"
                       />
                       <button
                         onClick={handleApplyCoupon}
                         disabled={couponLoading || !couponCode.trim()}
-                        className="btn-primary px-5 py-2.5 text-sm shrink-0"
+                        className="px-5 py-2.5 text-sm shrink-0 rounded-lg font-semibold transition"
+                        style={{ background: "var(--color-yellow-500)", color: "black" }}
                       >
                         {couponLoading ? (
                           <span className="inline-block w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
