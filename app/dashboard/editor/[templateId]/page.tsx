@@ -1165,7 +1165,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
 
     if (!result?.success) return;
 
-    toast.success(`${template.name} satın alındı! (-${coinPrice} FL Coin)`);
+    toast.success(`${template.name} satın alındı (-${coinPrice} FL)`);
     setCoinBalance(result.newBalance);
     window.location.reload();
   };
@@ -1561,7 +1561,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                   <div className="flex items-center justify-between px-4 py-3 rounded-2xl border border-white/10 bg-white/[0.03]">
                     <div className="flex items-center gap-2">
                       <Coins className="h-4 w-4 text-yellow-300" />
-                      <span className="text-sm text-white font-medium">{AI_COST} FL Coin</span>
+                      <span className="text-sm text-white font-medium">{AI_COST} FL</span>
                     </div>
                     <span className={`text-xs ${coinBalance >= AI_COST ? 'text-gray-400' : 'text-red-400'}`}>
                       Bakiye: {coinBalance} FL

@@ -34,7 +34,7 @@ export default function PublicFooter() {
                 Sorumluluk Reddi
               </Link>
               <Link href="/fl-coins" className="text-gray-400 hover:text-white transition">
-                FL Coin
+                FL
               </Link>
               <Link href="/payment-security" className="text-gray-400 hover:text-white transition">
                 Ödeme Güvenliği

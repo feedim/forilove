@@ -257,7 +257,7 @@ export default function NewŞablonPage() {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1.5">Fiyat (FL Coin)</label>
+              <label className="block text-sm text-gray-400 mb-1.5">Fiyat (FL)</label>
               <input
                 type="number"
                 value={coinPrice}

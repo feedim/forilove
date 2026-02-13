@@ -217,7 +217,7 @@ export default function CreatorDashboard() {
                   key={template.id}
                   id={template.id}
                   title={template.name}
-                  subtitle={`${template.coin_price} FL Coin · ${new Date(template.created_at).toLocaleDateString('tr-TR')}`}
+                  subtitle={`${template.coin_price} FL · ${new Date(template.created_at).toLocaleDateString('tr-TR')}`}
                   viewCount={template.view_count || 0}
                   previewSrc={`/api/templates/${template.id}/preview`}
                   editHref={`/creator/edit/${template.id}`}

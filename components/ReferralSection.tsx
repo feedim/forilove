@@ -104,11 +104,19 @@ export default function ReferralSection({ userId }: { userId: string }) {
       });
       if (error) throw error;
       if (data?.success) {
-        toast.success('Referans kodu uygulandı!');
+        toast.success('Referans kodu uygulandı');
         setHasReferrer(true);
         setReferralInput('');
       } else {
-        toast.error(data?.message || 'Referans kodu uygulanamadı');
+        const msg = data?.message || '';
+        const tr: Record<string, string> = {
+          'Cannot refer yourself': 'Kendi referans kodunuzu kullanamazsınız',
+          'Invalid referral code': 'Geçersiz referans kodu',
+          'Already referred': 'Zaten bir referans kodunuz var',
+          'Referral code not found': 'Referans kodu bulunamadı',
+          'User already has a referrer': 'Zaten bir referans kodunuz var',
+        };
+        toast.error(tr[msg] || 'Referans kodu uygulanamadı');
       }
     } catch {
       toast.error('Referans kodu uygulanamadı');

@@ -166,7 +166,7 @@ export default function SavedTemplatesPage() {
 
     if (!confirmResult?.success) return;
 
-    toast.success(`${template.name} satın alındı! (-${coinPrice} FL Coin)`);
+    toast.success(`${template.name} satın alındı (-${coinPrice} FL)`);
     setCoinBalance(confirmResult.newBalance);
     setPurchases([...purchases, template.id]);
     router.push(`/dashboard/editor/${template.id}`);

@@ -123,7 +123,7 @@ export default function PaymentPage() {
               <div>
                 <p className="text-sm text-gray-400 mb-1">{data.package_name}</p>
                 <p className="text-xl font-bold text-yellow-500">
-                  {totalCoins.toLocaleString()} FL Coin
+                  {totalCoins.toLocaleString()} FL
                 </p>
                 {data.bonus_coins > 0 && (
                   <p className="text-xs text-gray-500 mt-0.5">
