@@ -47,7 +47,7 @@ export default function SavedTemplatesPage() {
         .from("saved_templates")
         .select(`
           template_id,
-          templates (id, name, slug, coin_price, description, html_content)
+          templates (id, name, slug, coin_price, discount_price, discount_label, description, html_content)
         `)
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
@@ -138,7 +138,7 @@ export default function SavedTemplatesPage() {
   }, [purchases, router]);
 
   const handlePurchase = async (template: any) => {
-    const coinPrice = template.coin_price || 0;
+    const coinPrice = template.discount_price ?? template.coin_price ?? 0;
 
     const confirmResult = await confirm({
       itemName: template.name,

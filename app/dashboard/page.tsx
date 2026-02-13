@@ -202,7 +202,7 @@ export default function DashboardPage() {
       // Load templates excluding purchased ones
       let templatesQuery = supabase
         .from("templates")
-        .select("id, name, slug, coin_price, description, html_content")
+        .select("id, name, slug, coin_price, discount_price, discount_label, description, html_content")
         .eq("is_active", true);
 
       if (purchasedTemplateIds.length > 0) {
@@ -241,7 +241,7 @@ export default function DashboardPage() {
 
       let templatesQuery = supabase
         .from("templates")
-        .select("id, name, slug, coin_price, description, html_content")
+        .select("id, name, slug, coin_price, discount_price, discount_label, description, html_content")
         .eq("is_active", true);
 
       // Only add the filter if there are purchased templates
