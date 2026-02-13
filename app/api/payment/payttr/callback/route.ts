@@ -27,6 +27,18 @@ export async function POST(request: NextRequest) {
     const status = formData.get('status') as string;
     const total_amount = formData.get('total_amount') as string;
     const hash = formData.get('hash') as string;
+
+    // Alan validasyonu — eksik alan varsa geçersiz request, retry gereksiz
+    if (!merchant_oid || !status || !total_amount || !hash) {
+      console.error('[PayTR Callback] Missing required fields:', {
+        merchant_oid: !!merchant_oid,
+        status: !!status,
+        total_amount: !!total_amount,
+        hash: !!hash,
+      });
+      return new NextResponse('OK', { status: 200 });
+    }
+
     console.log('[PayTR Callback] merchant_oid:', merchant_oid, 'status:', status, 'amount:', total_amount);
 
     const merchant_key = (process.env.PAYTTR_MERCHANT_KEY || '').trim();
@@ -41,12 +53,14 @@ export async function POST(request: NextRequest) {
     const hashSTR = `${merchant_oid}${merchant_salt}${status}${total_amount}`;
     const calculatedHash = crypto.createHmac('sha256', merchant_key).update(hashSTR).digest('base64');
 
-    const hashBuffer = Buffer.from(hash || '', 'utf8');
+    const hashBuffer = Buffer.from(hash, 'utf8');
     const calculatedBuffer = Buffer.from(calculatedHash, 'utf8');
     if (hashBuffer.length !== calculatedBuffer.length || !crypto.timingSafeEqual(hashBuffer, calculatedBuffer)) {
       console.error('[PayTR Callback] Hash mismatch for', merchant_oid);
       return new NextResponse('OK', { status: 200 });
     }
+
+    console.log('[PayTR Callback] Hash verified for', merchant_oid);
 
     // Ödeme kaydını bul
     const { data: payment, error: paymentError } = await supabase
@@ -60,8 +74,9 @@ export async function POST(request: NextRequest) {
       return new NextResponse('OK', { status: 200 });
     }
 
-    // Zaten işlenmiş mi kontrol et
+    // Zaten işlenmiş mi kontrol et (idempotency)
     if (payment.status === 'completed') {
+      console.log('[PayTR Callback] Already completed, skipping:', merchant_oid);
       return new NextResponse('OK', { status: 200 });
     }
 
@@ -84,6 +99,7 @@ export async function POST(request: NextRequest) {
     // Ödeme başarılı mı?
     if (status === 'success') {
       const totalCoins = payment.coins_purchased;
+      console.log('[PayTR Callback] Processing success for', merchant_oid, 'coins:', totalCoins, 'user:', payment.user_id);
 
       // 1. Mevcut bakiyeyi al
       const { data: profile, error: profileError } = await supabase
@@ -93,38 +109,37 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (profileError || !profile) {
-        console.error('[PayTR Callback] Profile not found:', merchant_oid, profileError?.message);
-        await supabase
-          .from('coin_payments')
-          .update({
-            status: 'failed',
-            metadata: { ...payment.metadata, error: `Profil bulunamadı: ${profileError?.message}` },
-            completed_at: new Date().toISOString(),
-          })
-          .eq('id', payment.id);
-        return new NextResponse('OK', { status: 200 });
+        console.error('[PayTR Callback] Profile not found (will retry):', merchant_oid, 'user:', payment.user_id, profileError?.message);
+        // Payment "pending" kalır → PayTR retry edecek
+        return new NextResponse('FAIL', { status: 500 });
       }
 
-      // 2. Bakiyeyi artır
-      const { error: updateError } = await supabase
+      const oldBalance = profile.coin_balance || 0;
+      const newBalance = oldBalance + totalCoins;
+      console.log('[PayTR Callback] Balance update:', merchant_oid, `${oldBalance} + ${totalCoins} = ${newBalance}`);
+
+      // 2. Bakiyeyi artır + .select() ile doğrula
+      const { data: updatedRows, error: updateError } = await supabase
         .from('profiles')
-        .update({ coin_balance: (profile.coin_balance || 0) + totalCoins })
-        .eq('user_id', payment.user_id);
+        .update({ coin_balance: newBalance })
+        .eq('user_id', payment.user_id)
+        .select('coin_balance');
 
       if (updateError) {
-        console.error('[PayTR Callback] Balance update failed:', merchant_oid, updateError.message);
-        await supabase
-          .from('coin_payments')
-          .update({
-            status: 'failed',
-            metadata: { ...payment.metadata, error: `Bakiye güncellenemedi: ${updateError.message}` },
-            completed_at: new Date().toISOString(),
-          })
-          .eq('id', payment.id);
-        return new NextResponse('OK', { status: 200 });
+        console.error('[PayTR Callback] Balance update failed (will retry):', merchant_oid, updateError.message);
+        // Payment "pending" kalır → PayTR retry edecek
+        return new NextResponse('FAIL', { status: 500 });
       }
 
-      // 3. Transaction kaydı ekle
+      if (!updatedRows || updatedRows.length === 0) {
+        console.error('[PayTR Callback] Balance update affected 0 rows (will retry):', merchant_oid, 'user:', payment.user_id);
+        // Payment "pending" kalır → PayTR retry edecek
+        return new NextResponse('FAIL', { status: 500 });
+      }
+
+      console.log('[PayTR Callback] Balance updated successfully:', merchant_oid, 'new_balance:', updatedRows[0].coin_balance);
+
+      // 3. Transaction kaydı ekle (kritik değil, coin zaten eklendi)
       const { error: txError } = await supabase
         .from('coin_transactions')
         .insert({
@@ -137,7 +152,7 @@ export async function POST(request: NextRequest) {
         });
 
       if (txError) {
-        console.error('[PayTR Callback] Transaction record failed:', merchant_oid, txError.message);
+        console.error('[PayTR Callback] Transaction record failed (non-critical):', merchant_oid, txError.message);
       }
 
       // 4. Ödemeyi completed olarak işaretle
@@ -149,9 +164,10 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', payment.id);
 
-      console.log('[PayTR Callback] ✓ Completed for', merchant_oid, 'coins:', totalCoins);
+      console.log('[PayTR Callback] ✓ Completed for', merchant_oid, 'coins:', totalCoins, 'new_balance:', updatedRows[0].coin_balance);
 
     } else {
+      console.log('[PayTR Callback] Payment failed by PayTR:', merchant_oid, 'status:', status);
       await supabase
         .from('coin_payments')
         .update({
@@ -164,7 +180,8 @@ export async function POST(request: NextRequest) {
 
     return new NextResponse('OK', { status: 200 });
   } catch (error: any) {
-    console.error('[PayTR Callback] Exception:', error?.message);
-    return new NextResponse('OK', { status: 200 });
+    console.error('[PayTR Callback] Exception (will retry):', error?.message, error?.stack);
+    // Geçici hata olabilir → non-200 dön, PayTR retry etsin
+    return new NextResponse('FAIL', { status: 500 });
   }
 }
