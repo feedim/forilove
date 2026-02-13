@@ -11,6 +11,30 @@ export const dynamic = 'force-dynamic';
  *
  * Auth: client Authorization: Bearer <token> header'ı gönderir
  */
+/** GET /api/payment/verify — diagnostic endpoint */
+export async function GET() {
+  try {
+    const adminClient = createAdminClient();
+    // Supabase bağlantısını test et
+    const { count, error } = await adminClient
+      .from('coin_payments')
+      .select('*', { count: 'exact', head: true });
+
+    return NextResponse.json({
+      ok: !error,
+      timestamp: new Date().toISOString(),
+      commit: '39f1c23',
+      env: {
+        hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      },
+      db: error ? { error: error.message } : { payments_count: count },
+    });
+  } catch (e: any) {
+    return NextResponse.json({ ok: false, error: e?.message }, { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   const adminClient = createAdminClient();
 
