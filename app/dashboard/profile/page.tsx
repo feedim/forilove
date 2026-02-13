@@ -52,21 +52,12 @@ export default function ProfilePage() {
       setLastName(profileData?.surname || "");
 
       if (profileData?.role === 'admin') {
-        const [usersRes, paymentsRes, todayPaymentsRes, projectsRes] = await Promise.all([
-          supabase.from('profiles').select('*', { count: 'exact', head: true }),
-          supabase.from('coin_payments').select('price_paid, coins_purchased', { count: 'exact' }).eq('status', 'completed'),
-          supabase.from('coin_payments').select('price_paid, coins_purchased').eq('status', 'completed').gte('completed_at', new Date().toISOString().split('T')[0]),
-          supabase.from('projects').select('*', { count: 'exact', head: true }).eq('is_published', true),
-        ]);
-        setAdminStats({
-          totalUsers: usersRes.count || 0,
-          totalPayments: paymentsRes.count || 0,
-          totalRevenueTRY: paymentsRes.data?.reduce((s: number, p: any) => s + (p.price_paid || 0), 0) || 0,
-          totalCoins: paymentsRes.data?.reduce((s: number, p: any) => s + (p.coins_purchased || 0), 0) || 0,
-          todayRevenueTRY: todayPaymentsRes.data?.reduce((s: number, p: any) => s + (p.price_paid || 0), 0) || 0,
-          todayPayments: todayPaymentsRes.data?.length || 0,
-          publishedPages: projectsRes.count || 0,
-        });
+        try {
+          const res = await fetch('/api/admin/stats');
+          if (res.ok) {
+            setAdminStats(await res.json());
+          }
+        } catch { /* silent */ }
       }
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
