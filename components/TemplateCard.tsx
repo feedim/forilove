@@ -34,7 +34,8 @@ export default function TemplateCard({
 }: TemplateCardProps) {
   const isPublished = template.projectStatus === 'published';
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isHoveredRef = useRef(false);
   const isMobileRef = useRef(false);
 
@@ -46,64 +47,74 @@ export default function TemplateCard({
     return () => mq.removeEventListener('change', handler);
   }, []);
 
-  const kickScroll = useCallback(() => {
+  const startSlideshow = useCallback(() => {
     if (isMobileRef.current || !isHoveredRef.current) return;
-    if (scrollTimerRef.current) return; // already running
+    if (timerRef.current) return;
     const iframe = iframeRef.current;
-    if (!iframe) return;
-    try {
-      const doc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (!doc) return;
-      const maxScroll = doc.documentElement.scrollHeight - doc.documentElement.clientHeight;
-      if (maxScroll <= 0) return;
+    const wrap = wrapRef.current;
+    if (!iframe || !wrap) return;
 
-      const steps = maxScroll > 3000 ? 5 : maxScroll > 1500 ? 4 : 3;
-      const positions: number[] = [];
-      for (let i = 0; i < steps; i++) {
-        positions.push(Math.round((maxScroll * i) / (steps - 1)));
-      }
+    // iframe is scaled 0.3x, actual content size = 333% of card
+    // We move the iframe via translateY to show different sections
+    const iframeH = iframe.offsetHeight; // actual rendered height (333% of card)
+    const cardH = wrap.offsetHeight;     // visible card height
+    if (iframeH <= cardH) return;
 
-      doc.documentElement.style.scrollBehavior = 'smooth';
-      let idx = 0;
-      doc.documentElement.scrollTop = 0;
+    const maxShift = iframeH - cardH;
+    const steps = maxShift > 2000 ? 4 : 3;
+    const positions = [0];
+    for (let i = 1; i < steps; i++) {
+      positions.push(Math.round((maxShift * i) / (steps - 1)));
+    }
 
-      const jumpNext = () => {
+    let idx = 0;
+    iframe.style.transform = 'scale(0.3) translateY(0px)';
+    iframe.style.opacity = '1';
+
+    const showNext = () => {
+      if (!isHoveredRef.current) return;
+      // fade out
+      iframe.style.opacity = '0';
+      timerRef.current = setTimeout(() => {
         if (!isHoveredRef.current) return;
         idx++;
         if (idx >= positions.length) idx = 0;
-        doc.documentElement.scrollTop = positions[idx];
-        scrollTimerRef.current = setTimeout(jumpNext, 1800);
-      };
+        // jump position while invisible
+        iframe.style.transform = `scale(0.3) translateY(-${positions[idx]}px)`;
+        // fade in
+        iframe.style.opacity = '1';
+        timerRef.current = setTimeout(showNext, 1400);
+      }, 250);
+    };
 
-      scrollTimerRef.current = setTimeout(jumpNext, 1000);
-    } catch { /* cross-origin, skip */ }
+    timerRef.current = setTimeout(showNext, 1200);
   }, []);
 
   const handleMouseEnter = useCallback(() => {
     isHoveredRef.current = true;
-    kickScroll();
-  }, [kickScroll]);
+    startSlideshow();
+  }, [startSlideshow]);
 
   const handleIframeLoad = useCallback(() => {
-    // iframe just loaded — if already hovered, start scrolling
-    if (isHoveredRef.current) kickScroll();
-  }, [kickScroll]);
+    if (isHoveredRef.current) startSlideshow();
+  }, [startSlideshow]);
 
-  const stopAutoScroll = useCallback(() => {
+  const handleMouseLeave = useCallback(() => {
     isHoveredRef.current = false;
-    if (scrollTimerRef.current) {
-      clearTimeout(scrollTimerRef.current);
-      scrollTimerRef.current = null;
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
     }
     const iframe = iframeRef.current;
-    if (!iframe) return;
-    try {
-      const doc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (doc) {
-        doc.documentElement.style.scrollBehavior = 'auto';
-        doc.documentElement.scrollTop = 0;
-      }
-    } catch { /* cross-origin, skip */ }
+    if (iframe) {
+      iframe.style.transition = 'none';
+      iframe.style.transform = 'scale(0.3) translateY(0px)';
+      iframe.style.opacity = '1';
+      // re-enable transition after reset
+      requestAnimationFrame(() => {
+        if (iframe) iframe.style.transition = 'opacity 0.25s ease, transform 0s';
+      });
+    }
   }, []);
 
   const handleSaveClick = (e: React.MouseEvent) => {
@@ -117,19 +128,19 @@ export default function TemplateCard({
     <div
       onClick={onClick}
       onMouseEnter={handleMouseEnter}
-      onMouseLeave={stopAutoScroll}
+      onMouseLeave={handleMouseLeave}
       className="group relative aspect-[3/4] bg-zinc-900 overflow-hidden border border-white/10 hover:border-pink-500/30 transition-all cursor-pointer"
       style={{ borderRadius: '29px' }}
     >
       {/* Template Preview */}
-      <div className="absolute inset-0 overflow-hidden bg-zinc-900">
+      <div ref={wrapRef} className="absolute inset-0 overflow-hidden bg-zinc-900">
         {previewUrl ? (
           <iframe
             ref={iframeRef}
             src={previewUrl}
             onLoad={handleIframeLoad}
-            className="w-full h-full pointer-events-none scale-[0.3] origin-top-left"
-            style={{ width: '333%', height: '333%' }}
+            className="w-full h-full pointer-events-none origin-top-left"
+            style={{ width: '333%', height: '333%', transform: 'scale(0.3) translateY(0px)', transition: 'opacity 0.25s ease, transform 0s' }}
             sandbox="allow-same-origin"
             loading="lazy"
           />
@@ -138,8 +149,8 @@ export default function TemplateCard({
             ref={iframeRef}
             srcDoc={DOMPurify.sanitize(template.html_content, { WHOLE_DOCUMENT: true, ADD_TAGS: ['style', 'link'], ADD_ATTR: ['data-editable', 'data-type', 'data-label'] })}
             onLoad={handleIframeLoad}
-            className="w-full h-full pointer-events-none scale-[0.3] origin-top-left"
-            style={{ width: '333%', height: '333%' }}
+            className="w-full h-full pointer-events-none origin-top-left"
+            style={{ width: '333%', height: '333%', transform: 'scale(0.3) translateY(0px)', transition: 'opacity 0.25s ease, transform 0s' }}
             sandbox="allow-same-origin"
             loading="lazy"
           />
