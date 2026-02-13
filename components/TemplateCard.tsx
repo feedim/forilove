@@ -1,7 +1,7 @@
 import Link from "next/link";
 import DOMPurify from "isomorphic-dompurify";
 import { Heart, Coins, Bookmark, Eye } from "lucide-react";
-import { useRef, useCallback, useEffect } from "react";
+import { useRef } from "react";
 
 interface TemplateCardProps {
   template: any;
@@ -34,88 +34,6 @@ export default function TemplateCard({
 }: TemplateCardProps) {
   const isPublished = template.projectStatus === 'published';
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isHoveredRef = useRef(false);
-  const isMobileRef = useRef(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 768px)');
-    isMobileRef.current = mq.matches;
-    const handler = (e: MediaQueryListEvent) => { isMobileRef.current = e.matches; };
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
-
-  const startSlideshow = useCallback(() => {
-    if (isMobileRef.current || !isHoveredRef.current) return;
-    if (timerRef.current) return;
-    const iframe = iframeRef.current;
-    const wrap = wrapRef.current;
-    if (!iframe || !wrap) return;
-
-    // iframe is scaled 0.3x, actual content size = 333% of card
-    // We move the iframe via translateY to show different sections
-    const iframeH = iframe.offsetHeight; // actual rendered height (333% of card)
-    const cardH = wrap.offsetHeight;     // visible card height
-    if (iframeH <= cardH) return;
-
-    const maxShift = iframeH - cardH;
-    const steps = maxShift > 2000 ? 4 : 3;
-    const positions = [0];
-    for (let i = 1; i < steps; i++) {
-      positions.push(Math.round((maxShift * i) / (steps - 1)));
-    }
-
-    let idx = 0;
-    iframe.style.transform = 'scale(0.3) translateY(0px)';
-    iframe.style.opacity = '1';
-
-    const showNext = () => {
-      if (!isHoveredRef.current) return;
-      // fade out
-      iframe.style.opacity = '0';
-      timerRef.current = setTimeout(() => {
-        if (!isHoveredRef.current) return;
-        idx++;
-        if (idx >= positions.length) idx = 0;
-        // jump position while invisible
-        iframe.style.transform = `scale(0.3) translateY(-${positions[idx]}px)`;
-        // fade in
-        iframe.style.opacity = '1';
-        timerRef.current = setTimeout(showNext, 1400);
-      }, 250);
-    };
-
-    timerRef.current = setTimeout(showNext, 1200);
-  }, []);
-
-  const handleMouseEnter = useCallback(() => {
-    isHoveredRef.current = true;
-    startSlideshow();
-  }, [startSlideshow]);
-
-  const handleIframeLoad = useCallback(() => {
-    if (isHoveredRef.current) startSlideshow();
-  }, [startSlideshow]);
-
-  const handleMouseLeave = useCallback(() => {
-    isHoveredRef.current = false;
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    const iframe = iframeRef.current;
-    if (iframe) {
-      iframe.style.transition = 'none';
-      iframe.style.transform = 'scale(0.3) translateY(0px)';
-      iframe.style.opacity = '1';
-      // re-enable transition after reset
-      requestAnimationFrame(() => {
-        if (iframe) iframe.style.transition = 'opacity 0.25s ease, transform 0s';
-      });
-    }
-  }, []);
 
   const handleSaveClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -127,20 +45,17 @@ export default function TemplateCard({
   return (
     <div
       onClick={onClick}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
       className="group relative aspect-[3/4] bg-zinc-900 overflow-hidden border border-white/10 hover:border-pink-500/30 transition-all cursor-pointer"
       style={{ borderRadius: '29px' }}
     >
       {/* Template Preview */}
-      <div ref={wrapRef} className="absolute inset-0 overflow-hidden bg-zinc-900">
+      <div className="absolute inset-0 overflow-hidden bg-zinc-900">
         {previewUrl ? (
           <iframe
             ref={iframeRef}
             src={previewUrl}
-            onLoad={handleIframeLoad}
-            className="w-full h-full pointer-events-none origin-top-left"
-            style={{ width: '333%', height: '333%', transform: 'scale(0.3) translateY(0px)', transition: 'opacity 0.25s ease, transform 0s' }}
+            className="w-full h-full pointer-events-none scale-[0.3] origin-top-left"
+            style={{ width: '333%', height: '333%' }}
             sandbox="allow-same-origin"
             loading="lazy"
           />
@@ -148,9 +63,8 @@ export default function TemplateCard({
           <iframe
             ref={iframeRef}
             srcDoc={DOMPurify.sanitize(template.html_content, { WHOLE_DOCUMENT: true, ADD_TAGS: ['style', 'link'], ADD_ATTR: ['data-editable', 'data-type', 'data-label'] })}
-            onLoad={handleIframeLoad}
-            className="w-full h-full pointer-events-none origin-top-left"
-            style={{ width: '333%', height: '333%', transform: 'scale(0.3) translateY(0px)', transition: 'opacity 0.25s ease, transform 0s' }}
+            className="w-full h-full pointer-events-none scale-[0.3] origin-top-left"
+            style={{ width: '333%', height: '333%' }}
             sandbox="allow-same-origin"
             loading="lazy"
           />
