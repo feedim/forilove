@@ -128,10 +128,9 @@
   }
 }
 
-/* Mobile Touch — tap highlight + overscroll bounce kapatma */
+/* Mobile Touch */
 html, body {
   -webkit-tap-highlight-color: transparent;
-  overscroll-behavior: none;
 }
 
 /* Cursor Pointer for ALL Interactive Elements */
