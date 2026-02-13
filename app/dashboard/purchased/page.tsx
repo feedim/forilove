@@ -34,7 +34,7 @@ export default function PurchasedTemplatesPage() {
         .from("purchases")
         .select(`
           template_id,
-          templates (id, name, slug, coin_price, description, html_content)
+          templates (id, name, slug, coin_price, discount_price, discount_label, description, html_content)
         `)
         .eq("user_id", user.id)
         .eq("payment_status", "completed")

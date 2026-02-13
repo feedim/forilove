@@ -99,8 +99,8 @@ export default function TemplateCard({
       <div className="absolute inset-0 p-6 flex flex-col justify-between bg-gradient-to-t from-black via-black/50 to-transparent">
         <div className="flex items-start">
           <div className="flex items-center gap-2">
-            {template.discount_label && !isPurchased && (
-              <span className="bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-full">
+            {template.discount_label && !isPurchased && !isPublished && (
+              <span className="bg-pink-600 text-white text-xs font-bold px-3 py-1.5 rounded-full uppercase">
                 {template.discount_label}
               </span>
             )}
@@ -170,11 +170,11 @@ export default function TemplateCard({
             <div className="flex items-center gap-3">
               {showPrice && (
                 <>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <Coins className="h-6 w-6 text-yellow-500" />
                     {template.discount_price ? (
                       <>
-                        <span className="text-lg font-bold text-gray-400 line-through">
+                        <span className="text-base font-bold text-gray-500 line-through decoration-red-500/70 decoration-2">
                           {template.coin_price}
                         </span>
                         <span className="text-3xl font-black text-yellow-500">
