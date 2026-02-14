@@ -116,7 +116,7 @@ export default function TemplatesPage() {
                     template={template}
                     isPurchased={false}
                     isSaved={false}
-                    showSaveButton={false}
+                    showSaveButton={true}
                     showPrice={true}
                     onClick={() => handleTemplateClick(template.id)}
                   />

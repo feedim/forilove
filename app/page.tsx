@@ -200,7 +200,7 @@ export default function Home() {
                       template={template}
                       isPurchased={false}
                       isSaved={false}
-                      showSaveButton={false}
+                      showSaveButton={true}
                       showPrice={true}
                       onClick={() => { router.push(`/editor/${template.id}`); }}
                     />

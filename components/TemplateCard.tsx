@@ -48,6 +48,8 @@ export default function TemplateCard({
     e.stopPropagation();
     if (onSaveToggle) {
       onSaveToggle(template.id);
+    } else {
+      window.location.href = '/login';
     }
   };
 
