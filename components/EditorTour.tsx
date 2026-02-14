@@ -15,8 +15,8 @@ const STEPS: TourStep[] = [
   {
     target: "preview",
     targetMobile: "preview",
-    title: "Canlı Önizleme",
-    description: "Düzenlemek istediğin alana dokun.",
+    title: "Metin & Görsel Düzenle",
+    description: "Önizlemedeki metin veya görsele dokunarak düzenleyebilirsin.",
   },
   {
     target: "ai-fill",
@@ -52,8 +52,8 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
   const [current, setCurrent] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [tooltipAbove, setTooltipAbove] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
 
   const getTarget = useCallback(
     (step: TourStep) => {
@@ -61,6 +61,17 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
       return document.querySelector(`[data-tour="${attr}"]`) as HTMLElement | null;
     },
     [isMobile]
+  );
+
+  // Scroll target into view (for toolbar items that may be off-screen)
+  const scrollTargetIntoView = useCallback(
+    (step: TourStep) => {
+      const el = getTarget(step);
+      if (!el) return;
+      // scrollIntoView for elements inside scrollable containers (toolbar)
+      el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    },
+    [getTarget]
   );
 
   const measure = useCallback(() => {
@@ -71,8 +82,6 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
     }
     const r = el.getBoundingClientRect();
     setRect(r);
-    // If target is in the bottom half of viewport, show tooltip above
-    setTooltipAbove(r.bottom > window.innerHeight * 0.65);
   }, [current, getTarget]);
 
   // Detect mobile
@@ -83,9 +92,21 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Measure on step change, resize, scroll
+  // On step change: scroll into view, then measure after scroll settles
   useEffect(() => {
+    scrollTargetIntoView(STEPS[current]);
+    // Measure immediately, then again after scroll animation
     measure();
+    const t1 = setTimeout(measure, 350);
+    const t2 = setTimeout(measure, 600);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [current, scrollTargetIntoView, measure]);
+
+  // Measure on resize, scroll
+  useEffect(() => {
     window.addEventListener("resize", measure);
     window.addEventListener("scroll", measure, true);
     return () => {
@@ -93,12 +114,6 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
       window.removeEventListener("scroll", measure, true);
     };
   }, [measure]);
-
-  // Re-measure after a brief delay to catch layout shifts
-  useEffect(() => {
-    const t = setTimeout(measure, 100);
-    return () => clearTimeout(t);
-  }, [current, measure]);
 
   const next = () => {
     if (current < STEPS.length - 1) {
@@ -110,40 +125,49 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
 
   const skip = () => onComplete();
 
-  // Padding around target element
   const PAD = 8;
+  const vw = typeof window !== "undefined" ? window.innerWidth : 400;
+  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
 
   const clipPath = rect
     ? (() => {
         const x = Math.max(0, rect.left - PAD);
         const y = Math.max(0, rect.top - PAD);
-        const x2 = Math.min(window.innerWidth, rect.right + PAD);
-        const y2 = Math.min(window.innerHeight, rect.bottom + PAD);
+        const x2 = Math.min(vw, rect.right + PAD);
+        const y2 = Math.min(vh, rect.bottom + PAD);
         return `polygon(0% 0%, 0% 100%, ${x}px 100%, ${x}px ${y}px, ${x2}px ${y}px, ${x2}px ${y2}px, ${x}px ${y2}px, ${x}px 100%, 100% 100%, 100% 0%)`;
       })()
     : undefined;
 
-  // Tooltip position
-  const tooltipStyle: React.CSSProperties = {};
-  if (rect) {
-    const tooltipWidth = 300;
-    let left = rect.left + rect.width / 2 - tooltipWidth / 2;
-    // Clamp to viewport
-    left = Math.max(12, Math.min(left, window.innerWidth - tooltipWidth - 12));
-    tooltipStyle.left = left;
-    tooltipStyle.width = tooltipWidth;
+  // Responsive tooltip width
+  const tooltipWidth = isMobile ? Math.min(vw - 24, 280) : 300;
+  const GAP = 12;
 
-    if (tooltipAbove) {
-      tooltipStyle.bottom = window.innerHeight - rect.top + PAD + 12;
+  // Tooltip positioning — always clamp inside viewport
+  const tooltipStyle: React.CSSProperties = { width: tooltipWidth };
+  if (rect) {
+    // Horizontal: center on target, clamp to edges
+    let left = rect.left + rect.width / 2 - tooltipWidth / 2;
+    left = Math.max(12, Math.min(left, vw - tooltipWidth - 12));
+    tooltipStyle.left = left;
+
+    // Vertical: prefer below, go above if not enough space
+    const spaceBelow = vh - rect.bottom - PAD - GAP;
+    const spaceAbove = rect.top - PAD - GAP;
+    // Estimate tooltip height
+    const estHeight = 140;
+
+    if (spaceBelow >= estHeight || spaceBelow >= spaceAbove) {
+      // Show below
+      tooltipStyle.top = Math.min(rect.bottom + PAD + GAP, vh - estHeight - 12);
     } else {
-      tooltipStyle.top = rect.bottom + PAD + 12;
+      // Show above
+      tooltipStyle.bottom = Math.max(vh - rect.top + PAD + GAP, 12);
     }
   } else {
-    // Fallback: center
     tooltipStyle.top = "50%";
     tooltipStyle.left = "50%";
     tooltipStyle.transform = "translate(-50%, -50%)";
-    tooltipStyle.width = 300;
   }
 
   const overlay = (
@@ -152,7 +176,6 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
       className="fixed inset-0"
       style={{ zIndex: 99999 }}
       onClick={(e) => {
-        // Clicking the overlay (dark area) advances to next
         if (e.target === overlayRef.current) next();
       }}
     >
@@ -181,7 +204,7 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
         />
       )}
 
-      {/* Clickable transparent area over the spotlight hole to capture clicks */}
+      {/* Clickable transparent area over spotlight */}
       {rect && (
         <div
           className="absolute cursor-pointer"
@@ -197,6 +220,7 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
 
       {/* Tooltip */}
       <div
+        ref={tooltipRef}
         className="absolute bg-[#161616]/95 backdrop-blur-xl rounded-2xl p-4"
         style={{
           ...tooltipStyle,
@@ -205,7 +229,7 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h4 className="text-white font-bold text-base mb-1">{STEPS[current].title}</h4>
+        <h4 className="text-white font-bold text-[15px] mb-1">{STEPS[current].title}</h4>
         <p className="text-zinc-400 text-sm leading-relaxed mb-4">{STEPS[current].description}</p>
 
         <div className="flex items-center justify-between">
