@@ -678,7 +678,7 @@ export default function ProfilePage() {
                         inputMode="numeric"
                         value={emailCode}
                         onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                        placeholder="000000"
+                        placeholder="00000000"
                         maxLength={8}
                         className="input-modern flex-1 text-center font-mono tracking-[0.3em]"
                       />
