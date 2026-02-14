@@ -230,7 +230,7 @@ export default function AffiliateApplyPage() {
               </div>
             )}
 
-            <div className="bg-zinc-900 rounded-2xl p-6 space-y-4">
+            <div className={`bg-zinc-900 rounded-2xl p-6 space-y-4 ${!emailVerified ? "opacity-50 pointer-events-none" : ""}`}>
               <div>
                 <label className="block text-xs text-zinc-400 mb-1">Ad Soyad</label>
                 <input
