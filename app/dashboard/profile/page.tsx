@@ -264,7 +264,8 @@ export default function ProfilePage() {
         body: JSON.stringify({ promoId }),
       });
       if (!res.ok) {
-        toast.error('Promo silinemedi');
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || 'Promo silinemedi');
         return;
       }
       setPromos(promos.filter(p => p.id !== promoId));

@@ -256,7 +256,7 @@ export default function AffiliatePaymentPage() {
                       ? balance.nextAutoDate
                         ? `Sonraki otomatik çekim: ${new Date(balance.nextAutoDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' })}`
                         : "Bakiye yeterli — 7 gün dolduğunda otomatik talep oluşur"
-                      : `Min. ${balance.minPayout} TRY bakiyeye ulaştığınızda 7 günde bir otomatik talep oluşur.`}
+                      : `Min. 100 TRY bakiyeye ulaştığınızda 7 günde bir otomatik talep oluşur.`}
                     {" "}
                     <span className="text-pink-400">Manuel çekim için &quot;Çek&quot; butonunu kullanın.</span>
                   </p>
