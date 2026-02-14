@@ -33,8 +33,8 @@ export default function PromoBanner() {
         }
       }
 
-      // Don't show banner on dashboard or editor/preview (breaks layout with calc heights)
-      if (pathname?.startsWith("/dashboard") || pathname?.startsWith("/editor")) {
+      // Don't show banner on dashboard (promo already applied after signup)
+      if (pathname?.startsWith("/dashboard")) {
         setPromoInfo(null);
         return;
       }
