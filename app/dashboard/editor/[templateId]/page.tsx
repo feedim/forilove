@@ -13,6 +13,7 @@ import { getActivePrice, isDiscountActive } from '@/lib/discount';
 import type { CouponInfo } from '@/components/PurchaseConfirmModal';
 import MusicPickerModal from '@/components/MusicPickerModal';
 import { useAuthModal } from '@/components/AuthModal';
+import EditorTour from '@/components/EditorTour';
 
 declare global { interface Window { YT: any; onYouTubeIframeAPIReady: (() => void) | undefined; } }
 
@@ -66,6 +67,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
   const [showAIModal, setShowAIModal] = useState(false);
   const [aiPrompt, setAIPrompt] = useState('');
   const [aiLoading, setAILoading] = useState(false);
+  const [showTour, setShowTour] = useState(false);
   const TEMPLATE_UNLOCK_COST = 29;
   const [unlockedFields, setUnlockedFields] = useState<Set<string>>(new Set());
   const [selectedVisibility, setSelectedVisibility] = useState<boolean | null>(null);
@@ -206,6 +208,42 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values, template]);
+
+  // Editor tour: show once after template loads
+  useEffect(() => {
+    if (!template || loading) return;
+    const timer = setTimeout(async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles').select('has_seen_editor_tour')
+            .eq('user_id', user.id).single();
+          if (profile?.has_seen_editor_tour) return;
+        } else {
+          if (localStorage.getItem('forilove_editor_tour_done')) return;
+        }
+        setShowTour(true);
+      } catch {
+        // If check fails, don't block — just skip tour
+      }
+    }, 1200);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [template, loading]);
+
+  const handleTourComplete = async () => {
+    setShowTour(false);
+    localStorage.setItem('forilove_editor_tour_done', '1');
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('profiles')
+          .update({ has_seen_editor_tour: true })
+          .eq('user_id', user.id);
+      }
+    } catch {}
+  };
 
   useEffect(() => {
     // Listen for messages from iframe (srcDoc iframes have origin 'null')
@@ -1790,6 +1828,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                 onClick={handlePublish}
                 disabled={saving || purchasing}
                 className="btn-primary shrink-0 px-4 py-2 text-sm whitespace-nowrap flex items-center gap-1.5"
+                data-tour="publish-mobile"
               >
                 {saving || purchasing
                   ? (project?.is_published ? "Güncelleniyor..." : !isPurchased && template?.coin_price > 0 ? "Satın Alınıyor..." : "Paylaşılıyor...")
@@ -1850,6 +1889,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                       <button
                         onClick={() => setShowAIModal(true)}
                         className="btn-secondary shrink-0 flex items-center gap-2 px-4 py-2 text-sm whitespace-nowrap"
+                        data-tour="ai-fill"
                       >
                         <Sparkles className="h-4 w-4" style={{ color: 'lab(49.5493% 79.8381 2.31768)' }} />
                         AI ile Doldur
@@ -1869,7 +1909,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                         </button>
                       )}
                       {musicUrl ? (
-                        <div className="btn-secondary shrink-0 flex items-center rounded-full overflow-hidden" style={{ padding: '0 1rem' }}>
+                        <div className="btn-secondary shrink-0 flex items-center rounded-full overflow-hidden" style={{ padding: '0 1rem' }} data-tour="music">
                           {/* Play/Pause — direct handler for mobile gesture context */}
                           <button
                             onClick={handleMusicToggle}
@@ -1912,6 +1952,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                         <button
                           onClick={() => setShowMusicModal(true)}
                           className="btn-secondary shrink-0 flex items-center gap-2 px-4 py-2 text-sm whitespace-nowrap"
+                          data-tour="music"
                         >
                           <Music className="h-4 w-4" />
                           Müzik Ekle
@@ -1920,6 +1961,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                       <button
                         onClick={handlePreview}
                         className="btn-secondary shrink-0 flex items-center gap-2 px-4 py-2 text-sm whitespace-nowrap"
+                        data-tour="preview-btn"
                       >
                         <Eye className="h-4 w-4" />
                         Önizleme
@@ -1941,6 +1983,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                       onClick={handlePublish}
                       disabled={saving || purchasing}
                       className="btn-primary shrink-0 px-4 py-2 text-sm ml-2 whitespace-nowrap flex items-center gap-1.5"
+                      data-tour="publish"
                     >
                       {saving || purchasing
                         ? (project?.is_published ? "Güncelleniyor..." : !isPurchased && template?.coin_price > 0 ? "Satın Alınıyor..." : "Paylaşılıyor...")
@@ -1959,7 +2002,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
       {/* Main Editor Layout */}
       <div className="relative flex-1 min-h-0">
         {/* Live Preview - Full Width, account for mobile bottom bar */}
-        <div className="h-[calc(100%-56px)] md:h-full overflow-hidden bg-white" style={{ overscrollBehavior: 'contain' }}>
+        <div className="h-[calc(100%-56px)] md:h-full overflow-hidden bg-white" style={{ overscrollBehavior: 'contain' }} data-tour="preview">
           <iframe
             ref={iframeRef}
             srcDoc={previewHtml}
@@ -1999,12 +2042,13 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                 <button
                   onClick={() => setShowAIModal(true)}
                   className="btn-secondary shrink-0 flex items-center gap-2 px-4 py-2.5 text-sm whitespace-nowrap"
+                  data-tour="ai-fill-mobile"
                 >
                   <Sparkles className="h-4 w-4" style={{ color: 'lab(49.5493% 79.8381 2.31768)' }} />
                   AI Doldur
                 </button>
                 {musicUrl ? (
-                  <div className="btn-secondary shrink-0 flex items-center rounded-full overflow-hidden" style={{ padding: '0 1rem' }}>
+                  <div className="btn-secondary shrink-0 flex items-center rounded-full overflow-hidden" style={{ padding: '0 1rem' }} data-tour="music-mobile">
                     {/* Play/Pause — direct handler for mobile gesture context */}
                     <button
                       onClick={handleMusicToggle}
@@ -2048,6 +2092,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                   <button
                     onClick={() => setShowMusicModal(true)}
                     className="btn-secondary shrink-0 flex items-center gap-2 px-4 py-2.5 text-sm whitespace-nowrap"
+                    data-tour="music-mobile"
                   >
                     <Music className="h-4 w-4" />
                     Müzik Ekle
@@ -2070,6 +2115,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                 <button
                   onClick={handlePreview}
                   className="btn-secondary shrink-0 flex items-center gap-2 px-4 py-2.5 text-sm whitespace-nowrap"
+                  data-tour="preview-btn-mobile"
                 >
                   <Eye className="h-4 w-4" />
                   Önizleme
@@ -2785,6 +2831,9 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
         onClose={() => setShowShareModal(false)}
       />
       {/* YouTube player managed by useEffect — no inline iframe needed */}
+
+      {/* Editor Tour */}
+      {showTour && <EditorTour onComplete={handleTourComplete} />}
       </div>
     </div>
   );
