@@ -1311,7 +1311,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                           const el = document.getElementById('editor-toolbar-scroll');
                           if (el) el.scrollBy({ left: -200, behavior: 'smooth' });
                         }}
-                        className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 transition active:scale-95"
+                        className="shrink-0 flex items-center justify-center rounded-full bg-transparent hover:bg-white/10 border border-white/10 transition active:scale-95" style={{ width: 49, height: 49 }}
                         aria-label="Sola kaydır"
                       >
                         <ArrowLeft className="h-4 w-4" />
@@ -1432,7 +1432,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                           const el = document.getElementById('editor-toolbar-scroll');
                           if (el) el.scrollBy({ left: 200, behavior: 'smooth' });
                         }}
-                        className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 transition active:scale-95"
+                        className="shrink-0 flex items-center justify-center rounded-full bg-transparent hover:bg-white/10 border border-white/10 transition active:scale-95" style={{ width: 49, height: 49 }}
                         aria-label="Sağa kaydır"
                       >
                         <ArrowLeft className="h-4 w-4 rotate-180" />
