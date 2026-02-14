@@ -170,7 +170,7 @@ export default function CoinsPage() {
           return (
             <div className="space-y-8">
               <div className="text-center space-y-4">
-                <div className="text-5xl sm:text-6xl font-bold text-yellow-500">
+                <div className="text-5xl font-bold text-yellow-500">
                   {totalCoins.toLocaleString()} FL
                 </div>
                 {pkg.bonus_coins > 0 && (
