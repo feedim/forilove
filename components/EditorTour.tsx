@@ -4,19 +4,34 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { ChevronRight } from "lucide-react";
 
+/* ------------------------------------------------------------------ */
+/*  Step definitions                                                   */
+/* ------------------------------------------------------------------ */
+
 interface TourStep {
-  target: string;
-  targetMobile: string;
+  /** data-tour attribute on a parent-page element (null = iframe-based) */
+  target: string | null;
+  targetMobile: string | null;
+  /** For iframe-based steps: selector to find inside iframe */
+  iframeSelector?: string;
   title: string;
   description: string;
 }
 
 const STEPS: TourStep[] = [
   {
-    target: "preview",
-    targetMobile: "preview",
-    title: "Metin & Görsel Düzenle",
-    description: "Önizlemedeki metin veya görsele dokunarak düzenleyebilirsin.",
+    target: null,
+    targetMobile: null,
+    iframeSelector: '[data-editable]:not([data-type="image"]):not([data-type="background-image"]):not([data-type="color"])',
+    title: "Metni Düzenle",
+    description: "Bir metne dokunarak düzenleyebilirsin. Açılan pencereden değiştir ve kaydet.",
+  },
+  {
+    target: null,
+    targetMobile: null,
+    iframeSelector: '[data-editable][data-type="image"], [data-editable][data-type="background-image"]',
+    title: "Görseli Değiştir",
+    description: "Bir görsele dokunarak değiştirebilirsin. Galerinden veya kamerandan yükle.",
   },
   {
     target: "ai-fill",
@@ -44,6 +59,10 @@ const STEPS: TourStep[] = [
   },
 ];
 
+/* ------------------------------------------------------------------ */
+/*  Component                                                          */
+/* ------------------------------------------------------------------ */
+
 interface EditorTourProps {
   onComplete: () => void;
 }
@@ -53,36 +72,63 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
-  const tooltipRef = useRef<HTMLDivElement>(null);
 
-  const getTarget = useCallback(
-    (step: TourStep) => {
+  /* ---- helpers ---- */
+
+  /** Resolve the bounding rect for the current step's target element */
+  const measureStep = useCallback(
+    (step: TourStep): DOMRect | null => {
+      // --- iframe-based target ---
+      if (step.iframeSelector) {
+        const iframe = document.querySelector("iframe") as HTMLIFrameElement | null;
+        if (!iframe) return null;
+        try {
+          const iDoc = iframe.contentDocument;
+          if (!iDoc) return null;
+          const el = iDoc.querySelector(step.iframeSelector) as HTMLElement | null;
+          if (!el) return null;
+          const iframeRect = iframe.getBoundingClientRect();
+          const elRect = el.getBoundingClientRect();
+          // Translate iframe-local coords to viewport coords
+          return new DOMRect(
+            iframeRect.left + elRect.left,
+            iframeRect.top + elRect.top,
+            elRect.width,
+            elRect.height
+          );
+        } catch {
+          return null;
+        }
+      }
+
+      // --- normal data-tour target ---
       const attr = isMobile ? step.targetMobile : step.target;
-      return document.querySelector(`[data-tour="${attr}"]`) as HTMLElement | null;
+      if (!attr) return null;
+      const el = document.querySelector(`[data-tour="${attr}"]`) as HTMLElement | null;
+      if (!el) return null;
+      return el.getBoundingClientRect();
     },
     [isMobile]
   );
 
-  // Scroll target into view (for toolbar items that may be off-screen)
+  const measure = useCallback(() => {
+    setRect(measureStep(STEPS[current]));
+  }, [current, measureStep]);
+
+  /** Scroll a data-tour element into view (toolbar items) */
   const scrollTargetIntoView = useCallback(
     (step: TourStep) => {
-      const el = getTarget(step);
+      if (step.iframeSelector) return; // iframe elements don't need parent scroll
+      const attr = isMobile ? step.targetMobile : step.target;
+      if (!attr) return;
+      const el = document.querySelector(`[data-tour="${attr}"]`) as HTMLElement | null;
       if (!el) return;
-      // scrollIntoView for elements inside scrollable containers (toolbar)
       el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
     },
-    [getTarget]
+    [isMobile]
   );
 
-  const measure = useCallback(() => {
-    const el = getTarget(STEPS[current]);
-    if (!el) {
-      setRect(null);
-      return;
-    }
-    const r = el.getBoundingClientRect();
-    setRect(r);
-  }, [current, getTarget]);
+  /* ---- effects ---- */
 
   // Detect mobile
   useEffect(() => {
@@ -92,20 +138,16 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // On step change: scroll into view, then measure after scroll settles
+  // On step change: scroll into view + measure multiple times to catch animations
   useEffect(() => {
     scrollTargetIntoView(STEPS[current]);
-    // Measure immediately, then again after scroll animation
     measure();
-    const t1 = setTimeout(measure, 350);
+    const t1 = setTimeout(measure, 300);
     const t2 = setTimeout(measure, 600);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [current, scrollTargetIntoView, measure]);
 
-  // Measure on resize, scroll
+  // Re-measure on resize / scroll
   useEffect(() => {
     window.addEventListener("resize", measure);
     window.addEventListener("scroll", measure, true);
@@ -115,20 +157,21 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
     };
   }, [measure]);
 
-  const next = () => {
-    if (current < STEPS.length - 1) {
-      setCurrent((c) => c + 1);
-    } else {
-      onComplete();
-    }
-  };
+  /* ---- actions ---- */
 
+  const next = () => {
+    if (current < STEPS.length - 1) setCurrent((c) => c + 1);
+    else onComplete();
+  };
   const skip = () => onComplete();
+
+  /* ---- rendering calculations ---- */
 
   const PAD = 8;
   const vw = typeof window !== "undefined" ? window.innerWidth : 400;
   const vh = typeof window !== "undefined" ? window.innerHeight : 800;
 
+  // Clip-path: punch a hole where the target is
   const clipPath = rect
     ? (() => {
         const x = Math.max(0, rect.left - PAD);
@@ -140,56 +183,50 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
     : undefined;
 
   // Responsive tooltip width
-  const tooltipWidth = isMobile ? Math.min(vw - 24, 280) : 300;
+  const tooltipW = isMobile ? Math.min(vw - 24, 280) : 300;
   const GAP = 12;
+  const EST_H = 140; // estimated tooltip height
 
-  // Tooltip positioning — always clamp inside viewport
-  const tooltipStyle: React.CSSProperties = { width: tooltipWidth };
+  const tooltipStyle: React.CSSProperties = { width: tooltipW };
+
   if (rect) {
-    // Horizontal: center on target, clamp to edges
-    let left = rect.left + rect.width / 2 - tooltipWidth / 2;
-    left = Math.max(12, Math.min(left, vw - tooltipWidth - 12));
+    // Horizontal: center on target, clamp to viewport edges
+    let left = rect.left + rect.width / 2 - tooltipW / 2;
+    left = Math.max(12, Math.min(left, vw - tooltipW - 12));
     tooltipStyle.left = left;
 
-    // Vertical: prefer below, go above if not enough space
+    // Vertical: prefer below target, go above if not enough room
     const spaceBelow = vh - rect.bottom - PAD - GAP;
     const spaceAbove = rect.top - PAD - GAP;
-    // Estimate tooltip height
-    const estHeight = 140;
 
-    if (spaceBelow >= estHeight || spaceBelow >= spaceAbove) {
-      // Show below
-      tooltipStyle.top = Math.min(rect.bottom + PAD + GAP, vh - estHeight - 12);
+    if (spaceBelow >= EST_H || spaceBelow >= spaceAbove) {
+      tooltipStyle.top = Math.min(rect.bottom + PAD + GAP, vh - EST_H - 12);
     } else {
-      // Show above
       tooltipStyle.bottom = Math.max(vh - rect.top + PAD + GAP, 12);
     }
   } else {
+    // Fallback: center of screen
     tooltipStyle.top = "50%";
     tooltipStyle.left = "50%";
     tooltipStyle.transform = "translate(-50%, -50%)";
   }
+
+  /* ---- JSX ---- */
 
   const overlay = (
     <div
       ref={overlayRef}
       className="fixed inset-0"
       style={{ zIndex: 99999 }}
-      onClick={(e) => {
-        if (e.target === overlayRef.current) next();
-      }}
+      onClick={(e) => { if (e.target === overlayRef.current) next(); }}
     >
       {/* Dark overlay with spotlight hole */}
       <div
         className="absolute inset-0 bg-black/70"
-        style={{
-          clipPath,
-          transition: "clip-path 0.3s ease",
-          pointerEvents: "none",
-        }}
+        style={{ clipPath, transition: "clip-path 0.3s ease", pointerEvents: "none" }}
       />
 
-      {/* Spotlight border glow */}
+      {/* Spotlight glow ring */}
       {rect && (
         <div
           className="absolute rounded-xl pointer-events-none"
@@ -204,7 +241,7 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
         />
       )}
 
-      {/* Clickable transparent area over spotlight */}
+      {/* Clickable area over spotlight */}
       {rect && (
         <div
           className="absolute cursor-pointer"
@@ -218,9 +255,8 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
         />
       )}
 
-      {/* Tooltip */}
+      {/* Tooltip card */}
       <div
-        ref={tooltipRef}
         className="absolute bg-[#161616]/95 backdrop-blur-xl rounded-2xl p-4"
         style={{
           ...tooltipStyle,
@@ -237,16 +273,10 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
             {current + 1}/{STEPS.length}
           </span>
           <div className="flex items-center gap-3">
-            <button
-              onClick={skip}
-              className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors"
-            >
+            <button onClick={skip} className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
               Atla
             </button>
-            <button
-              onClick={next}
-              className="btn-primary px-4 py-2 text-sm flex items-center gap-1.5"
-            >
+            <button onClick={next} className="btn-primary px-4 py-2 text-sm flex items-center gap-1.5">
               {current === STEPS.length - 1 ? "Bitir" : "İleri"}
               {current < STEPS.length - 1 && <ChevronRight className="h-3.5 w-3.5" />}
             </button>
