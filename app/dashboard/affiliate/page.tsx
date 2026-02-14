@@ -58,7 +58,7 @@ export default function AffiliateDashboardPage() {
             <ArrowLeft className="h-5 w-5" />
             <span className="font-medium">Geri</span>
           </button>
-          <h1 className="text-lg font-semibold">Affiliate Program</h1>
+          <h1 className="text-lg font-semibold">Satış Ortağı</h1>
           <div className="w-16" />
         </nav>
       </header>
@@ -77,7 +77,7 @@ export default function AffiliateDashboardPage() {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <BarChart3 className="h-5 w-5 text-pink-500" />
-                    <h3 className="font-semibold">Affiliate Program</h3>
+                    <h3 className="font-semibold">Satış Ortağı</h3>
                   </div>
                   <span className="text-xs bg-pink-500/20 text-pink-400 px-2.5 py-1 rounded-full font-medium">%{sponsorAnalytics.commissionRate} komisyon</span>
                 </div>
@@ -235,7 +235,7 @@ export default function AffiliateDashboardPage() {
                   <div className="flex items-center gap-3">
                     <HelpCircle className="h-5 w-5 text-pink-500" />
                     <div>
-                      <h3 className="font-semibold">Affiliate Program</h3>
+                      <h3 className="font-semibold">Satış Ortağı</h3>
                       <p className="text-xs text-zinc-500">Aklınızda bir soru mu var?</p>
                     </div>
                   </div>

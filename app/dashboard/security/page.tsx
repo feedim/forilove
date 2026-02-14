@@ -18,6 +18,8 @@ export default function SecurityPage() {
   const [emailVerified, setEmailVerified] = useState(false);
   const [password, setPassword] = useState("");
   const [showPasswordInput, setShowPasswordInput] = useState(false);
+  const [showDisablePassword, setShowDisablePassword] = useState(false);
+  const [disablePassword, setDisablePassword] = useState("");
   // Email verification
   const [verifyingEmail, setVerifyingEmail] = useState(false);
   const [emailCode, setEmailCode] = useState("");
@@ -106,8 +108,24 @@ export default function SecurityPage() {
   };
 
   const handleDisable = async () => {
+    if (!disablePassword.trim()) {
+      toast.error("Şifrenizi girin");
+      return;
+    }
+
     setDisabling(true);
     try {
+      // Verify password first
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: userEmail,
+        password: disablePassword,
+      });
+
+      if (authError) {
+        toast.error("Şifre yanlış");
+        return;
+      }
+
       const res = await fetch("/api/auth/mfa", { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) {
@@ -116,6 +134,8 @@ export default function SecurityPage() {
       }
       toast.success("İki faktörlü doğrulama kapatıldı");
       setMfaEnabled(false);
+      setShowDisablePassword(false);
+      setDisablePassword("");
     } catch {
       toast.error("Bir hata oluştu");
     } finally {
@@ -287,17 +307,50 @@ export default function SecurityPage() {
                     </div>
                     {role !== "affiliate" && (
                       <button
-                        onClick={handleDisable}
-                        disabled={disabling}
+                        onClick={() => setShowDisablePassword(!showDisablePassword)}
                         className="text-xs text-zinc-500 hover:text-red-400 transition"
                       >
-                        {disabling ? "..." : "Kapat"}
+                        Kapat
                       </button>
                     )}
                     {role === "affiliate" && (
                       <span className="text-xs text-zinc-600">Zorunlu</span>
                     )}
                   </div>
+
+                  {/* Disable 2FA - password required */}
+                  {showDisablePassword && role !== "affiliate" && (
+                    <div className="space-y-3 bg-white/5 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Lock className="h-4 w-4 text-zinc-400" />
+                        <p className="text-sm font-medium">2FA kapatmak için şifrenizi girin</p>
+                      </div>
+                      <PasswordInput
+                        placeholder="Şifre"
+                        value={disablePassword}
+                        onChange={(e) => setDisablePassword(e.target.value)}
+                        maxLength={128}
+                        autoComplete="current-password"
+                        className="input-modern w-full"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => { setShowDisablePassword(false); setDisablePassword(""); }}
+                          className="flex-1 btn-secondary py-2.5 text-sm"
+                        >
+                          İptal
+                        </button>
+                        <button
+                          onClick={handleDisable}
+                          disabled={disabling || !disablePassword.trim()}
+                          className="flex-1 py-2.5 text-sm bg-red-600 hover:bg-red-500 text-white rounded-xl font-semibold transition flex items-center justify-center gap-2"
+                        >
+                          {disabling ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                          2FA Kapat
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-4">
