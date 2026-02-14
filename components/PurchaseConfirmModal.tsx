@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 /* ─── Types ─── */
@@ -96,7 +95,6 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
   const [appliedCoupon, setAppliedCoupon] = useState<CouponInfo | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponOpen, setCouponOpen] = useState(false);
-  const router = useRouter();
   const supabase = createClient();
 
   // Calculate effective cost with coupon
@@ -160,8 +158,8 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
 
   const handleConfirm = async () => {
     if (insufficientBalance) {
+      window.open("/dashboard/coins", "_blank");
       onClose();
-      router.push("/dashboard/coins");
       return;
     }
 

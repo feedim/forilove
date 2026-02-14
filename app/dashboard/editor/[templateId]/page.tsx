@@ -149,6 +149,21 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Refresh coin balance when user returns to tab (e.g. after buying coins in new tab)
+  useEffect(() => {
+    const handleVisibility = async () => {
+      if (document.hidden) return;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase.from('profiles').select('coin_balance').eq('user_id', user.id).single();
+        if (data) setCoinBalance(data.coin_balance || 0);
+      } catch {}
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [supabase]);
+
   useEffect(() => {
     if (template?.html_content) {
       const timer = setTimeout(() => updatePreview(), 200);
