@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
-import { X, Search, Music, Check, Link2 } from "lucide-react";
-import { MUSIC_LIBRARY, type MusicTrack } from "@/lib/musicLibrary";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { X, Search, Music, Check, Link2, Loader2 } from "lucide-react";
+import { MUSIC_LIBRARY } from "@/lib/musicLibrary";
 
 interface MusicPickerModalProps {
   isOpen: boolean;
@@ -10,6 +10,13 @@ interface MusicPickerModalProps {
   onSelect: (youtubeUrl: string) => void;
   currentUrl?: string;
   onRemove?: () => void;
+}
+
+interface SearchResult {
+  id: string;
+  title: string;
+  artist: string;
+  thumbnail: string;
 }
 
 function extractVideoId(url: string): string | null {
@@ -30,23 +37,28 @@ export default function MusicPickerModal({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [customUrl, setCustomUrl] = useState("");
   const [customMode, setCustomMode] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Default curated list (shown when no search query)
+  const defaultTracks: SearchResult[] = MUSIC_LIBRARY.map((t) => ({
+    id: t.id,
+    title: t.title,
+    artist: t.artist,
+    thumbnail: `https://img.youtube.com/vi/${t.id}/mqdefault.jpg`,
+  }));
 
   // Initialize selectedId from currentUrl
   useEffect(() => {
     if (isOpen && currentUrl) {
       const vid = extractVideoId(currentUrl);
       if (vid) {
-        const found = MUSIC_LIBRARY.find((t) => t.id === vid);
-        if (found) {
-          setSelectedId(vid);
-          setCustomMode(false);
-        } else {
-          setCustomUrl(currentUrl);
-          setCustomMode(true);
-          setSelectedId(null);
-        }
+        setSelectedId(vid);
+        setCustomMode(false);
       }
     }
   }, [isOpen, currentUrl]);
@@ -57,6 +69,8 @@ export default function MusicPickerModal({
       setSearchQuery("");
       setCustomMode(false);
       setCustomUrl("");
+      setSearchResults([]);
+      setSearching(false);
     }
   }, [isOpen]);
 
@@ -67,17 +81,60 @@ export default function MusicPickerModal({
     }
   }, [isOpen]);
 
-  // Filtered tracks
-  const filtered = useMemo(() => {
-    return MUSIC_LIBRARY.filter((track) => {
-      const q = searchQuery.toLowerCase();
-      return (
-        !searchQuery ||
-        track.title.toLowerCase().includes(q) ||
-        track.artist.toLowerCase().includes(q)
+  // YouTube search with debounce
+  const searchYouTube = useCallback(async (query: string) => {
+    if (!query || query.length < 2) {
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
+
+    // Abort previous request
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setSearching(true);
+    try {
+      const res = await fetch(
+        `/api/youtube-search?q=${encodeURIComponent(query)}`,
+        { signal: controller.signal }
       );
-    });
-  }, [searchQuery]);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      if (!controller.signal.aborted) {
+        setSearchResults(data.items || []);
+      }
+    } catch {
+      if (!controller.signal.aborted) {
+        setSearchResults([]);
+      }
+    } finally {
+      if (!controller.signal.aborted) {
+        setSearching(false);
+      }
+    }
+  }, []);
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!value || value.length < 2) {
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    debounceRef.current = setTimeout(() => searchYouTube(value), 400);
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      abortRef.current?.abort();
+    };
+  }, []);
 
   // ─── Handlers ────────────────────────────────────────────
   const handleSelect = () => {
@@ -93,11 +150,7 @@ export default function MusicPickerModal({
     }
   };
 
-  const handleRemove = () => {
-    onRemove?.();
-  };
-
-  const handleTrackClick = (track: MusicTrack) => {
+  const handleTrackClick = (track: SearchResult) => {
     setSelectedId(track.id);
     setCustomMode(false);
     setCustomUrl("");
@@ -117,12 +170,14 @@ export default function MusicPickerModal({
       )
     : false;
 
+  // Show search results if searching, otherwise curated list
+  const displayTracks = searchQuery.length >= 2 ? searchResults : defaultTracks;
+
   return (
     <div
       className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
       onClick={onClose}
     >
-      {/* Modal */}
       <div
         className="bg-zinc-900 w-full sm:w-[500px] rounded-t-3xl sm:rounded-3xl animate-slide-up sm:animate-scale-in flex flex-col"
         style={{ maxHeight: "85vh" }}
@@ -136,7 +191,7 @@ export default function MusicPickerModal({
               Müzik Seç
             </h3>
             <p className="text-xs text-gray-400 mt-0.5">
-              Arka plan müziğini seçin
+              YouTube&apos;da arayın veya listeden seçin
             </p>
           </div>
           <button
@@ -156,10 +211,13 @@ export default function MusicPickerModal({
               ref={searchInputRef}
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-pink-500/50 focus:ring-1 focus:ring-pink-500/30 transition-all"
-              placeholder="Şarkı veya sanatçı ara..."
+              placeholder="YouTube'da şarkı ara..."
             />
+            {searching && (
+              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 animate-spin" />
+            )}
           </div>
         </div>
 
@@ -168,13 +226,18 @@ export default function MusicPickerModal({
           className="flex-1 overflow-y-auto px-5 py-3 space-y-1"
           style={{ minHeight: 0 }}
         >
-          {filtered.length === 0 ? (
+          {searching && displayTracks.length === 0 ? (
+            <div className="text-center py-8">
+              <Loader2 className="h-6 w-6 text-gray-500 mx-auto mb-2 animate-spin" />
+              <p className="text-sm text-gray-500">Aranıyor...</p>
+            </div>
+          ) : displayTracks.length === 0 && searchQuery.length >= 2 ? (
             <div className="text-center py-8">
               <Music className="h-8 w-8 text-gray-600 mx-auto mb-2" />
-              <p className="text-sm text-gray-500">Şarkı bulunamadı</p>
+              <p className="text-sm text-gray-500">Sonuç bulunamadı</p>
             </div>
           ) : (
-            filtered.map((track) => {
+            displayTracks.map((track) => {
               const isSelected = selectedId === track.id && !customMode;
 
               return (
@@ -182,22 +245,18 @@ export default function MusicPickerModal({
                   key={track.id}
                   onClick={() => handleTrackClick(track)}
                   className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all text-left ${
-                    isSelected
-                      ? "bg-pink-500/15"
-                      : "hover:bg-white/5"
+                    isSelected ? "bg-pink-500/15" : "hover:bg-white/5"
                   }`}
                 >
-                  {/* Thumbnail */}
                   <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-white/5">
                     <img
-                      src={`https://img.youtube.com/vi/${track.id}/mqdefault.jpg`}
+                      src={track.thumbnail || `https://img.youtube.com/vi/${track.id}/mqdefault.jpg`}
                       alt=""
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />
                   </div>
 
-                  {/* Info */}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-white truncate">
                       {track.title}
@@ -207,7 +266,6 @@ export default function MusicPickerModal({
                     </p>
                   </div>
 
-                  {/* Selected Check */}
                   {isSelected && (
                     <div className="w-6 h-6 rounded-full bg-pink-500 flex items-center justify-center shrink-0">
                       <Check className="h-3.5 w-3.5 text-white" />
@@ -224,9 +282,7 @@ export default function MusicPickerModal({
           <button
             onClick={() => {
               setCustomMode(!customMode);
-              if (!customMode) {
-                setSelectedId(null);
-              }
+              if (!customMode) setSelectedId(null);
             }}
             className="flex items-center gap-2 text-xs text-gray-400 hover:text-gray-300 transition-colors py-2 w-full"
           >
@@ -277,7 +333,7 @@ export default function MusicPickerModal({
         <div className="flex gap-3 p-5 pt-3 shrink-0">
           {(currentUrl || onRemove) && (
             <button
-              onClick={handleRemove}
+              onClick={() => onRemove?.()}
               className="flex-1 py-3 rounded-xl text-sm font-medium bg-white/5 text-red-400 hover:bg-white/10 transition-all"
             >
               Müziği Kaldır
