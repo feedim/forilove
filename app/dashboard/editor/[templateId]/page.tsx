@@ -11,6 +11,7 @@ import { ShareSheet } from '@/components/ShareIconButton';
 import { usePurchaseConfirm } from '@/components/PurchaseConfirmModal';
 import { getActivePrice, isDiscountActive } from '@/lib/discount';
 import type { CouponInfo } from '@/components/PurchaseConfirmModal';
+import MusicPickerModal from '@/components/MusicPickerModal';
 
 declare global { interface Window { YT: any; onYouTubeIframeAPIReady: (() => void) | undefined; } }
 
@@ -2094,108 +2095,23 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
           </>
         )}
 
-      {/* Music Modal */}
-      {showMusicModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-zinc-900 w-full sm:w-[500px] rounded-t-3xl sm:rounded-4xl p-5 space-y-4 animate-slide-up sm:animate-scale-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
-              <div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Music className="h-5 w-5 text-pink-400" />
-                  Arka Plan Müziği
-                </h3>
-                <p className="text-xs text-gray-400">YouTube linki yapıştırın</p>
-              </div>
-              <button
-                onClick={() => setShowMusicModal(false)}
-                aria-label="Kapat"
-                className="rounded-full p-2 bg-white/10 text-gray-400 hover:text-white hover:bg-white/15 transition-all"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <input
-                  type="url"
-                  value={musicUrl}
-                  onChange={(e) => setMusicUrl(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      const isValid = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/|music\.youtube\.com\/watch\?v=)[a-zA-Z0-9_-]{11}/.test(musicUrl);
-                      if (musicUrl && isValid) { saveMusicToDb(musicUrl); setShowMusicModal(false); }
-                    }
-                  }}
-                  className="input-modern w-full text-base"
-                  placeholder="https://www.youtube.com/watch?v=..."
-                  autoFocus
-                />
-                <p className="text-xs text-gray-500 mt-2">Sayfanız açıldığında bu müzik arka planda çalacak</p>
-              </div>
-
-              {/* Preview / Validation */}
-              {musicUrl && (() => {
-                const match = musicUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/|music\.youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/);
-                if (!match) return (
-                  <p className="text-xs text-red-400">Geçerli bir YouTube linki girin</p>
-                );
-                const videoId = match[1];
-                return (
-                  <div className="flex items-center gap-3 rounded-xl border border-white/10 p-3" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                    <img
-                      src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
-                      alt=""
-                      className="w-16 h-16 rounded-lg object-cover shrink-0"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-white text-sm font-medium truncate" id="music-modal-title">Yükleniyor...</p>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-red-500 shrink-0"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="white"/></svg>
-                        <span className="text-white/40 text-xs">YouTube</span>
-                      </div>
-                      {(() => {
-                        fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
-                          .then(r => r.ok ? r.json() : null)
-                          .then(d => {
-                            const el = document.getElementById('music-modal-title');
-                            if (el && d?.title) el.textContent = d.title;
-                          }).catch(() => {});
-                        return null;
-                      })()}
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              {musicUrl && (
-                <button
-                  onClick={() => { setMusicUrl(""); setEditorMusicPlaying(false); saveMusicToDb(""); setShowMusicModal(false); }}
-                  className="flex-1 btn-secondary py-3 text-red-400"
-                >
-                  Müziği Kaldır
-                </button>
-              )}
-              <button
-                onClick={() => {
-                  const isValid = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/|music\.youtube\.com\/watch\?v=)[a-zA-Z0-9_-]{11}/.test(musicUrl);
-                  if (!musicUrl || !isValid) return;
-                  saveMusicToDb(musicUrl);
-                  setShowMusicModal(false);
-                }}
-                className="flex-1 btn-primary py-3"
-              >
-                Kaydet
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Music Picker Modal */}
+      <MusicPickerModal
+        isOpen={showMusicModal}
+        onClose={() => setShowMusicModal(false)}
+        onSelect={(url) => {
+          setMusicUrl(url);
+          saveMusicToDb(url);
+          setShowMusicModal(false);
+        }}
+        currentUrl={musicUrl}
+        onRemove={() => {
+          setMusicUrl("");
+          setEditorMusicPlaying(false);
+          saveMusicToDb("");
+          setShowMusicModal(false);
+        }}
+      />
 
       {/* Details Modal */}
       {showDetailsModal && project && (
