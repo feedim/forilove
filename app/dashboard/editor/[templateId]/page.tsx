@@ -1788,7 +1788,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
             </div>
           )}
           {/* Desktop toolbar */}
-          <div className="hidden md:flex items-center gap-2 flex-1 min-w-0 justify-end" style={{ borderRadius: '3rem' }}>
+          <div className="hidden md:flex items-center gap-2 flex-1 min-w-0 justify-end">
             {loading ? (
               <div className="text-sm text-zinc-400">Yükleniyor...</div>
             ) : (
@@ -1806,7 +1806,8 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                     </button>
                     <div
                       id="editor-toolbar-scroll"
-                      className="flex-1 min-w-0 flex items-center justify-end gap-2 overflow-x-auto scrollbar-hide ml-[5px]"
+                      className="flex-1 min-w-0 flex items-center justify-end gap-2 overflow-x-auto scrollbar-hide ml-[5px] bg-white/5 overflow-hidden"
+                      style={{ borderRadius: '3rem' }}
                     >
                       <div className="btn-secondary shrink-0 flex items-center rounded-full overflow-hidden" style={{ padding: '0 1rem' }}>
                         <button
