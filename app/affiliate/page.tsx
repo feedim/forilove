@@ -72,10 +72,6 @@ export default function AffiliatePage() {
       {/* Hero */}
       <section className="py-20 sm:py-28">
         <div className="container mx-auto px-4 sm:px-6 max-w-4xl text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/20 mb-8">
-            <TrendingUp className="h-4 w-4 text-green-500" />
-            <span className="text-sm text-gray-300">Her satıştan kazanın</span>
-          </div>
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6" style={{ lineHeight: 1.1 }}>
             Forilove
             <span className="block text-pink-500 mt-3">Affiliate Program</span>
