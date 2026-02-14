@@ -169,7 +169,7 @@ export default function AffiliatePaymentPage() {
     switch (status) {
       case "pending": return { text: "Bekliyor", color: "text-pink-300", icon: Clock };
       case "approved": return { text: "Onaylandı", color: "text-pink-500", icon: CheckCircle };
-      case "rejected": return { text: "Reddedildi", color: "text-red-500", icon: XCircle };
+      case "rejected": return { text: "Reddedildi", color: "text-pink-500", icon: XCircle };
       default: return { text: status, color: "text-zinc-400", icon: Clock };
     }
   };

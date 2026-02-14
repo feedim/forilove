@@ -166,7 +166,7 @@ export default function AffiliateApplyPage() {
             <div className="flex items-center gap-3 mb-5">
               {existingApplication.status === "pending" && <Clock className="h-10 w-10 text-yellow-500" />}
               {existingApplication.status === "approved" && <CheckCircle className="h-10 w-10 text-green-500" />}
-              {existingApplication.status === "rejected" && <XCircle className="h-10 w-10 text-red-500" />}
+              {existingApplication.status === "rejected" && <XCircle className="h-10 w-10 text-pink-500" />}
               <div>
                 <h2 className="text-lg font-bold">
                   {existingApplication.status === "pending" && "Başvurunuz İnceleniyor"}
@@ -185,7 +185,7 @@ export default function AffiliateApplyPage() {
                 <span className={`font-medium px-2.5 py-0.5 rounded-full text-xs ${
                   existingApplication.status === "pending" ? "bg-yellow-500/20 text-yellow-400" :
                   existingApplication.status === "approved" ? "bg-green-500/20 text-green-400" :
-                  "bg-red-500/20 text-red-400"
+                  "bg-pink-500/20 text-pink-400"
                 }`}>
                   {existingApplication.status === "pending" ? "Bekliyor" : existingApplication.status === "approved" ? "Onaylandı" : "Reddedildi"}
                 </span>
