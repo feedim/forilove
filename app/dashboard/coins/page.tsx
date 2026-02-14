@@ -237,21 +237,23 @@ export default function CoinsPage() {
 
               {/* Recent Transactions */}
               {transactions.length > 0 && (
-                <div className="pt-8 border-t border-white/10">
+                <div className="pt-8 border-t border-white/5">
                   <div className="space-y-4">
                     {transactions.map((txn) => (
                       <TransactionCard key={txn.id} transaction={txn} />
                     ))}
                   </div>
-                  <div className="mt-6 text-center">
-                    <Link href="/dashboard/transactions">
-                      <button className="btn-secondary px-6 py-3">
-                        Tüm İşlem Geçmişi
-                      </button>
-                    </Link>
-                  </div>
                 </div>
               )}
+
+              {/* İşlem Geçmişi Link */}
+              <div className="pt-6 text-center">
+                <Link href="/dashboard/transactions">
+                  <button className="btn-secondary px-6 py-3">
+                    İşlem Geçmişi
+                  </button>
+                </Link>
+              </div>
             </div>
           );
         })()}

@@ -53,7 +53,7 @@ export function ProjectListSkeleton({ count = 3 }: { count?: number }) {
 
 export function TransactionCardSkeleton() {
   return (
-    <div className="border-b border-white/10 pb-4">
+    <div className="border-b border-white/5 pb-4">
       <div className="flex items-center justify-between">
         <div className="flex-1 space-y-2">
           <div className={`${shimmer} h-4 w-2/3 rounded-lg`} />
