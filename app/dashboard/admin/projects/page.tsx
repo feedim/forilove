@@ -112,7 +112,7 @@ export default function AdminProjectsPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Sayfa, kullanıcı veya slug ara..."
-            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-zinc-400"
+            className="w-full bg-white/5 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-zinc-400"
           />
         </div>
 
@@ -130,7 +130,7 @@ export default function AdminProjectsPage() {
           <>
             <div className="space-y-2">
               {filtered.map((p: any) => (
-                <div key={p.id} className="bg-zinc-900 rounded-xl p-3 sm:p-4 flex items-center justify-between gap-3">
+                <div key={p.id} className="bg-white/[0.06] rounded-xl p-3 sm:p-4 flex items-center justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       {p.is_public ? (
