@@ -1,56 +1,72 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PIPED_INSTANCES = [
-  "https://pipedapi.kavin.rocks",
-  "https://pipedapi.adminforge.de",
-  "https://pipedapi.in.projectsegfau.lt",
-];
-
-interface PipedItem {
-  type: string;
-  url: string;
-  title: string;
-  thumbnail: string;
-  uploaderName: string;
-  uploaderUrl: string;
-  duration: number;
-}
-
 export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get("q");
   if (!q || q.length < 2) {
     return NextResponse.json({ items: [] });
   }
 
-  for (const instance of PIPED_INSTANCES) {
-    try {
-      const res = await fetch(
-        `${instance}/search?q=${encodeURIComponent(q)}&filter=music_songs`,
-        { signal: AbortSignal.timeout(5000) }
-      );
-      if (!res.ok) continue;
+  try {
+    const res = await fetch(
+      "https://www.youtube.com/youtubei/v1/search?prettyPrint=false",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          context: {
+            client: {
+              clientName: "WEB",
+              clientVersion: "2.20240101.00.00",
+              hl: "tr",
+              gl: "TR",
+            },
+          },
+          query: q,
+        }),
+        signal: AbortSignal.timeout(8000),
+      }
+    );
 
-      const data = await res.json();
-      const items = (data.items || [])
-        .filter((item: PipedItem) => item.type === "stream" && item.url)
-        .slice(0, 20)
-        .map((item: PipedItem) => {
-          const videoId = item.url?.replace("/watch?v=", "") || "";
-          return {
-            id: videoId,
-            title: item.title || "",
-            artist: item.uploaderName || "",
-            thumbnail: item.thumbnail || `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
-            duration: item.duration || 0,
-          };
+    if (!res.ok) {
+      return NextResponse.json({ items: [] });
+    }
+
+    const data = await res.json();
+
+    const sections =
+      data?.contents?.twoColumnSearchResultsRenderer?.primaryContents
+        ?.sectionListRenderer?.contents || [];
+
+    const items: { id: string; title: string; artist: string; thumbnail: string }[] = [];
+
+    for (const section of sections) {
+      const sectionItems = section?.itemSectionRenderer?.contents || [];
+      for (const item of sectionItems) {
+        const vid = item?.videoRenderer;
+        if (!vid?.videoId) continue;
+
+        const title =
+          vid.title?.runs?.map((r: { text: string }) => r.text).join("") || "";
+        const artist =
+          vid.ownerText?.runs?.[0]?.text || "";
+        const thumbnail =
+          vid.thumbnail?.thumbnails?.[0]?.url ||
+          `https://img.youtube.com/vi/${vid.videoId}/mqdefault.jpg`;
+
+        items.push({
+          id: vid.videoId,
+          title,
+          artist,
+          thumbnail,
         });
 
-      return NextResponse.json({ items });
-    } catch {
-      continue;
+        if (items.length >= 20) break;
+      }
+      if (items.length >= 20) break;
     }
-  }
 
-  // All instances failed
-  return NextResponse.json({ items: [] });
+    return NextResponse.json({ items });
+  } catch {
+    return NextResponse.json({ items: [] });
+  }
 }
