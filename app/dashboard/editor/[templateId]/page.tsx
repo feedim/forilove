@@ -705,21 +705,37 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
             }
           }, true);
 
-          document.querySelectorAll('[data-editable]').forEach(function(el) {
+          // Hover + cursor via document-level mousemove + elementsFromPoint (works through overlays)
+          var lastHovered = null;
+          document.addEventListener('mousemove', function(e) {
+            var els = document.elementsFromPoint(e.clientX, e.clientY);
+            var editable = null;
+            for (var i = 0; i < els.length; i++) {
+              editable = els[i].closest ? els[i].closest('[data-editable]') : null;
+              if (!editable) editable = els[i].hasAttribute && els[i].hasAttribute('data-editable') ? els[i] : null;
+              if (editable) break;
+            }
+            // Set cursor on topmost element (the one browser actually renders cursor for)
+            var topEl = els[0];
+            if (topEl) topEl.style.cursor = editable ? 'pointer' : '';
+            // Update hover outline
+            if (editable !== lastHovered) {
+              if (lastHovered) {
+                lastHovered.style.outline = '2px solid transparent';
+                lastHovered.style.boxShadow = 'none';
+              }
+              if (editable) {
+                editable.style.outline = '2px solid #ec4899';
+                editable.style.boxShadow = '0 0 0 4px rgba(236, 72, 153, 0.1)';
+              }
+              lastHovered = editable;
+            }
+          }, false);
 
-            // Hover effect
+          document.querySelectorAll('[data-editable]').forEach(function(el) {
+            // Init transition for smooth hover effect
             el.style.outline = '2px solid transparent';
             el.style.transition = 'outline 0.2s, box-shadow 0.2s';
-
-            el.addEventListener('mouseenter', function() {
-              el.style.outline = '2px solid #ec4899';
-              el.style.boxShadow = '0 0 0 4px rgba(236, 72, 153, 0.1)';
-            });
-
-            el.addEventListener('mouseleave', function() {
-              el.style.outline = '2px solid transparent';
-              el.style.boxShadow = 'none';
-            });
 
             // Color indicator badge for color-editable fields
             if (el.getAttribute('data-type') === 'color') {
