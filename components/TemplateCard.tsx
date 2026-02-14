@@ -93,7 +93,7 @@ export default function TemplateCard({
           <span className="text-xs font-medium text-zinc-300">{exploreViewCount.toLocaleString()}</span>
         </div>
       ) : (
-        <div className="absolute top-3 right-3 z-10 flex items-center gap-2 pointer-events-auto">
+        <div className="absolute top-3 right-3 z-20 flex items-center gap-2 pointer-events-auto">
           {/* Share Button */}
           <button
             onClick={(e) => { e.stopPropagation(); setShareOpen(true); }}
