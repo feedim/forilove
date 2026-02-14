@@ -474,6 +474,18 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
           setHooks(parsedHooks);
           let initialValues = extractDefaults(parsedHooks);
 
+          // Parse removable areas (for Bölümler button)
+          const areaParser = new DOMParser();
+          const areaDoc = areaParser.parseFromString(htmlContent, 'text/html');
+          const parsedAreas: { key: string; label: string }[] = [];
+          areaDoc.querySelectorAll('[data-area]').forEach(el => {
+            const key = el.getAttribute('data-area');
+            if (!key) return;
+            const label = el.getAttribute('data-area-label') || key.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            parsedAreas.push({ key, label });
+          });
+          setAreas(parsedAreas);
+
           // Restore guest edits from localStorage (OAuth return)
           try {
             const sp = new URLSearchParams(window.location.search);
@@ -1386,7 +1398,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
 
   const handlePreview = () => {
     // Save current editor state to sessionStorage and open preview page
-    sessionStorage.setItem('forilove_preview', JSON.stringify({
+    localStorage.setItem('forilove_preview', JSON.stringify({
       html: previewHtml,
       musicUrl: musicUrl || '',
       templateName: template?.name || 'Önizleme',
@@ -1688,11 +1700,14 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
               <button
                 onClick={handlePublish}
                 disabled={saving || purchasing}
-                className="btn-primary shrink-0 px-4 py-2 text-sm whitespace-nowrap"
+                className="btn-primary shrink-0 px-4 py-2 text-sm whitespace-nowrap flex items-center gap-1.5"
               >
                 {saving || purchasing
                   ? (project?.is_published ? "Güncelleniyor..." : "Paylaşılıyor...")
-                  : (project?.is_published ? "Güncelle" : "Paylaş")
+                  : project?.is_published ? "Güncelle"
+                  : !isPurchased && template?.coin_price > 0
+                    ? <><Coins className="h-4 w-4 text-yellow-400" />{template.coin_price} FL</>
+                    : "Paylaş"
                 }
               </button>
             </div>
@@ -1841,11 +1856,14 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                     <button
                       onClick={handlePublish}
                       disabled={saving || purchasing}
-                      className="btn-primary shrink-0 px-4 py-2 text-sm ml-2 whitespace-nowrap"
+                      className="btn-primary shrink-0 px-4 py-2 text-sm ml-2 whitespace-nowrap flex items-center gap-1.5"
                     >
                       {saving || purchasing
                         ? (project?.is_published ? "Güncelleniyor..." : "Paylaşılıyor...")
-                        : (project?.is_published ? "Güncelle" : "Paylaş")
+                        : project?.is_published ? "Güncelle"
+                        : !isPurchased && template?.coin_price > 0
+                          ? <><Coins className="h-4 w-4 text-yellow-400" />{template.coin_price} FL</>
+                          : "Paylaş"
                       }
                     </button>
               </>

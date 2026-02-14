@@ -43,7 +43,7 @@ export default function PreviewPage() {
   }, []);
 
   useEffect(() => {
-    const raw = sessionStorage.getItem("forilove_preview");
+    const raw = localStorage.getItem("forilove_preview");
     if (!raw) return;
     try {
       const data = JSON.parse(raw);
