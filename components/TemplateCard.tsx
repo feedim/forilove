@@ -202,7 +202,7 @@ export default function TemplateCard({
           {template.purchase_count > 0 && !isPurchased && !isPublished && (
             <div className="flex items-center gap-1.5 mt-2">
               <Users className="h-3.5 w-3.5 text-zinc-500" />
-              <span className="text-xs text-zinc-500">{template.purchase_count} kişi aldı</span>
+              <span className="text-xs text-zinc-500">{template.purchase_count} kişi kullandı</span>
             </div>
           )}
         </div>
