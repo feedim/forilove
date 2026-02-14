@@ -232,7 +232,16 @@ DECLARE
   v_already_signed BOOLEAN;
   v_coupon_code TEXT;
   v_new_coupon_id UUID;
+  v_user_created_at TIMESTAMPTZ;
 BEGIN
+  -- Promo sadece yeni kullanıcılara uygulanır (hesap < 1 saat)
+  SELECT created_at INTO v_user_created_at
+  FROM auth.users WHERE id = p_user_id;
+
+  IF v_user_created_at IS NULL OR v_user_created_at < now() - INTERVAL '1 hour' THEN
+    RETURN json_build_object('success', false, 'error', 'Promosyonlar sadece yeni kullanıcılar için geçerlidir');
+  END IF;
+
   SELECT * INTO v_promo
   FROM public.promo_links
   WHERE UPPER(code) = UPPER(TRIM(p_promo_code)) AND is_active = true

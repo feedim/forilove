@@ -166,14 +166,17 @@ export default function DashboardPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Promo sadece yeni kullanıcılara uygulanır (hesap < 1 saat)
+      const accountAge = Date.now() - new Date(user.created_at).getTime();
+      const ONE_HOUR = 60 * 60 * 1000;
+      if (accountAge > ONE_HOUR) return;
+
       const { data } = await supabase.rpc('process_promo_signup', {
         p_promo_code: pendingPromo,
         p_user_id: user.id,
       });
 
       if (data?.success) {
-        // Promo coupon created, will be shown via checkWelcomeCoupon
-        // Set flag to trigger welcome coupon modal
         sessionStorage.setItem('forilove_show_welcome_coupon', 'true');
       }
     } catch (e) { if (process.env.NODE_ENV === 'development') console.warn('Promo signup failed:', e); }

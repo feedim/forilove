@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams, usePathname } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 const PROMO_STORAGE_KEY = "forilove_pending_promo";
 const PROMO_INFO_KEY = "forilove_promo_info";
@@ -15,6 +16,17 @@ export default function PromoBanner() {
     const init = async () => {
       // Don't show on dashboard (promo already applied after signup)
       if (pathname?.startsWith("/dashboard")) {
+        setPromoInfo(null);
+        return;
+      }
+
+      // Promo sadece yeni kullanıcılar için — giriş yapmış kullanıcılara gösterme
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        // Mevcut kullanıcı — promo verilerini temizle ve banner gösterme
+        localStorage.removeItem(PROMO_STORAGE_KEY);
+        localStorage.removeItem(PROMO_INFO_KEY);
         setPromoInfo(null);
         return;
       }
