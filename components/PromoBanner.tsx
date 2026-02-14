@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 
 const PROMO_STORAGE_KEY = "forilove_pending_promo";
 const PROMO_INFO_KEY = "forilove_promo_info";
+const PROMO_DISMISSED_KEY = "forilove_promo_dismissed";
 
 export default function PromoBanner() {
   const [promoInfo, setPromoInfo] = useState<{ code: string; discount: number } | null>(null);
@@ -48,6 +49,13 @@ export default function PromoBanner() {
         return;
       }
 
+      // Check if banner was dismissed within last 5 minutes
+      const dismissedAt = localStorage.getItem(PROMO_DISMISSED_KEY);
+      if (dismissedAt && Date.now() - parseInt(dismissedAt) < 5 * 60 * 1000) {
+        setPromoInfo(null);
+        return;
+      }
+
       // Show banner from localStorage
       const stored = localStorage.getItem(PROMO_INFO_KEY);
       if (stored) {
@@ -76,6 +84,7 @@ export default function PromoBanner() {
   if (!promoInfo) return null;
 
   const handleDismiss = () => {
+    localStorage.setItem(PROMO_DISMISSED_KEY, Date.now().toString());
     setPromoInfo(null);
   };
 
