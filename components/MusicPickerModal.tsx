@@ -162,11 +162,11 @@ export default function MusicPickerModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 bg-black/50 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
       onClick={onClose}
     >
       <div
-        className="bg-zinc-900 w-full sm:w-[480px] rounded-t-3xl sm:rounded-3xl animate-slide-up sm:animate-scale-in flex flex-col"
+        className="bg-zinc-900/95 backdrop-blur-xl w-full sm:w-[480px] rounded-t-3xl sm:rounded-3xl animate-slide-up sm:animate-scale-in flex flex-col"
         style={{ height: "89vh", maxHeight: "89vh" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -174,7 +174,6 @@ export default function MusicPickerModal({
         <div className="flex items-center justify-between px-4 pt-4 pb-2.5 border-b border-white/10 shrink-0">
           <div>
             <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <Music className="h-4.5 w-4.5 text-pink-400" />
               Müzik Seç
             </h3>
             <p className="text-[11px] text-zinc-400 mt-0.5">
