@@ -1794,18 +1794,16 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
             ) : (
               <>
                     {/* Scrollable tools area with arrow buttons */}
-                    {showLeftArrow && (
-                      <button
-                        onClick={() => {
-                          const el = document.getElementById('editor-toolbar-scroll');
-                          if (el) el.scrollBy({ left: -200, behavior: 'smooth' });
-                        }}
-                        className="btn-secondary shrink-0 flex items-center justify-center transition active:scale-95 !p-0" style={{ width: 49, height: 49 }}
-                        aria-label="Sola kaydır"
-                      >
-                        <ArrowLeft className="h-5 w-5 text-white/70" />
-                      </button>
-                    )}
+                    <button
+                      onClick={() => {
+                        const el = document.getElementById('editor-toolbar-scroll');
+                        if (el) el.scrollBy({ left: -200, behavior: 'smooth' });
+                      }}
+                      className={`btn-secondary shrink-0 flex items-center justify-center transition active:scale-95 !p-0 ${showLeftArrow ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} style={{ width: 49, height: 49 }}
+                      aria-label="Sola kaydır"
+                    >
+                      <ArrowLeft className="h-5 w-5 text-white/70" />
+                    </button>
                     <div
                       id="editor-toolbar-scroll"
                       className="flex-1 min-w-0 flex items-center justify-end gap-2 overflow-x-auto scrollbar-hide ml-[5px]"
@@ -1911,18 +1909,16 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                         Önizleme
                       </button>
                     </div>
-                    {showRightArrow && (
-                      <button
-                        onClick={() => {
-                          const el = document.getElementById('editor-toolbar-scroll');
-                          if (el) el.scrollBy({ left: 200, behavior: 'smooth' });
-                        }}
-                        className="btn-secondary shrink-0 flex items-center justify-center transition active:scale-95 !p-0" style={{ width: 49, height: 49 }}
-                        aria-label="Sağa kaydır"
-                      >
-                        <ArrowLeft className="h-5 w-5 text-white/70 rotate-180" />
-                      </button>
-                    )}
+                    <button
+                      onClick={() => {
+                        const el = document.getElementById('editor-toolbar-scroll');
+                        if (el) el.scrollBy({ left: 200, behavior: 'smooth' });
+                      }}
+                      className={`btn-secondary shrink-0 flex items-center justify-center transition active:scale-95 !p-0 ${showRightArrow ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} style={{ width: 49, height: 49 }}
+                      aria-label="Sağa kaydır"
+                    >
+                      <ArrowLeft className="h-5 w-5 text-white/70 rotate-180" />
+                    </button>
                     {/* Publish button - always visible */}
                     <button
                       onClick={handlePublish}
