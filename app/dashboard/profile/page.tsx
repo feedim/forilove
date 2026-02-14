@@ -637,28 +637,32 @@ export default function ProfilePage() {
         )}
 
         {/* Affiliate Son Kullanıcılar */}
-        {profile?.role === 'affiliate' && sponsorUsers.length > 0 && (
+        {profile?.role === 'affiliate' && (
           <div className="bg-zinc-900 rounded-2xl p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <User className="h-5 w-5 text-pink-500" />
               <h3 className="font-semibold">Son Kayit Olan Kullanicilar</h3>
             </div>
-            <div className="space-y-3">
-              {sponsorUsers.map((u: any, i: number) => (
-                <div key={i} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-semibold text-gray-300 shrink-0">
-                      {u.name.charAt(0).toUpperCase()}
+            {sponsorUsers.length > 0 ? (
+              <div className="space-y-3">
+                {sponsorUsers.map((u: any, i: number) => (
+                  <div key={i} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-semibold text-gray-300 shrink-0">
+                        {u.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{u.name}</p>
+                        <p className="text-xs text-gray-500">{new Date(u.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}</p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{u.name}</p>
-                      <p className="text-xs text-gray-500">{new Date(u.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}</p>
-                    </div>
+                    <span className="text-sm font-bold text-yellow-500 shrink-0">{u.coin_balance} FL</span>
                   </div>
-                  <span className="text-sm font-bold text-yellow-500 shrink-0">{u.coin_balance} FL</span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">Henuz linkinizden kayit olan kullanici yok.</p>
+            )}
           </div>
         )}
 
