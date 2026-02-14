@@ -12,14 +12,8 @@ export default function SecurityPage() {
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<string | null>(null);
   const [mfaEnabled, setMfaEnabled] = useState(false);
-  const [enabling, setEnabling] = useState(false);
-  const [disabling, setDisabling] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [emailVerified, setEmailVerified] = useState(false);
-  const [password, setPassword] = useState("");
-  const [showPasswordInput, setShowPasswordInput] = useState(false);
-  const [showDisablePassword, setShowDisablePassword] = useState(false);
-  const [disablePassword, setDisablePassword] = useState("");
   // Email verification
   const [verifyingEmail, setVerifyingEmail] = useState(false);
   const [emailCode, setEmailCode] = useState("");
@@ -29,6 +23,21 @@ export default function SecurityPage() {
   // Email change
   const [editEmail, setEditEmail] = useState(false);
   const [newEmail, setNewEmail] = useState("");
+  // 2FA enable: step 0=hidden, 1=password, 2=otp
+  const [enableStep, setEnableStep] = useState(0);
+  const [enablePassword, setEnablePassword] = useState("");
+  const [enableCode, setEnableCode] = useState("");
+  const [enabling, setEnabling] = useState(false);
+  const [enableSending, setEnableSending] = useState(false);
+  // 2FA disable: step 0=hidden, 1=password, 2=otp
+  const [disableStep, setDisableStep] = useState(0);
+  const [disablePassword, setDisablePassword] = useState("");
+  const [disableCode, setDisableCode] = useState("");
+  const [disabling, setDisabling] = useState(false);
+  const [disableSending, setDisableSending] = useState(false);
+  // MFA OTP cooldown
+  const [mfaCooldown, setMfaCooldown] = useState(0);
+
   const router = useRouter();
   const supabase = createClient();
 
@@ -41,6 +50,12 @@ export default function SecurityPage() {
     const timer = setTimeout(() => setEmailCooldown(emailCooldown - 1), 1000);
     return () => clearTimeout(timer);
   }, [emailCooldown]);
+
+  useEffect(() => {
+    if (mfaCooldown <= 0) return;
+    const timer = setTimeout(() => setMfaCooldown(mfaCooldown - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [mfaCooldown]);
 
   const loadData = async () => {
     try {
@@ -70,25 +85,55 @@ export default function SecurityPage() {
     }
   };
 
-  const handleEnable = async () => {
-    if (!password.trim()) {
+  // Enable 2FA - Step 1: verify password, send OTP
+  const handleEnablePasswordStep = async () => {
+    if (!enablePassword.trim()) {
       toast.error("Şifrenizi girin");
       return;
     }
-
-    setEnabling(true);
+    setEnableSending(true);
     try {
-      // Verify password first
       const { error: authError } = await supabase.auth.signInWithPassword({
         email: userEmail,
-        password,
+        password: enablePassword,
       });
-
       if (authError) {
         toast.error("Şifre yanlış");
         return;
       }
+      // Send OTP
+      const { error } = await supabase.auth.signInWithOtp({
+        email: userEmail,
+        options: { shouldCreateUser: false },
+      });
+      if (error) {
+        toast.error("Kod gönderilemedi");
+        return;
+      }
+      toast.success("Doğrulama kodu e-postanıza gönderildi");
+      setEnableStep(2);
+      setMfaCooldown(60);
+    } catch {
+      toast.error("Bir hata oluştu");
+    } finally {
+      setEnableSending(false);
+    }
+  };
 
+  // Enable 2FA - Step 2: verify OTP, enable MFA
+  const handleEnableOtpStep = async () => {
+    if (enableCode.length < 6) return;
+    setEnabling(true);
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email: userEmail,
+        token: enableCode,
+        type: "email",
+      });
+      if (error) {
+        toast.error("Kod geçersiz veya süresi dolmuş");
+        return;
+      }
       const res = await fetch("/api/auth/mfa", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -101,8 +146,9 @@ export default function SecurityPage() {
       }
       toast.success("İki faktörlü doğrulama etkinleştirildi!");
       setMfaEnabled(true);
-      setShowPasswordInput(false);
-      setPassword("");
+      setEnableStep(0);
+      setEnablePassword("");
+      setEnableCode("");
     } catch {
       toast.error("Bir hata oluştu");
     } finally {
@@ -110,25 +156,55 @@ export default function SecurityPage() {
     }
   };
 
-  const handleDisable = async () => {
+  // Disable 2FA - Step 1: verify password, send OTP
+  const handleDisablePasswordStep = async () => {
     if (!disablePassword.trim()) {
       toast.error("Şifrenizi girin");
       return;
     }
-
-    setDisabling(true);
+    setDisableSending(true);
     try {
-      // Verify password first
       const { error: authError } = await supabase.auth.signInWithPassword({
         email: userEmail,
         password: disablePassword,
       });
-
       if (authError) {
         toast.error("Şifre yanlış");
         return;
       }
+      // Send OTP
+      const { error } = await supabase.auth.signInWithOtp({
+        email: userEmail,
+        options: { shouldCreateUser: false },
+      });
+      if (error) {
+        toast.error("Kod gönderilemedi");
+        return;
+      }
+      toast.success("Doğrulama kodu e-postanıza gönderildi");
+      setDisableStep(2);
+      setMfaCooldown(60);
+    } catch {
+      toast.error("Bir hata oluştu");
+    } finally {
+      setDisableSending(false);
+    }
+  };
 
+  // Disable 2FA - Step 2: verify OTP, disable MFA
+  const handleDisableOtpStep = async () => {
+    if (disableCode.length < 6) return;
+    setDisabling(true);
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email: userEmail,
+        token: disableCode,
+        type: "email",
+      });
+      if (error) {
+        toast.error("Kod geçersiz veya süresi dolmuş");
+        return;
+      }
       const res = await fetch("/api/auth/mfa", { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) {
@@ -137,12 +213,32 @@ export default function SecurityPage() {
       }
       toast.success("İki faktörlü doğrulama kapatıldı");
       setMfaEnabled(false);
-      setShowDisablePassword(false);
+      setDisableStep(0);
       setDisablePassword("");
+      setDisableCode("");
     } catch {
       toast.error("Bir hata oluştu");
     } finally {
       setDisabling(false);
+    }
+  };
+
+  // Resend MFA OTP
+  const handleResendMfaOtp = async () => {
+    if (mfaCooldown > 0 || !userEmail) return;
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: userEmail,
+        options: { shouldCreateUser: false },
+      });
+      if (error) {
+        toast.error("Kod gönderilemedi");
+        return;
+      }
+      toast.success("Kod tekrar gönderildi");
+      setMfaCooldown(60);
+    } catch {
+      toast.error("Bir hata oluştu");
     }
   };
 
@@ -185,7 +281,6 @@ export default function SecurityPage() {
     if (emailCode.length < 6 || !userEmail) return;
     setVerifyingCode(true);
     try {
-      // Send OTP to server for verification (prevents client-side bypass)
       const res = await fetch("/api/auth/verify-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -332,128 +427,210 @@ export default function SecurityPage() {
             </div>
 
             {/* 2FA Status - only for affiliate/admin */}
-            {(role === "affiliate" || role === "admin") && <div className="bg-zinc-900 rounded-2xl p-6 mb-6">
-              <div className="flex items-center gap-2 mb-2">
-                <Shield className="h-5 w-5 text-pink-500" />
-                <h2 className="font-semibold text-lg">İki Faktörlü Doğrulama (2FA)</h2>
+            {(role === "affiliate" || role === "admin") && (
+              <div className="bg-zinc-900 rounded-2xl p-6 mb-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield className="h-5 w-5 text-pink-500" />
+                  <h2 className="font-semibold text-lg">İki Faktörlü Doğrulama (2FA)</h2>
+                </div>
+                <p className="text-xs text-zinc-500 mb-6">
+                  Hesabınızı ekstra güvenlik katmanıyla koruyun. 2FA etkinleştirildiğinde her girişte e-postanıza doğrulama kodu gönderilir.
+                </p>
+
+                {mfaEnabled ? (
+                  <div className="space-y-4">
+                    {/* 2FA Etkin badge + Kapat */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Check className="h-5 w-5 text-pink-500 shrink-0" />
+                        <div>
+                          <p className="text-sm font-semibold text-pink-400">2FA Etkin</p>
+                          <p className="text-xs text-zinc-400">Her girişte {userEmail} adresine doğrulama kodu gönderilecek.</p>
+                        </div>
+                      </div>
+                      {disableStep === 0 && (
+                        <button
+                          onClick={() => setDisableStep(1)}
+                          className="text-xs text-zinc-500 hover:text-pink-400 transition shrink-0 ml-3"
+                        >
+                          Kapat
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Disable Step 1: Password */}
+                    {disableStep === 1 && (
+                      <div className="space-y-3 bg-white/5 rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Lock className="h-4 w-4 text-zinc-400" />
+                          <p className="text-sm font-medium">Şifrenizi girin</p>
+                        </div>
+                        <PasswordInput
+                          placeholder="Şifre"
+                          value={disablePassword}
+                          onChange={(e) => setDisablePassword(e.target.value)}
+                          maxLength={128}
+                          autoComplete="current-password"
+                          className="input-modern w-full"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => { setDisableStep(0); setDisablePassword(""); }}
+                            className="flex-1 btn-secondary py-2.5 text-sm"
+                          >
+                            İptal
+                          </button>
+                          <button
+                            onClick={handleDisablePasswordStep}
+                            disabled={disableSending || !disablePassword.trim()}
+                            className="flex-1 btn-primary py-2.5 text-sm flex items-center justify-center gap-2"
+                          >
+                            {disableSending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                            Devam
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Disable Step 2: OTP */}
+                    {disableStep === 2 && (
+                      <div className="space-y-3 bg-white/5 rounded-xl p-4">
+                        <p className="text-xs text-zinc-400">E-postanıza gönderilen 8 haneli kodu girin. Spam veya diğer klasörleri de kontrol edin.</p>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={disableCode}
+                            onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                            placeholder="00000000"
+                            maxLength={8}
+                            className="input-modern flex-1 text-center font-mono tracking-[0.3em]"
+                          />
+                          <button
+                            onClick={handleDisableOtpStep}
+                            disabled={disabling || disableCode.length < 6}
+                            className="btn-primary px-4 py-2.5 text-sm flex items-center gap-1.5"
+                          >
+                            {disabling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                            Kapat
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <button
+                            onClick={handleResendMfaOtp}
+                            disabled={mfaCooldown > 0}
+                            className="text-xs text-zinc-500 hover:text-white transition disabled:opacity-50"
+                          >
+                            {mfaCooldown > 0 ? `Tekrar gönder (${mfaCooldown}s)` : "Kodu Tekrar Gönder"}
+                          </button>
+                          <button
+                            onClick={() => { setDisableStep(0); setDisablePassword(""); setDisableCode(""); }}
+                            className="text-xs text-zinc-500 hover:text-white transition"
+                          >
+                            İptal
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {role === "affiliate" && (
+                      <div className="bg-pink-500/10 border border-pink-500/20 rounded-xl p-4">
+                        <p className="text-xs text-pink-400">
+                          Affiliate olarak IBAN bilgisi eklemek ve indirim linki oluşturmak için 2FA etkinleştirmeniz zorunludur.
+                        </p>
+                      </div>
+                    )}
+
+                    {enableStep === 0 && (
+                      <button
+                        onClick={() => setEnableStep(1)}
+                        className="btn-primary w-full py-3 flex items-center justify-center gap-2"
+                      >
+                        <Shield className="h-4 w-4" />
+                        2FA Etkinleştir
+                      </button>
+                    )}
+
+                    {/* Enable Step 1: Password */}
+                    {enableStep === 1 && (
+                      <div className="space-y-3 bg-white/5 rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Lock className="h-4 w-4 text-zinc-400" />
+                          <p className="text-sm font-medium">Hesap şifrenizi girin</p>
+                        </div>
+                        <PasswordInput
+                          placeholder="Şifre"
+                          value={enablePassword}
+                          onChange={(e) => setEnablePassword(e.target.value)}
+                          maxLength={128}
+                          autoComplete="current-password"
+                          className="input-modern w-full"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => { setEnableStep(0); setEnablePassword(""); }}
+                            className="flex-1 btn-secondary py-2.5 text-sm"
+                          >
+                            İptal
+                          </button>
+                          <button
+                            onClick={handleEnablePasswordStep}
+                            disabled={enableSending || !enablePassword.trim()}
+                            className="flex-1 btn-primary py-2.5 text-sm flex items-center justify-center gap-2"
+                          >
+                            {enableSending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                            Devam
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Enable Step 2: OTP */}
+                    {enableStep === 2 && (
+                      <div className="space-y-3 bg-white/5 rounded-xl p-4">
+                        <p className="text-xs text-zinc-400">E-postanıza gönderilen 8 haneli kodu girin. Spam veya diğer klasörleri de kontrol edin.</p>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={enableCode}
+                            onChange={(e) => setEnableCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                            placeholder="00000000"
+                            maxLength={8}
+                            className="input-modern flex-1 text-center font-mono tracking-[0.3em]"
+                          />
+                          <button
+                            onClick={handleEnableOtpStep}
+                            disabled={enabling || enableCode.length < 6}
+                            className="btn-primary px-4 py-2.5 text-sm flex items-center gap-1.5"
+                          >
+                            {enabling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Shield className="h-3.5 w-3.5" />}
+                            Etkinleştir
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <button
+                            onClick={handleResendMfaOtp}
+                            disabled={mfaCooldown > 0}
+                            className="text-xs text-zinc-500 hover:text-white transition disabled:opacity-50"
+                          >
+                            {mfaCooldown > 0 ? `Tekrar gönder (${mfaCooldown}s)` : "Kodu Tekrar Gönder"}
+                          </button>
+                          <button
+                            onClick={() => { setEnableStep(0); setEnablePassword(""); setEnableCode(""); }}
+                            className="text-xs text-zinc-500 hover:text-white transition"
+                          >
+                            İptal
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              <p className="text-xs text-zinc-500 mb-6">
-                Hesabınızı ekstra güvenlik katmanıyla koruyun. 2FA etkinleştirildiğinde her girişte e-postanıza doğrulama kodu gönderilir.
-              </p>
-
-              {mfaEnabled ? (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 bg-pink-500/10 border border-pink-500/20 rounded-xl p-4">
-                    <Check className="h-5 w-5 text-pink-500 shrink-0" />
-                    <div>
-                      <p className="text-sm font-semibold text-pink-400">2FA Etkin</p>
-                      <p className="text-xs text-zinc-400">Her girişte {userEmail} adresine doğrulama kodu gönderilecek.</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <Mail className="h-5 w-5 text-zinc-400" />
-                      <div>
-                        <p className="text-sm font-medium">E-posta Doğrulaması</p>
-                        <p className="text-xs text-zinc-500">{userEmail}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setShowDisablePassword(!showDisablePassword)}
-                      className="text-xs text-zinc-500 hover:text-red-400 transition"
-                    >
-                      Kapat
-                    </button>
-                  </div>
-
-                  {/* Disable 2FA - password required */}
-                  {showDisablePassword && (
-                    <div className="space-y-3 bg-white/5 rounded-xl p-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Lock className="h-4 w-4 text-zinc-400" />
-                        <p className="text-sm font-medium">2FA kapatmak için şifrenizi girin</p>
-                      </div>
-                      <PasswordInput
-                        placeholder="Şifre"
-                        value={disablePassword}
-                        onChange={(e) => setDisablePassword(e.target.value)}
-                        maxLength={128}
-                        autoComplete="current-password"
-                        className="input-modern w-full"
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => { setShowDisablePassword(false); setDisablePassword(""); }}
-                          className="flex-1 btn-secondary py-2.5 text-sm"
-                        >
-                          İptal
-                        </button>
-                        <button
-                          onClick={handleDisable}
-                          disabled={disabling || !disablePassword.trim()}
-                          className="flex-1 py-2.5 text-sm bg-red-600 hover:bg-red-500 text-white rounded-xl font-semibold transition flex items-center justify-center gap-2"
-                        >
-                          {disabling ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                          2FA Kapat
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {role === "affiliate" && (
-                    <div className="bg-pink-500/10 border border-pink-500/20 rounded-xl p-4">
-                      <p className="text-xs text-pink-400">
-                        Affiliate olarak IBAN bilgisi eklemek ve indirim linki oluşturmak için 2FA etkinleştirmeniz zorunludur.
-                      </p>
-                    </div>
-                  )}
-
-                  {!showPasswordInput ? (
-                    <button
-                      onClick={() => setShowPasswordInput(true)}
-                      className="btn-primary w-full py-3 flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                      <Shield className="h-4 w-4" />
-                      2FA Etkinleştir
-                    </button>
-                  ) : (
-                    <div className="space-y-3 bg-white/5 rounded-xl p-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Lock className="h-4 w-4 text-zinc-400" />
-                        <p className="text-sm font-medium">Hesap şifrenizi girin</p>
-                      </div>
-                      <PasswordInput
-                        placeholder="Şifre"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        maxLength={128}
-                        autoComplete="current-password"
-                        className="input-modern w-full"
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => { setShowPasswordInput(false); setPassword(""); }}
-                          className="flex-1 btn-secondary py-2.5 text-sm"
-                        >
-                          İptal
-                        </button>
-                        <button
-                          onClick={handleEnable}
-                          disabled={enabling || !password.trim()}
-                          className="flex-1 btn-primary py-2.5 text-sm flex items-center justify-center gap-2"
-                        >
-                          {enabling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
-                          Onayla
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>}
+            )}
 
             {/* Info - only for affiliate/admin */}
             {(role === "affiliate" || role === "admin") && (
