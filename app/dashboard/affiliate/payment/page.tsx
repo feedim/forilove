@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Wallet, Check, Clock, CheckCircle, XCircle, Send } from "lucide-react";
+import { ArrowLeft, Wallet, Check, Clock, CheckCircle, XCircle, Send, Calendar } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
+
+type PeriodKey = "all" | "thisMonth" | "last3m" | "last6m";
+
+const ITEMS_PER_PAGE = 10;
 
 export default function AffiliatePaymentPage() {
   const [loading, setLoading] = useState(true);
@@ -16,7 +20,8 @@ export default function AffiliatePaymentPage() {
   const [balance, setBalance] = useState<any>(null);
   const [payouts, setPayouts] = useState<any[]>([]);
   const [requesting, setRequesting] = useState(false);
-  const [visiblePayouts, setVisiblePayouts] = useState(10);
+  const [visiblePayouts, setVisiblePayouts] = useState(ITEMS_PER_PAGE);
+  const [historyPeriod, setHistoryPeriod] = useState<PeriodKey>("all");
   const router = useRouter();
   const supabase = createClient();
 
@@ -36,7 +41,7 @@ export default function AffiliatePaymentPage() {
         return;
       }
 
-      // Load payment info
+      // Load payment info + balance from promos API
       const promoRes = await fetch("/api/affiliate/promos");
       if (promoRes.ok) {
         const data = await promoRes.json();
@@ -44,13 +49,15 @@ export default function AffiliatePaymentPage() {
           setIban(data.paymentInfo.iban || "");
           setHolderName(data.paymentInfo.holderName || "");
         }
+        if (data.balance) {
+          setBalance(data.balance);
+        }
       }
 
-      // Load payout data
+      // Load payout history
       const payoutRes = await fetch("/api/affiliate/payouts");
       if (payoutRes.ok) {
         const data = await payoutRes.json();
-        setBalance(data.balance || null);
         setPayouts(data.payouts || []);
       }
     } catch (e) {
@@ -63,6 +70,11 @@ export default function AffiliatePaymentPage() {
   useEffect(() => {
     loadData();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reset visible count when period changes
+  useEffect(() => {
+    setVisiblePayouts(ITEMS_PER_PAGE);
+  }, [historyPeriod]);
 
   const handleSave = async () => {
     if (!iban.trim() || !holderName.trim()) {
@@ -131,6 +143,40 @@ export default function AffiliatePaymentPage() {
     }
   };
 
+  // Filter payouts by period
+  const filteredPayouts = useMemo(() => {
+    if (historyPeriod === "all") return payouts;
+
+    const now = new Date();
+    let cutoff: Date;
+    switch (historyPeriod) {
+      case "thisMonth":
+        cutoff = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case "last3m":
+        cutoff = new Date(now.getTime() - 90 * 86400000);
+        break;
+      case "last6m":
+        cutoff = new Date(now.getTime() - 180 * 86400000);
+        break;
+      default:
+        return payouts;
+    }
+
+    return payouts.filter(p => new Date(p.requested_at) >= cutoff);
+  }, [payouts, historyPeriod]);
+
+  // Period summary
+  const periodSummary = useMemo(() => {
+    const approved = filteredPayouts.filter(p => p.status === "approved");
+    const pending = filteredPayouts.filter(p => p.status === "pending");
+    return {
+      total: filteredPayouts.length,
+      approvedAmount: Math.round(approved.reduce((s, p) => s + Number(p.amount), 0) * 100) / 100,
+      pendingAmount: Math.round(pending.reduce((s, p) => s + Number(p.amount), 0) * 100) / 100,
+    };
+  }, [filteredPayouts]);
+
   return (
     <div className="min-h-screen bg-black text-white">
       <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-xl min-h-[73px]">
@@ -152,33 +198,25 @@ export default function AffiliatePaymentPage() {
           </div>
         ) : (
           <>
-            {/* Bakiye Özeti */}
+            {/* Ödeme Talebi */}
             {balance && (
               <div className="bg-zinc-900 rounded-2xl p-6 mb-6">
                 <div className="flex items-center gap-2 mb-4">
-                  <Wallet className="h-5 w-5 text-pink-500" />
-                  <h2 className="font-semibold text-lg">Bakiye</h2>
+                  <Send className="h-5 w-5 text-pink-500" />
+                  <h2 className="font-semibold text-lg">Ödeme Talebi</h2>
                 </div>
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="bg-white/5 rounded-xl p-3">
-                    <p className="text-xs text-gray-400 mb-1">Toplam Kazanç</p>
-                    <p className="text-xl font-bold">{balance.totalEarnings.toLocaleString('tr-TR')} <span className="text-xs text-gray-400">TRY</span></p>
+                <div className="flex items-center justify-between bg-white/5 rounded-xl p-4 mb-4">
+                  <div>
+                    <p className="text-xs text-gray-400">Çekilebilir Bakiye</p>
+                    <p className="text-2xl font-bold text-pink-500">{balance.available.toLocaleString('tr-TR')} <span className="text-sm text-gray-400">TRY</span></p>
                   </div>
-                  <div className="bg-white/5 rounded-xl p-3">
-                    <p className="text-xs text-gray-400 mb-1">Çekilebilir Bakiye</p>
-                    <p className="text-xl font-bold text-pink-500">{balance.available.toLocaleString('tr-TR')} <span className="text-xs text-gray-400">TRY</span></p>
-                  </div>
-                  <div className="bg-white/5 rounded-xl p-3">
-                    <p className="text-xs text-gray-400 mb-1">Ödenen</p>
-                    <p className="text-lg font-bold text-pink-400">{balance.totalPaidOut.toLocaleString('tr-TR')} <span className="text-xs text-gray-400">TRY</span></p>
-                  </div>
-                  <div className="bg-white/5 rounded-xl p-3">
-                    <p className="text-xs text-gray-400 mb-1">Bekleyen Talep</p>
-                    <p className="text-lg font-bold text-pink-300">{balance.totalPending.toLocaleString('tr-TR')} <span className="text-xs text-gray-400">TRY</span></p>
-                  </div>
+                  {balance.totalPending > 0 && (
+                    <div className="text-right">
+                      <p className="text-xs text-gray-400">Bekleyen</p>
+                      <p className="text-lg font-bold text-pink-300">{balance.totalPending.toLocaleString('tr-TR')} <span className="text-xs text-gray-400">TRY</span></p>
+                    </div>
+                  )}
                 </div>
-
-                {/* Ödeme Talebi Butonu */}
                 {balance.canRequestPayout ? (
                   <button
                     onClick={handleRequestPayout}
@@ -190,7 +228,7 @@ export default function AffiliatePaymentPage() {
                   </button>
                 ) : (
                   <p className="text-xs text-gray-500 text-center">
-                    Minimum ödeme tutarı {balance.minPayout} TRY&apos;dir. Mevcut bakiye: {balance.available.toLocaleString('tr-TR')} TRY
+                    Minimum ödeme tutarı 100 TRY&apos;dir. Mevcut bakiye: {balance.available.toLocaleString('tr-TR')} TRY
                   </p>
                 )}
               </div>
@@ -242,12 +280,55 @@ export default function AffiliatePaymentPage() {
               </div>
             </div>
 
-            {/* Ödeme Geçmişi */}
+            {/* Ödeme Geçmişi - Tarih Filtreli */}
             <div className="bg-zinc-900 rounded-2xl p-6 mb-6">
-              <h3 className="font-semibold mb-4">Ödeme Geçmişi</h3>
-              {payouts.length > 0 ? (
+              <div className="flex items-center gap-2 mb-4">
+                <Calendar className="h-5 w-5 text-pink-500" />
+                <h3 className="font-semibold">Ödeme Geçmişi</h3>
+              </div>
+
+              {/* Dönem Seçici */}
+              <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1">
+                {([
+                  { key: "all" as PeriodKey, label: "Tümü" },
+                  { key: "thisMonth" as PeriodKey, label: "Bu Ay" },
+                  { key: "last3m" as PeriodKey, label: "Son 3 Ay" },
+                  { key: "last6m" as PeriodKey, label: "Son 6 Ay" },
+                ]).map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setHistoryPeriod(key)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition shrink-0 ${
+                      historyPeriod === key ? "bg-pink-500 text-white" : "bg-white/5 text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Dönem Özeti */}
+              {filteredPayouts.length > 0 && (
+                <div className="flex gap-3 mb-4">
+                  <div className="flex-1 bg-white/5 rounded-xl p-3 text-center">
+                    <p className="text-[10px] text-gray-500">Onaylanan</p>
+                    <p className="text-sm font-bold text-pink-500">{periodSummary.approvedAmount.toLocaleString('tr-TR')} TRY</p>
+                  </div>
+                  <div className="flex-1 bg-white/5 rounded-xl p-3 text-center">
+                    <p className="text-[10px] text-gray-500">Bekleyen</p>
+                    <p className="text-sm font-bold text-pink-300">{periodSummary.pendingAmount.toLocaleString('tr-TR')} TRY</p>
+                  </div>
+                  <div className="flex-1 bg-white/5 rounded-xl p-3 text-center">
+                    <p className="text-[10px] text-gray-500">Talep</p>
+                    <p className="text-sm font-bold">{periodSummary.total}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Liste */}
+              {filteredPayouts.length > 0 ? (
                 <div className="space-y-3">
-                  {payouts.slice(0, visiblePayouts).map((payout) => {
+                  {filteredPayouts.slice(0, visiblePayouts).map((payout) => {
                     const status = statusLabel(payout.status);
                     const StatusIcon = status.icon;
                     return (
@@ -268,17 +349,19 @@ export default function AffiliatePaymentPage() {
                       </div>
                     );
                   })}
-                  {visiblePayouts < payouts.length && (
+                  {visiblePayouts < filteredPayouts.length && (
                     <button
-                      onClick={() => setVisiblePayouts(prev => prev + 10)}
+                      onClick={() => setVisiblePayouts(prev => prev + ITEMS_PER_PAGE)}
                       className="w-full py-2 text-sm text-pink-500 hover:text-pink-400 font-medium transition"
                     >
-                      Daha Fazla Göster ({payouts.length - visiblePayouts} kalan)
+                      Daha Fazla Göster ({filteredPayouts.length - visiblePayouts} kalan)
                     </button>
                   )}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">Henüz ödeme talebi yok.</p>
+                <p className="text-sm text-gray-500 text-center py-4">
+                  {historyPeriod === "all" ? "Henüz ödeme talebi yok." : "Bu dönemde ödeme talebi yok."}
+                </p>
               )}
             </div>
 

@@ -88,54 +88,101 @@ export async function GET() {
     }
 
     // Calculate earnings from affiliate's referred users' payments
-    let totalRevenue = 0;
-    let totalEarnings = 0;
-    let totalPurchases = 0;
+    let allPayments: any[] = [];
 
     if (allSignupUserIds.length > 0) {
       const { data: payments } = await admin
         .from("coin_payments")
-        .select("price_paid")
+        .select("price_paid, created_at")
         .in("user_id", allSignupUserIds)
         .eq("status", "completed");
 
       if (payments) {
-        totalPurchases = payments.length;
-        totalRevenue = payments.reduce((sum: number, p: any) => sum + (p.price_paid || 0), 0);
+        allPayments = payments;
       }
     }
 
+    const commissionRate = data && data.length > 0 ? TOTAL_ALLOCATION - data[0].discount_percent : 0;
+
+    // Period-based analytics
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterdayStart = new Date(todayStart.getTime() - 86400000);
+    const last7d = new Date(now.getTime() - 7 * 86400000);
+    const last14d = new Date(now.getTime() - 14 * 86400000);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const calcPeriod = (start: Date, end?: Date) => {
+      const filtered = allPayments.filter(p => {
+        const d = new Date(p.created_at);
+        return d >= start && (!end || d < end);
+      });
+      const revenue = filtered.reduce((sum: number, p: any) => sum + (p.price_paid || 0), 0);
+      return {
+        purchases: filtered.length,
+        revenue: Math.round(revenue * 100) / 100,
+        earnings: Math.round((revenue * commissionRate / 100) * 100) / 100,
+      };
+    };
+
+    const totalRevenue = allPayments.reduce((sum: number, p: any) => sum + (p.price_paid || 0), 0);
+    const totalEarnings = Math.round((totalRevenue * commissionRate / 100) * 100) / 100;
+
+    // Signup counts per period
+    const allSignupDates = Object.values(signupsByPromo).flat();
+    const countSignups = (start: Date, end?: Date) => {
+      return allSignupDates.filter(s => {
+        const d = new Date(s.signed_up_at);
+        return d >= start && (!end || d < end);
+      }).length;
+    };
+
+    const periodAnalytics = {
+      today: { ...calcPeriod(todayStart), signups: countSignups(todayStart) },
+      yesterday: { ...calcPeriod(yesterdayStart, todayStart), signups: countSignups(yesterdayStart, todayStart) },
+      last7d: { ...calcPeriod(last7d), signups: countSignups(last7d) },
+      last14d: { ...calcPeriod(last14d), signups: countSignups(last14d) },
+      thisMonth: { ...calcPeriod(monthStart), signups: countSignups(monthStart) },
+    };
+
     // Calculate commission for each promo based on its discount
     const promos = (data || []).map((p: any) => {
-      const commissionRate = TOTAL_ALLOCATION - p.discount_percent;
+      const cr = TOTAL_ALLOCATION - p.discount_percent;
       return {
         ...p,
         signups: signupsByPromo[p.id] || [],
-        commission_rate: commissionRate,
+        commission_rate: cr,
       };
     });
 
-    // Use first promo's discount for overall commission calculation
-    if (data && data.length > 0) {
-      const commissionRate = TOTAL_ALLOCATION - data[0].discount_percent;
-      totalEarnings = Math.round((totalRevenue * commissionRate / 100) * 100) / 100;
-    }
+    // Get affiliate payment info + payout data
+    const [paymentInfoRes, payoutsRes] = await Promise.all([
+      admin.from("profiles").select("affiliate_iban, affiliate_holder_name").eq("user_id", user.id).single(),
+      admin.from("affiliate_payouts").select("amount, status").eq("affiliate_user_id", user.id),
+    ]);
 
-    // Get affiliate payment info
-    const { data: paymentInfo } = await admin
-      .from("profiles")
-      .select("affiliate_iban, affiliate_holder_name")
-      .eq("user_id", user.id)
-      .single();
+    const paymentInfo = paymentInfoRes.data;
+    const payoutsList = payoutsRes.data || [];
+    const totalPaidOut = payoutsList.filter((p: any) => p.status === "approved").reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+    const totalPending = payoutsList.filter((p: any) => p.status === "pending").reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+    const availableBalance = Math.round((totalEarnings - totalPaidOut - totalPending) * 100) / 100;
 
     return NextResponse.json({
       promos,
       analytics: {
         totalSignups,
-        totalPurchases,
+        totalPurchases: allPayments.length,
         totalRevenue: Math.round(totalRevenue * 100) / 100,
         totalEarnings,
-        commissionRate: data && data.length > 0 ? TOTAL_ALLOCATION - data[0].discount_percent : 0,
+        commissionRate,
+        periods: periodAnalytics,
+      },
+      balance: {
+        totalEarnings,
+        totalPaidOut: Math.round(totalPaidOut * 100) / 100,
+        totalPending: Math.round(totalPending * 100) / 100,
+        available: Math.max(0, availableBalance),
+        canRequestPayout: availableBalance >= 100,
       },
       recentUsers,
       paymentInfo: paymentInfo ? {

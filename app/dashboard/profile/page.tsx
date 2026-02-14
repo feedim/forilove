@@ -32,7 +32,9 @@ export default function ProfilePage() {
   const [promoCreating, setPromoCreating] = useState(false);
   const [copiedPromo, setCopiedPromo] = useState<string | null>(null);
   const [sponsorAnalytics, setSponsorAnalytics] = useState<any>(null);
+  const [sponsorBalance, setSponsorBalance] = useState<any>(null);
   const [sponsorUsers, setSponsorUsers] = useState<any[]>([]);
+  const [sponsorPeriod, setSponsorPeriod] = useState<"today" | "yesterday" | "last7d" | "last14d" | "thisMonth">("last7d");
   const [visibleCoupons, setVisibleCoupons] = useState(10);
   const [visiblePromos, setVisiblePromos] = useState(10);
   const router = useRouter();
@@ -88,6 +90,7 @@ export default function ProfilePage() {
             const data = await res.json();
             setPromos(data.promos || []);
             setSponsorAnalytics(data.analytics || null);
+            setSponsorBalance(data.balance || null);
             setSponsorUsers(data.recentUsers || []);
           }
         } catch { /* silent */ }
@@ -631,32 +634,81 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Affiliate Analytics */}
+        {/* Affiliate Analytics - AdSense Style */}
         {profile?.role === 'affiliate' && sponsorAnalytics && (
           <div className="bg-zinc-900 rounded-2xl p-6 mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <BarChart3 className="h-5 w-5 text-pink-500" />
-              <h3 className="font-semibold">Affiliate Program</h3>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-pink-500" />
+                <h3 className="font-semibold">Affiliate Program</h3>
+              </div>
+              <span className="text-xs bg-pink-500/20 text-pink-400 px-2.5 py-1 rounded-full font-medium">%{sponsorAnalytics.commissionRate} komisyon</span>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white/5 rounded-xl p-4">
-                <p className="text-xs text-gray-400 mb-1">Toplam Kayıt</p>
-                <p className="text-2xl font-bold">{sponsorAnalytics.totalSignups}</p>
+
+            {/* Bakiye Kartları */}
+            {sponsorBalance && (
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                <div className="bg-pink-500/10 border border-pink-500/20 rounded-xl p-3 text-center">
+                  <p className="text-[10px] text-pink-300 mb-0.5">Toplam Kazanç</p>
+                  <p className="text-lg font-bold text-pink-500">{sponsorBalance.totalEarnings.toLocaleString('tr-TR')}</p>
+                  <p className="text-[10px] text-gray-500">TRY</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+                  <p className="text-[10px] text-gray-400 mb-0.5">Çekilebilir</p>
+                  <p className="text-lg font-bold">{sponsorBalance.available.toLocaleString('tr-TR')}</p>
+                  <p className="text-[10px] text-gray-500">TRY</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+                  <p className="text-[10px] text-gray-400 mb-0.5">Bekleyen</p>
+                  <p className="text-lg font-bold text-pink-300">{sponsorBalance.totalPending.toLocaleString('tr-TR')}</p>
+                  <p className="text-[10px] text-gray-500">TRY</p>
+                </div>
               </div>
-              <div className="bg-white/5 rounded-xl p-4">
-                <p className="text-xs text-gray-400 mb-1">Toplam Satış</p>
-                <p className="text-2xl font-bold">{sponsorAnalytics.totalPurchases}</p>
-              </div>
-              <div className="bg-white/5 rounded-xl p-4">
-                <p className="text-xs text-gray-400 mb-1">Komisyon Oranı</p>
-                <p className="text-2xl font-bold text-pink-500">%{sponsorAnalytics.commissionRate}</p>
-              </div>
-              <div className="bg-white/5 rounded-xl p-4">
-                <p className="text-xs text-gray-400 mb-1">Toplam Kazanç</p>
-                <p className="text-2xl font-bold text-pink-500">{sponsorAnalytics.totalEarnings.toLocaleString('tr-TR')} <span className="text-sm text-gray-400">TRY</span></p>
-              </div>
+            )}
+
+            {/* Dönem Seçici */}
+            <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1">
+              {([
+                { key: "today" as const, label: "Bugün" },
+                { key: "yesterday" as const, label: "Dün" },
+                { key: "last7d" as const, label: "7 Gün" },
+                { key: "last14d" as const, label: "14 Gün" },
+                { key: "thisMonth" as const, label: "Bu Ay" },
+              ]).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setSponsorPeriod(key)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition shrink-0 ${
+                    sponsorPeriod === key ? "bg-pink-500 text-white" : "bg-white/5 text-gray-400 hover:text-white"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
-            <p className="text-xs text-gray-500 mt-3">İndiriminiz ne kadar düşükse, komisyonunuz o kadar yüksek olur. (Min. %5 — Maks. %20)</p>
+
+            {/* Dönem Verileri */}
+            {sponsorAnalytics.periods && (
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <div className="bg-white/5 rounded-xl p-3">
+                  <p className="text-[10px] text-gray-500 mb-0.5">Kayıt</p>
+                  <p className="text-xl font-bold">{sponsorAnalytics.periods[sponsorPeriod]?.signups || 0}</p>
+                </div>
+                <div className="bg-white/5 rounded-xl p-3">
+                  <p className="text-[10px] text-gray-500 mb-0.5">Satış</p>
+                  <p className="text-xl font-bold">{sponsorAnalytics.periods[sponsorPeriod]?.purchases || 0}</p>
+                </div>
+                <div className="bg-white/5 rounded-xl p-3">
+                  <p className="text-[10px] text-gray-500 mb-0.5">Kazanç</p>
+                  <p className="text-xl font-bold text-pink-500">{(sponsorAnalytics.periods[sponsorPeriod]?.earnings || 0).toLocaleString('tr-TR')} <span className="text-[10px] text-gray-500">TRY</span></p>
+                </div>
+              </div>
+            )}
+
+            {/* Toplam Özet */}
+            <div className="border-t border-white/5 pt-3 flex items-center justify-between text-xs text-gray-500">
+              <span>Toplam: {sponsorAnalytics.totalSignups} kayıt · {sponsorAnalytics.totalPurchases} satış · Ödenen: {sponsorBalance?.totalPaidOut?.toLocaleString('tr-TR') || 0} TRY</span>
+            </div>
           </div>
         )}
 
