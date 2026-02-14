@@ -171,6 +171,12 @@ export default function AffiliatePage() {
             <div className="rounded-2xl overflow-hidden border border-white/10">
               <img src="/affiliate/panel-2.jpeg" alt="Affiliate Panel - Link Yönetimi" className="w-full" />
             </div>
+            <div className="rounded-2xl overflow-hidden border border-white/10">
+              <img src="/affiliate/panel-3.jpg" alt="Affiliate Panel - IBAN Bilgileri" className="w-full" />
+            </div>
+            <div className="rounded-2xl overflow-hidden border border-white/10">
+              <img src="/affiliate/panel-4.jpg" alt="Affiliate Panel - Ödeme Takibi" className="w-full" />
+            </div>
           </div>
         </div>
       </section>
