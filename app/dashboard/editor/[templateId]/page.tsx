@@ -261,25 +261,6 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
       e.preventDefault();
     };
-    // Detect DevTools open — clear iframe content when detected
-    let devtoolsInterval: ReturnType<typeof setInterval> | null = null;
-    const checkDevTools = () => {
-      const threshold = 160;
-      const widthDiff = window.outerWidth - window.innerWidth;
-      const heightDiff = window.outerHeight - window.innerHeight;
-      if (widthDiff > threshold || heightDiff > threshold) {
-        const iframe = document.querySelector('iframe');
-        if (iframe?.contentDocument) {
-          try {
-            const doc = iframe.contentDocument;
-            doc.open();
-            doc.write('<html><body style="background:#000;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif"><p>Geliştirici araçları açık</p></body></html>');
-            doc.close();
-          } catch {}
-        }
-      }
-    };
-    devtoolsInterval = setInterval(checkDevTools, 1500);
     // Console warning
     try {
       console.clear();
@@ -292,7 +273,6 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
     return () => {
       document.removeEventListener('keydown', handleKeydown, true);
       document.removeEventListener('contextmenu', handleContextMenu);
-      if (devtoolsInterval) clearInterval(devtoolsInterval);
     };
   }, []);
 
@@ -1109,15 +1089,8 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
           if ((e.ctrlKey || e.metaKey) && e.key.toUpperCase() === 'S') { e.preventDefault(); return; }
           if ((e.ctrlKey || e.metaKey) && e.key.toUpperCase() === 'A') { e.preventDefault(); return; }
         });
-        // Override outerHTML getters to prevent console HTML extraction (innerHTML left intact for DOM ops)
-        try {
-          Object.defineProperty(document.documentElement, 'outerHTML', { get: function() { return '<html></html>'; }, configurable: true });
-          Object.defineProperty(document.body, 'outerHTML', { get: function() { return '<body></body>'; }, configurable: true });
-        } catch(e) {}
-        // Disable common extraction methods
-        try {
-          XMLSerializer.prototype.serializeToString = function() { return ''; };
-        } catch(e) {}
+        // Periodic console clear inside iframe to discourage inspection
+        try { setInterval(function() { console.clear(); }, 3000); } catch(e) {}
       `;
       doc.body.appendChild(protectScript);
 
@@ -1145,14 +1118,6 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
       });
     } else {
       previewInitRef.current = true;
-      // Clear srcDoc attribute after first render so HTML isn't visible in DevTools element inspector
-      if (iframe) {
-        const onLoad = () => {
-          iframe.removeAttribute('srcdoc');
-          iframe.removeEventListener('load', onLoad);
-        };
-        iframe.addEventListener('load', onLoad);
-      }
     }
   };
 
