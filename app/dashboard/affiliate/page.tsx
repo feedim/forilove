@@ -263,7 +263,7 @@ export default function AffiliateDashboardPage() {
               ) : (
                 <div className="bg-white/5 rounded-xl p-4">
                   <p className="text-sm text-zinc-400 mb-3">Henüz bir promo kodunuz yok. Link oluşturmak için önce bir promo kodu oluşturun.</p>
-                  <Link href="/dashboard/admin/promos" className="inline-flex items-center gap-2 px-4 py-2 bg-pink-600 hover:bg-pink-500 rounded-lg text-xs font-bold transition">
+                  <Link href="/dashboard/admin/promos" className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-xs font-bold">
                     <Globe className="h-3.5 w-3.5" />
                     Promo Kodu Oluştur
                   </Link>

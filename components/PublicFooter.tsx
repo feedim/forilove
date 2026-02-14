@@ -3,7 +3,7 @@ import { Heart } from "lucide-react";
 
 export default function PublicFooter() {
   return (
-    <footer className="border-t border-white/10 py-12">
+    <footer className="border-t border-white/10 pt-12 pb-0">
       <div className="container mx-auto px-6">
         {/* Links + Payment */}
         <div className="flex flex-col items-center gap-6 mb-8">

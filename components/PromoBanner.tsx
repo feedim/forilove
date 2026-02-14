@@ -75,11 +75,26 @@ export default function PromoBanner() {
 
   if (!promoInfo) return null;
 
+  const handleDismiss = () => {
+    setPromoInfo(null);
+  };
+
   return (
     <div className="sticky top-0 z-50 flex items-center justify-center" style={{ height: 30, background: 'lab(49.5493% 79.8381 2.31768)' }}>
       <span className="text-white" style={{ fontSize: 11, fontWeight: 600 }}>
         %{promoInfo.discount} indirim uygulandı — Kod: {promoInfo.code}
       </span>
+      <button
+        onClick={handleDismiss}
+        className="absolute right-2 flex items-center justify-center"
+        style={{ width: 20, height: 20 }}
+        aria-label="Kapat"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 6 6 18" />
+          <path d="m6 6 12 12" />
+        </svg>
+      </button>
     </div>
   );
 }
