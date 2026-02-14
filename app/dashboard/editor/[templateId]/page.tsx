@@ -229,16 +229,42 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
     const shouldAutoplay = editorMusicAutoPlayRef.current;
     editorMusicAutoPlayRef.current = false;
 
+    let stuckTimer: ReturnType<typeof setTimeout> | null = null;
+    let initTimeout: ReturnType<typeof setTimeout> | null = null;
+
     const startTracking = () => {
       if (editorYtIntervalRef.current) clearInterval(editorYtIntervalRef.current);
       editorYtIntervalRef.current = setInterval(() => {
         if (editorYtDestroyedRef.current) return;
-        const ct = editorYtPlayerRef.current?.getCurrentTime?.();
-        const dur = editorYtPlayerRef.current?.getDuration?.();
+        const p = editorYtPlayerRef.current;
+        if (!p) return;
+        const ct = p.getCurrentTime?.();
+        const dur = p.getDuration?.();
         if (ct != null && dur && dur > 0) {
           setEditorMusicProgress((ct / dur) * 100);
         }
+        // Detect stuck buffering — recover after 12s
+        try {
+          const state = p.getPlayerState?.();
+          if (state === 3) { // BUFFERING
+            if (!stuckTimer) {
+              stuckTimer = setTimeout(() => {
+                if (editorYtDestroyedRef.current) { stuckTimer = null; return; }
+                try {
+                  const s = p.getPlayerState?.();
+                  if (s === 3) { p.seekTo?.(p.getCurrentTime?.() || 0, true); p.playVideo?.(); }
+                } catch {}
+                stuckTimer = null;
+              }, 12000);
+            }
+          } else if (stuckTimer) { clearTimeout(stuckTimer); stuckTimer = null; }
+        } catch {}
       }, 500);
+    };
+
+    const stopTracking = () => {
+      if (editorYtIntervalRef.current) { clearInterval(editorYtIntervalRef.current); editorYtIntervalRef.current = null; }
+      if (stuckTimer) { clearTimeout(stuckTimer); stuckTimer = null; }
     };
 
     // Create hidden container for YT player
@@ -267,31 +293,58 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
     const initPlayer = () => {
       if (editorYtDestroyedRef.current || initDone) return;
       initDone = true;
-      editorYtPlayerRef.current = new window.YT.Player(iframeId, {
-        events: {
-          onReady: () => {
-            if (editorYtDestroyedRef.current) return;
-            editorYtReadyRef.current = true;
-            editorYtPlayerRef.current?.setVolume?.(80);
-            if (shouldAutoplay) {
-              try { editorYtPlayerRef.current?.playVideo?.(); } catch {}
-            }
-          },
-          onStateChange: (event: any) => {
-            if (editorYtDestroyedRef.current) return;
-            if (event.data === 1) { // PLAYING
-              setEditorMusicPlaying(true);
-              startTracking();
-            } else if (event.data === 2) { // PAUSED
+      try {
+        editorYtPlayerRef.current = new window.YT.Player(iframeId, {
+          events: {
+            onReady: () => {
+              if (editorYtDestroyedRef.current) return;
+              if (initTimeout) { clearTimeout(initTimeout); initTimeout = null; }
+              editorYtReadyRef.current = true;
+              editorYtPlayerRef.current?.setVolume?.(80);
+              if (shouldAutoplay) {
+                try { editorYtPlayerRef.current?.playVideo?.(); } catch {}
+              }
+            },
+            onStateChange: (event: any) => {
+              if (editorYtDestroyedRef.current) return;
+              if (event.data === 1) { // PLAYING
+                setEditorMusicPlaying(true);
+                startTracking();
+              } else if (event.data === 2) { // PAUSED
+                setEditorMusicPlaying(false);
+                stopTracking();
+              } else if (event.data === 0) { // ENDED — manual loop (YT loop param unreliable)
+                setEditorMusicProgress(0);
+                try { editorYtPlayerRef.current?.seekTo?.(0, true); editorYtPlayerRef.current?.playVideo?.(); } catch {}
+              } else if (event.data === 3) { // BUFFERING — keep UI playing
+                // no-op: stuck detection handled in tracking interval
+              }
+            },
+            onError: (event: any) => {
+              // 2=invalid param, 5=HTML5 error, 100=not found, 101/150=embed disabled
+              console.warn('YT player error:', event.data);
+              if (editorYtDestroyedRef.current) return;
               setEditorMusicPlaying(false);
-              if (editorYtIntervalRef.current) { clearInterval(editorYtIntervalRef.current); editorYtIntervalRef.current = null; }
-            } else if (event.data === 0) { // ENDED
-              setEditorMusicProgress(100);
-            }
+              stopTracking();
+              editorYtReadyRef.current = false;
+            },
           },
-        },
-      });
+        });
+      } catch (e) {
+        console.warn('YT.Player init failed:', e);
+        editorYtReadyRef.current = false;
+      }
     };
+
+    // Init timeout — if player never becomes ready in 15s, reset state
+    initTimeout = setTimeout(() => {
+      if (!editorYtReadyRef.current && !editorYtDestroyedRef.current) {
+        console.warn('YT player init timeout');
+        setEditorMusicPlaying(false);
+        editorYtReadyRef.current = false;
+      }
+      initTimeout = null;
+    }, 15000);
 
     let pollTimer: ReturnType<typeof setInterval> | null = null;
     if (window.YT?.Player) {
@@ -305,11 +358,35 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
       }, 300);
     }
 
+    // Visibility change — sync state when user returns to tab / unlocks screen
+    const handleVisibilityChange = () => {
+      if (document.hidden || editorYtDestroyedRef.current) return;
+      const p = editorYtPlayerRef.current;
+      if (!p || !editorYtReadyRef.current) return;
+      try {
+        const state = p.getPlayerState?.();
+        if (state === 1) { // still playing
+          setEditorMusicPlaying(true);
+          startTracking();
+        } else if (state === 2 || state === -1 || state === 5) { // paused / unstarted / cued
+          setEditorMusicPlaying(false);
+          stopTracking();
+        } else if (state === 0) { // ended while hidden — restart
+          setEditorMusicProgress(0);
+          try { p.seekTo?.(0, true); p.playVideo?.(); } catch {}
+        }
+        // state 3 (buffering) — just let stuck detection handle it
+      } catch {}
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       editorYtDestroyedRef.current = true;
       editorYtReadyRef.current = false;
-      if (editorYtIntervalRef.current) { clearInterval(editorYtIntervalRef.current); editorYtIntervalRef.current = null; }
+      stopTracking();
       if (pollTimer) clearInterval(pollTimer);
+      if (initTimeout) { clearTimeout(initTimeout); initTimeout = null; }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       try { editorYtPlayerRef.current?.destroy?.(); } catch {}
       editorYtPlayerRef.current = null;
       if (container.parentNode) container.parentNode.removeChild(container);
@@ -318,13 +395,28 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
 
   // Direct play/pause handler — called from click, preserves mobile user gesture context
   const handleMusicToggle = useCallback(() => {
-    if (!editorYtPlayerRef.current) return;
-    if (editorMusicPlaying) {
-      try { editorYtPlayerRef.current.pauseVideo(); } catch {}
-    } else {
-      try { editorYtPlayerRef.current.playVideo(); } catch {}
+    const p = editorYtPlayerRef.current;
+    if (!p || !editorYtReadyRef.current) {
+      // Player not ready or dead — reset UI to stopped state
+      if (editorMusicPlaying) {
+        setEditorMusicPlaying(false);
+        if (editorYtIntervalRef.current) { clearInterval(editorYtIntervalRef.current); editorYtIntervalRef.current = null; }
+      }
+      return;
     }
-    // Actual state update comes from onStateChange callback above
+    try {
+      const state = p.getPlayerState?.();
+      if (editorMusicPlaying || state === 1) {
+        p.pauseVideo();
+      } else {
+        p.playVideo();
+      }
+    } catch {
+      // Player methods failed — likely destroyed/broken, reset state
+      setEditorMusicPlaying(false);
+      editorYtReadyRef.current = false;
+      if (editorYtIntervalRef.current) { clearInterval(editorYtIntervalRef.current); editorYtIntervalRef.current = null; }
+    }
   }, [editorMusicPlaying]);
 
   const loadData = async () => {
@@ -1677,41 +1769,28 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                     </button>
                   </div>
 
-                  <div className="space-y-3">
-                    <div>
-                      <textarea
-                        value={aiPrompt}
-                        onChange={(e) => setAIPrompt(e.target.value.slice(0, 500))}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                            e.preventDefault();
-                            handleAIGenerate();
-                          }
-                        }}
-                        className="input-modern w-full min-h-[120px] resize-y text-base"
-                        placeholder="Örn: Elif için yıldönümü, 3 yıldır birlikteyiz"
-                        maxLength={500}
-                        autoFocus
-                      />
-                      <p className="text-[11px] text-gray-500 mt-1 text-right">{aiPrompt.length}/500</p>
+                  <div>
+                    <textarea
+                      value={aiPrompt}
+                      onChange={(e) => setAIPrompt(e.target.value.slice(0, 500))}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                          e.preventDefault();
+                          handleAIGenerate();
+                        }
+                      }}
+                      className="input-modern w-full min-h-[120px] resize-y text-base"
+                      placeholder="Örn: Elif için yıldönümü, 3 yıldır birlikteyiz"
+                      maxLength={500}
+                      autoFocus
+                    />
+                    <div className="flex items-center justify-between mt-1.5">
+                      <p className="text-xs text-gray-500">Geri Al ile değişiklikleri iptal edebilirsiniz</p>
+                      <p className="text-[11px] text-gray-500">{aiPrompt.length}/500</p>
                     </div>
-                    <p className="text-xs text-gray-500">
-                      Geri Al ile değişiklikleri iptal edebilirsiniz
-                    </p>
                   </div>
 
-                  {/* Fiyat bilgisi */}
-                  <div className="flex items-center justify-between px-4 py-3 rounded-2xl border border-white/10 bg-white/[0.03]">
-                    <div className="flex items-center gap-2">
-                      <Coins className="h-4 w-4 text-yellow-300" />
-                      <span className="text-sm text-white font-medium">{AI_COST} FL</span>
-                    </div>
-                    <span className={`text-xs ${coinBalance >= AI_COST ? 'text-gray-400' : 'text-red-400'}`}>
-                      Bakiye: {coinBalance} FL
-                    </span>
-                  </div>
-
-                  <div className="flex gap-3 pt-2">
+                  <div className="flex gap-3">
                     <button
                       onClick={() => setShowAIModal(false)}
                       className="flex-1 btn-secondary py-3"
