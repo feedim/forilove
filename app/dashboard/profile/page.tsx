@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, User, Mail, Coins, LogOut, Heart, Settings, Clock, Calendar, Wallet, Trash2, Edit2, Bookmark, ShoppingBag, Sparkles, HelpCircle, FileText, Shield, MessageCircle, ScrollText, BarChart3, Globe, Ticket, Plus, X, Send } from "lucide-react";
+import { ArrowLeft, User, Mail, Coins, LogOut, Heart, Settings, Clock, Calendar, Wallet, Trash2, Edit2, Bookmark, ShoppingBag, Sparkles, HelpCircle, FileText, Shield, MessageCircle, ScrollText, BarChart3, Globe, Ticket, Plus, X, Send, TrendingUp } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -38,6 +38,8 @@ export default function ProfilePage() {
   const [visibleCoupons, setVisibleCoupons] = useState(10);
   const [visiblePromos, setVisiblePromos] = useState(10);
   const [requestingPayout, setRequestingPayout] = useState(false);
+  const [showAffiliateForm, setShowAffiliateForm] = useState(false);
+  const [affiliateForm, setAffiliateForm] = useState({ socialMedia: "", followers: "", description: "" });
   const router = useRouter();
   const supabase = createClient();
 
@@ -778,6 +780,115 @@ export default function ProfilePage() {
               </div>
             ) : (
               <p className="text-sm text-gray-500">Henüz linkinizden kayıt olan kullanıcı yok.</p>
+            )}
+          </div>
+        )}
+
+        {/* Affiliate Başvuru Formu - Normal Kullanıcılar */}
+        {profile?.role !== 'affiliate' && profile?.role !== 'admin' && (
+          <div className="bg-zinc-900 rounded-2xl p-6 mb-6">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-pink-500/10 flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-pink-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Affiliate Programına Başvur</h3>
+                <p className="text-xs text-gray-500">Takipçilerinize özel indirim linkleri oluşturun, her satıştan %15-%30 komisyon kazanın.</p>
+              </div>
+            </div>
+
+            {!showAffiliateForm ? (
+              <button
+                onClick={() => setShowAffiliateForm(true)}
+                className="btn-primary w-full py-3 text-sm font-semibold"
+              >
+                Başvur
+              </button>
+            ) : (
+              <div className="space-y-3 mt-4">
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Ad Soyad</label>
+                  <input
+                    type="text"
+                    value={getDisplayName()}
+                    readOnly
+                    className="input-modern w-full text-sm opacity-60 cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">E-posta</label>
+                  <input
+                    type="email"
+                    value={user?.email || ""}
+                    readOnly
+                    className="input-modern w-full text-sm opacity-60 cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Sosyal Medya Hesabı <span className="text-pink-500">*</span></label>
+                  <input
+                    type="url"
+                    value={affiliateForm.socialMedia}
+                    onChange={(e) => setAffiliateForm({ ...affiliateForm, socialMedia: e.target.value })}
+                    placeholder="https://instagram.com/kullaniciadi"
+                    className="input-modern w-full text-sm"
+                    maxLength={200}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Takipçi Sayısı <span className="text-pink-500">*</span></label>
+                  <input
+                    type="text"
+                    value={affiliateForm.followers}
+                    onChange={(e) => setAffiliateForm({ ...affiliateForm, followers: e.target.value })}
+                    placeholder="Örn: 10.000"
+                    className="input-modern w-full text-sm"
+                    maxLength={20}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Neden Başvuruyorsunuz? <span className="text-gray-600">(opsiyonel)</span></label>
+                  <textarea
+                    value={affiliateForm.description}
+                    onChange={(e) => setAffiliateForm({ ...affiliateForm, description: e.target.value.slice(0, 300) })}
+                    placeholder="Kısaca kendinizden bahsedin..."
+                    className="input-modern w-full text-sm resize-none"
+                    rows={3}
+                    maxLength={300}
+                  />
+                  <p className="text-[10px] text-gray-600 text-right mt-0.5">{affiliateForm.description.length}/300</p>
+                </div>
+                <div className="flex gap-3 pt-1">
+                  <button
+                    onClick={() => {
+                      setShowAffiliateForm(false);
+                      setAffiliateForm({ socialMedia: "", followers: "", description: "" });
+                    }}
+                    className="flex-1 btn-secondary py-3 text-sm"
+                  >
+                    İptal
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!affiliateForm.socialMedia.trim() || !affiliateForm.followers.trim()) {
+                        toast.error("Sosyal medya hesabı ve takipçi sayısı zorunludur");
+                        return;
+                      }
+                      const name = getDisplayName();
+                      const email = user?.email || "";
+                      const subject = encodeURIComponent(`Affiliate Başvurusu - ${name}`);
+                      const body = encodeURIComponent(
+                        `Ad Soyad: ${name}\nE-posta: ${email}\nSosyal Medya: ${affiliateForm.socialMedia}\nTakipçi Sayısı: ${affiliateForm.followers}${affiliateForm.description ? `\nAçıklama: ${affiliateForm.description}` : ""}`
+                      );
+                      window.location.href = `mailto:affiliate@forilove.com?subject=${subject}&body=${body}`;
+                      toast.success("Mail uygulamanız açılacak, başvurunuzu gönderin!");
+                    }}
+                    className="flex-1 btn-primary py-3 text-sm font-semibold"
+                  >
+                    Başvuruyu Gönder
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         )}

@@ -20,9 +20,12 @@ export default function PublicFooter() {
             <Link href="/contact" className="text-gray-400 hover:text-white transition">
               İletişim
             </Link>
-            <Link href="/affiliate" className="text-gray-400 hover:text-white transition">
-              Affiliate Program
-            </Link>
+            <div className="text-center">
+              <Link href="/affiliate" className="text-gray-400 hover:text-white transition">
+                Affiliate Program
+              </Link>
+              <p className="text-[10px] text-gray-600 mt-0.5">Başvuru için giriş yapıp profilinizden başvurun</p>
+            </div>
             <Link href="/distance-sales-contract" className="text-gray-400 hover:text-white transition">
               Mesafeli Satış Sözleşmesi
             </Link>
