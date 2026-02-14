@@ -1042,6 +1042,8 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
 
   // Write HTML to iframe — first time uses srcDoc, subsequent times write directly (no white flash)
   const writeToPreview = (html: string) => {
+    // Always update state so handlePreview gets latest HTML (with hidden areas, edits, etc.)
+    setPreviewHtml(html);
     const iframe = iframeRef.current;
     if (previewInitRef.current && iframe?.contentDocument) {
       const doc = iframe.contentDocument;
@@ -1054,7 +1056,6 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
         if (doc.body) doc.body.scrollTop = scrollY;
       });
     } else {
-      setPreviewHtml(html);
       previewInitRef.current = true;
     }
   };
