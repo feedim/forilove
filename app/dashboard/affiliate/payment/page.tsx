@@ -198,39 +198,54 @@ export default function AffiliatePaymentPage() {
           </div>
         ) : (
           <>
-            {/* Ödeme Talebi */}
+            {/* Çekilebilir Bakiye */}
             {balance && (
               <div className="bg-zinc-900 rounded-2xl p-6 mb-6">
                 <div className="flex items-center gap-2 mb-4">
-                  <Send className="h-5 w-5 text-pink-500" />
-                  <h2 className="font-semibold text-lg">Ödeme Talebi</h2>
+                  <Wallet className="h-5 w-5 text-pink-500" />
+                  <h2 className="font-semibold text-lg">Bakiye</h2>
                 </div>
-                <div className="flex items-center justify-between bg-white/5 rounded-xl p-4 mb-4">
+
+                {/* Çekilebilir + Çek Butonu */}
+                <div className="flex items-center justify-between bg-pink-500/10 border border-pink-500/20 rounded-xl p-4 mb-3">
                   <div>
-                    <p className="text-xs text-gray-400">Çekilebilir Bakiye</p>
-                    <p className="text-2xl font-bold text-pink-500">{balance.available.toLocaleString('tr-TR')} <span className="text-sm text-gray-400">TRY</span></p>
+                    <p className="text-xs text-pink-300 mb-0.5">Çekilebilir Bakiye</p>
+                    <p className="text-3xl font-bold text-pink-500">{balance.available.toLocaleString('tr-TR')} <span className="text-sm text-gray-400">TRY</span></p>
                   </div>
-                  {balance.totalPending > 0 && (
-                    <div className="text-right">
-                      <p className="text-xs text-gray-400">Bekleyen</p>
-                      <p className="text-lg font-bold text-pink-300">{balance.totalPending.toLocaleString('tr-TR')} <span className="text-xs text-gray-400">TRY</span></p>
-                    </div>
-                  )}
-                </div>
-                {balance.canRequestPayout ? (
                   <button
                     onClick={handleRequestPayout}
-                    disabled={requesting}
-                    className="btn-primary w-full py-3 flex items-center justify-center gap-2"
+                    disabled={requesting || !balance.canRequestPayout}
+                    className="px-5 py-2.5 bg-pink-600 hover:bg-pink-500 disabled:bg-zinc-700 disabled:text-gray-500 rounded-xl text-sm font-bold transition flex items-center gap-2 shrink-0"
                   >
                     <Send className="h-4 w-4" />
-                    {requesting ? "Talep oluşturuluyor..." : `Ödeme Talep Et (${balance.available.toLocaleString('tr-TR')} TRY)`}
+                    {requesting ? "..." : "Çek"}
                   </button>
-                ) : (
-                  <p className="text-xs text-gray-500 text-center">
-                    Minimum ödeme tutarı 100 TRY&apos;dir. Mevcut bakiye: {balance.available.toLocaleString('tr-TR')} TRY
+                </div>
+
+                {/* Bekleyen + Ödenen */}
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <div className="bg-white/5 rounded-xl p-3">
+                    <p className="text-[10px] text-gray-500">Bekleyen Talep</p>
+                    <p className="text-lg font-bold text-pink-300">{balance.totalPending.toLocaleString('tr-TR')} <span className="text-xs text-gray-500">TRY</span></p>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-3">
+                    <p className="text-[10px] text-gray-500">Toplam Ödenen</p>
+                    <p className="text-lg font-bold text-pink-400">{balance.totalPaidOut.toLocaleString('tr-TR')} <span className="text-xs text-gray-500">TRY</span></p>
+                  </div>
+                </div>
+
+                {/* Otomatik çekim bilgisi */}
+                <div className="bg-white/5 rounded-lg px-3 py-2">
+                  <p className="text-xs text-gray-400">
+                    {balance.available >= balance.minPayout
+                      ? balance.nextAutoDate
+                        ? `Sonraki otomatik çekim: ${new Date(balance.nextAutoDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                        : "Bakiye yeterli — 7 gün dolduğunda otomatik talep oluşur"
+                      : `Min. ${balance.minPayout} TRY bakiyeye ulaştığınızda 7 günde bir otomatik talep oluşur.`}
+                    {" "}
+                    <span className="text-pink-400">Manuel çekim için &quot;Çek&quot; butonunu kullanın.</span>
                   </p>
-                )}
+                </div>
               </div>
             )}
 

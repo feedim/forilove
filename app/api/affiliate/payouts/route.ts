@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const MIN_PAYOUT = 100;
 const TOTAL_ALLOCATION = 35;
+const AUTO_PAYOUT_INTERVAL_DAYS = 7;
 
 async function verifyAffiliate(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: { user } } = await supabase.auth.getUser();
@@ -21,7 +22,6 @@ async function verifyAffiliate(supabase: Awaited<ReturnType<typeof createClient>
 
 // Calculate affiliate earnings
 async function calculateEarnings(admin: ReturnType<typeof createAdminClient>, userId: string) {
-  // Get affiliate's promo links
   const { data: promos } = await admin
     .from("promo_links")
     .select("id, discount_percent")
@@ -33,7 +33,6 @@ async function calculateEarnings(admin: ReturnType<typeof createAdminClient>, us
 
   const promoIds = promos.map(p => p.id);
 
-  // Get all signup user IDs
   const { data: signups } = await admin
     .from("promo_signups")
     .select("user_id")
@@ -45,7 +44,6 @@ async function calculateEarnings(admin: ReturnType<typeof createAdminClient>, us
 
   const userIds = signups.map(s => s.user_id).filter(Boolean);
 
-  // Get completed payments from referred users
   const { data: payments } = await admin
     .from("coin_payments")
     .select("price_paid")
@@ -59,6 +57,50 @@ async function calculateEarnings(admin: ReturnType<typeof createAdminClient>, us
   return { totalEarnings, commissionRate };
 }
 
+// Try auto-payout: if 7+ days since last payout request and balance >= MIN_PAYOUT
+async function tryAutoPayout(admin: ReturnType<typeof createAdminClient>, userId: string, available: number, allPayouts: any[]) {
+  if (available < MIN_PAYOUT) return null;
+
+  // Check no pending payout exists
+  const hasPending = allPayouts.some(p => p.status === "pending");
+  if (hasPending) return null;
+
+  // Check IBAN exists
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("affiliate_iban, affiliate_holder_name")
+    .eq("user_id", userId)
+    .single();
+
+  if (!profile?.affiliate_iban || !profile?.affiliate_holder_name) return null;
+
+  // Check 7+ days since last payout request (any status)
+  const lastPayout = allPayouts[0]; // already sorted desc by requested_at
+  if (lastPayout) {
+    const daysSince = (Date.now() - new Date(lastPayout.requested_at).getTime()) / (1000 * 60 * 60 * 24);
+    if (daysSince < AUTO_PAYOUT_INTERVAL_DAYS) return null;
+  }
+
+  // Auto-create payout request
+  const { data: payout, error } = await admin
+    .from("affiliate_payouts")
+    .insert({
+      affiliate_user_id: userId,
+      amount: available,
+      status: "pending",
+      admin_note: "Otomatik talep (7 gün)",
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Auto-payout error:", error);
+    return null;
+  }
+
+  return payout;
+}
+
 export async function GET() {
   try {
     const supabase = await createClient();
@@ -69,7 +111,6 @@ export async function GET() {
 
     const admin = createAdminClient();
 
-    // Calculate total earnings
     const { totalEarnings, commissionRate } = await calculateEarnings(admin, user.id);
 
     // Get all payouts
@@ -79,7 +120,7 @@ export async function GET() {
       .eq("affiliate_user_id", user.id)
       .order("requested_at", { ascending: false });
 
-    const allPayouts = payouts || [];
+    let allPayouts = payouts || [];
     const totalPaidOut = allPayouts
       .filter(p => p.status === "approved")
       .reduce((sum, p) => sum + Number(p.amount), 0);
@@ -87,17 +128,32 @@ export async function GET() {
       .filter(p => p.status === "pending")
       .reduce((sum, p) => sum + Number(p.amount), 0);
 
-    const availableBalance = Math.round((totalEarnings - totalPaidOut - totalPending) * 100) / 100;
+    let availableBalance = Math.round((totalEarnings - totalPaidOut - totalPending) * 100) / 100;
+
+    // Try auto-payout if conditions are met
+    const autoPayout = await tryAutoPayout(admin, user.id, availableBalance, allPayouts);
+    if (autoPayout) {
+      allPayouts = [autoPayout, ...allPayouts];
+      availableBalance = Math.max(0, Math.round((availableBalance - Number(autoPayout.amount)) * 100) / 100);
+    }
+
+    // Calculate next auto-payout date
+    const lastRequest = allPayouts[0];
+    const nextAutoDate = lastRequest
+      ? new Date(new Date(lastRequest.requested_at).getTime() + AUTO_PAYOUT_INTERVAL_DAYS * 86400000).toISOString()
+      : null;
 
     return NextResponse.json({
       balance: {
         totalEarnings,
         totalPaidOut: Math.round(totalPaidOut * 100) / 100,
-        totalPending: Math.round(totalPending * 100) / 100,
+        totalPending: Math.round((totalPending + (autoPayout ? Number(autoPayout.amount) : 0)) * 100) / 100,
         available: Math.max(0, availableBalance),
         commissionRate,
-        canRequestPayout: availableBalance >= MIN_PAYOUT,
+        canRequestPayout: availableBalance >= MIN_PAYOUT && !allPayouts.some(p => p.status === "pending"),
         minPayout: MIN_PAYOUT,
+        nextAutoDate,
+        autoPayoutDays: AUTO_PAYOUT_INTERVAL_DAYS,
       },
       payouts: allPayouts,
     });

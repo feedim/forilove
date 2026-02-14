@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, User, Mail, Coins, LogOut, Heart, Settings, Clock, Calendar, Wallet, Trash2, Edit2, Bookmark, ShoppingBag, Sparkles, HelpCircle, FileText, Shield, MessageCircle, ScrollText, BarChart3, Globe, Ticket, Plus, X } from "lucide-react";
+import { ArrowLeft, User, Mail, Coins, LogOut, Heart, Settings, Clock, Calendar, Wallet, Trash2, Edit2, Bookmark, ShoppingBag, Sparkles, HelpCircle, FileText, Shield, MessageCircle, ScrollText, BarChart3, Globe, Ticket, Plus, X, Send } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -37,6 +37,7 @@ export default function ProfilePage() {
   const [sponsorPeriod, setSponsorPeriod] = useState<"today" | "yesterday" | "last7d" | "last14d" | "thisMonth">("last7d");
   const [visibleCoupons, setVisibleCoupons] = useState(10);
   const [visiblePromos, setVisiblePromos] = useState(10);
+  const [requestingPayout, setRequestingPayout] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -268,6 +269,28 @@ export default function ProfilePage() {
       toast.success('Promo silindi');
     } catch {
       toast.error('Bir hata olustu');
+    }
+  };
+
+  const handleRequestPayout = async () => {
+    setRequestingPayout(true);
+    try {
+      const res = await fetch('/api/affiliate/payouts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Talep oluşturulamadı');
+        return;
+      }
+      toast.success('Ödeme talebi oluşturuldu!');
+      loadProfile();
+    } catch {
+      toast.error('Bir hata oluştu');
+    } finally {
+      setRequestingPayout(false);
     }
   };
 
@@ -647,21 +670,34 @@ export default function ProfilePage() {
 
             {/* Bakiye Kartları */}
             {sponsorBalance && (
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                <div className="bg-pink-500/10 border border-pink-500/20 rounded-xl p-3 text-center">
-                  <p className="text-[10px] text-pink-300 mb-0.5">Toplam Kazanç</p>
-                  <p className="text-lg font-bold text-pink-500">{sponsorBalance.totalEarnings.toLocaleString('tr-TR')}</p>
-                  <p className="text-[10px] text-gray-500">TRY</p>
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center justify-between bg-pink-500/10 border border-pink-500/20 rounded-xl p-3">
+                  <div>
+                    <p className="text-[10px] text-pink-300">Çekilebilir Bakiye</p>
+                    <p className="text-2xl font-bold text-pink-500">{sponsorBalance.available.toLocaleString('tr-TR')} <span className="text-xs text-gray-400">TRY</span></p>
+                  </div>
+                  <button
+                    onClick={handleRequestPayout}
+                    disabled={requestingPayout || !sponsorBalance.canRequestPayout}
+                    className="px-4 py-2 bg-pink-600 hover:bg-pink-500 disabled:bg-zinc-700 disabled:text-gray-500 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0"
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                    {requestingPayout ? "..." : "Çek"}
+                  </button>
                 </div>
-                <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
-                  <p className="text-[10px] text-gray-400 mb-0.5">Çekilebilir</p>
-                  <p className="text-lg font-bold">{sponsorBalance.available.toLocaleString('tr-TR')}</p>
-                  <p className="text-[10px] text-gray-500">TRY</p>
-                </div>
-                <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
-                  <p className="text-[10px] text-gray-400 mb-0.5">Bekleyen</p>
-                  <p className="text-lg font-bold text-pink-300">{sponsorBalance.totalPending.toLocaleString('tr-TR')}</p>
-                  <p className="text-[10px] text-gray-500">TRY</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-2.5 text-center">
+                    <p className="text-[10px] text-gray-400 mb-0.5">Toplam Kazanç</p>
+                    <p className="text-sm font-bold text-pink-500">{sponsorBalance.totalEarnings.toLocaleString('tr-TR')}</p>
+                  </div>
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-2.5 text-center">
+                    <p className="text-[10px] text-gray-400 mb-0.5">Ödenen</p>
+                    <p className="text-sm font-bold text-pink-400">{sponsorBalance.totalPaidOut.toLocaleString('tr-TR')}</p>
+                  </div>
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-2.5 text-center">
+                    <p className="text-[10px] text-gray-400 mb-0.5">Bekleyen</p>
+                    <p className="text-sm font-bold text-pink-300">{sponsorBalance.totalPending.toLocaleString('tr-TR')}</p>
+                  </div>
                 </div>
               </div>
             )}
