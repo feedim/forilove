@@ -12,7 +12,6 @@ export default function TermsPage() {
     <LegalPageLayout title="Kullanım Koşulları">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "WebPage", name: "Kullanım Koşulları - Forilove", description: "Forilove kullanım koşulları ve hizmet şartları.", url: "https://forilove.com/terms", isPartOf: { "@id": "https://forilove.com/#website" } }) }} />
           <section>
-            <h3 className="text-xl font-bold text-white mb-3">1. Koşulların Kabulü</h3>
             <p>
               Forilove platformuna erişerek ve kullanarak, bu sözleşmenin tüm şartlarını kabul
               etmiş sayılırsınız. Bu koşulları kabul etmiyorsanız, lütfen hizmetimizi kullanmayınız.
@@ -21,7 +20,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h3 className="text-xl font-bold text-white mb-3">2. Hizmet Tanımı</h3>
+            <h2 className="text-xl font-bold text-white mb-3">2. Hizmet Tanımı</h2>
             <p className="mb-3">
               Forilove, kullanıcıların sevdiklerine özel web sayfaları oluşturmasını sağlayan bir platformdur.
               Hizmetimiz şunları içerir:
@@ -36,7 +35,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h3 className="text-xl font-bold text-white mb-3">3. Kullanıcı Hesapları</h3>
+            <h2 className="text-xl font-bold text-white mb-3">3. Kullanıcı Hesapları</h2>
             <p className="mb-3">
               Platformu kullanmak için bir hesap oluşturmanız gerekmektedir. Hesap oluştururken:
             </p>
@@ -50,7 +49,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h3 className="text-xl font-bold text-white mb-3">4. Kullanım Lisansı</h3>
+            <h2 className="text-xl font-bold text-white mb-3">4. Kullanım Lisansı</h2>
             <p>
               Forilove size, kişisel ve ticari olmayan kullanım için sınırlı, münhasır olmayan,
               devredilemez bir lisans verir. Bu lisans, şablonları kullanarak içerik oluşturmanıza
@@ -65,7 +64,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h3 className="text-xl font-bold text-white mb-3">5. Kullanıcı İçeriği ve Sorumluluk</h3>
+            <h2 className="text-xl font-bold text-white mb-3">5. Kullanıcı İçeriği ve Sorumluluk</h2>
             <p className="mb-3">
               Oluşturduğunuz içeriklerin tüm hakları size aittir. Ancak içerik yükleyerek:
             </p>
@@ -81,7 +80,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h3 className="text-xl font-bold text-white mb-3">6. Yasaklanmış Aktiviteler</h3>
+            <h2 className="text-xl font-bold text-white mb-3">6. Yasaklanmış Aktiviteler</h2>
             <p className="mb-3">Platformda aşağıdaki aktiviteler kesinlikle yasaktır:</p>
             <ul className="list-disc list-inside space-y-2 ml-4">
               <li>Yasa dışı, zararlı veya müstehcen içerik yüklemek</li>
@@ -96,7 +95,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h3 className="text-xl font-bold text-white mb-3">7. FL Coins ve Ödeme Koşulları</h3>
+            <h2 className="text-xl font-bold text-white mb-3">7. FL Coins ve Ödeme Koşulları</h2>
             <p className="mb-3">
               FL Coins, platformdaki sanal para birimidir. Ödeme yaparken:
             </p>
@@ -116,7 +115,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h3 className="text-xl font-bold text-white mb-3">8. Hesap Askıya Alma ve Sonlandırma</h3>
+            <h2 className="text-xl font-bold text-white mb-3">8. Hesap Askıya Alma ve Sonlandırma</h2>
             <p className="mb-3">
               Forilove, aşağıdaki durumlarda hesabınızı askıya alma veya kalıcı olarak sonlandırma hakkına sahiptir:
             </p>
@@ -134,7 +133,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h3 className="text-xl font-bold text-white mb-3">9. Hizmet Değişiklikleri</h3>
+            <h2 className="text-xl font-bold text-white mb-3">9. Hizmet Değişiklikleri</h2>
             <p>
               Forilove, önceden haber vermeksizin hizmeti değiştirme, askıya alma veya
               sonlandırma hakkını saklı tutar. Önemli değişiklikler için kullanıcılar
@@ -143,7 +142,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h3 className="text-xl font-bold text-white mb-3">10. Fikri Mülkiyet</h3>
+            <h2 className="text-xl font-bold text-white mb-3">10. Fikri Mülkiyet</h2>
             <p className="mb-3">
               Platform üzerindeki tüm içerik, tasarım, logo, şablon ve kodlar Forilove'in
               mülkiyetindedir veya lisansı altındadır:
@@ -157,7 +156,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h3 className="text-xl font-bold text-white mb-3">11. Sorumluluk Sınırlamaları</h3>
+            <h2 className="text-xl font-bold text-white mb-3">11. Sorumluluk Sınırlamaları</h2>
             <p className="mb-3">
               Forilove, aşağıdaki durumlardan sorumlu tutulamaz:
             </p>
@@ -172,7 +171,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h3 className="text-xl font-bold text-white mb-3">12. Gizlilik ve Veri Koruma</h3>
+            <h2 className="text-xl font-bold text-white mb-3">12. Gizlilik ve Veri Koruma</h2>
             <p>
               Kişisel verileriniz, <a href="/privacy" className="text-pink-500 hover:text-pink-400 underline">Gizlilik Politikası</a>'mıza
               uygun şekilde işlenir. KVKK (Kişisel Verilerin Korunması Kanunu) ve GDPR
@@ -181,7 +180,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h3 className="text-xl font-bold text-white mb-3">13. Uygulanacak Hukuk</h3>
+            <h2 className="text-xl font-bold text-white mb-3">13. Uygulanacak Hukuk</h2>
             <p>
               Bu kullanım koşulları, Türkiye Cumhuriyeti yasalarına tabidir. Herhangi bir
               anlaşmazlık durumunda İstanbul mahkemeleri ve icra daireleri yetkilidir.
@@ -191,7 +190,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h3 className="text-xl font-bold text-white mb-3">14. Değişiklikler</h3>
+            <h2 className="text-xl font-bold text-white mb-3">14. Değişiklikler</h2>
             <p>
               Forilove bu kullanım koşullarını istediği zaman değiştirme hakkını saklı tutar.
               Önemli değişiklikler e-posta yoluyla bildirilecektir. Bu sayfayı düzenli olarak
@@ -201,7 +200,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h3 className="text-xl font-bold text-white mb-3">15. Çeşitli Hükümler</h3>
+            <h2 className="text-xl font-bold text-white mb-3">15. Çeşitli Hükümler</h2>
             <ul className="list-disc list-inside space-y-2 ml-4">
               <li>Bu koşulların herhangi bir maddesi geçersiz sayılırsa, diğer maddeler geçerliliğini korur</li>
               <li>Forilove'in herhangi bir hakkını kullanmaması, o haktan feragat ettiği anlamına gelmez</li>
@@ -211,7 +210,7 @@ export default function TermsPage() {
           </section>
 
           <section className="bg-white/5 rounded-2xl p-6 border border-white/10">
-            <h3 className="text-xl font-bold text-white mb-3">İletişim</h3>
+            <h2 className="text-xl font-bold text-white mb-3">İletişim</h2>
             <p className="mb-3">
               Kullanım koşulları hakkında sorularınız için:
             </p>
