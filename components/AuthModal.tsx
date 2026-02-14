@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useRef, useCallback, useEffect } f
 import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
+import PasswordInput from "@/components/PasswordInput";
 import type { User } from "@supabase/supabase-js";
 
 /* ─── Types ─── */
@@ -31,11 +32,9 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
 
   const requireAuth = useCallback(async (rp?: string): Promise<User | null> => {
-    // Already logged in? Return user immediately
     const { data: { user } } = await supabase.auth.getUser();
     if (user) return user;
 
-    // Open modal and wait
     return new Promise((resolve) => {
       resolveRef.current = resolve;
       setReturnPath(rp);
@@ -86,7 +85,6 @@ function AuthModalSheet({ onClose, onSuccess, returnPath }: SheetProps) {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -94,7 +92,6 @@ function AuthModalSheet({ onClose, onSuccess, returnPath }: SheetProps) {
     return () => { document.body.style.overflow = ""; };
   }, []);
 
-  // Reset form when switching tabs
   useEffect(() => {
     setError(null);
     setPassword("");
@@ -106,27 +103,22 @@ function AuthModalSheet({ onClose, onSuccess, returnPath }: SheetProps) {
     setError(null);
 
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
       if (authError) {
         if (authError.message === "Invalid login credentials") {
-          setError("E-posta veya sifre yanlis.");
+          setError("E-posta veya şifre yanlış.");
         } else if (authError.message.includes("Email not confirmed")) {
-          setError("E-posta adresinizi onaylamaniz gerekiyor.");
+          setError("E-posta adresinizi onaylamanız gerekiyor.");
         } else {
-          setError("Giris yapilamadi. Lutfen tekrar deneyin.");
+          setError("Giriş yapılamadı. Lütfen tekrar deneyin.");
         }
         return;
       }
 
-      if (data.user) {
-        onSuccess(data.user);
-      }
+      if (data.user) onSuccess(data.user);
     } catch {
-      setError("Bir hata olustu.");
+      setError("Bir hata oluştu.");
     } finally {
       setLoading(false);
     }
@@ -142,53 +134,42 @@ function AuthModalSheet({ onClose, onSuccess, returnPath }: SheetProps) {
         email,
         password,
         options: {
-          data: {
-            name,
-            surname,
-            full_name: `${name} ${surname}`,
-          },
+          data: { name, surname, full_name: `${name} ${surname}` },
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
       if (authError) {
         if (authError.message.includes("User already registered")) {
-          setError("Bu e-posta adresi zaten kullaniliyor.");
+          setError("Bu e-posta adresi zaten kullanılıyor.");
         } else if (authError.message.includes("Password")) {
-          setError("Sifre en az 6 karakter olmalidir.");
+          setError("Şifre en az 6 karakter olmalıdır.");
         } else {
-          setError("Kayit olusturulamadi.");
+          setError("Kayıt oluşturulamadı.");
         }
         return;
       }
 
-      // Wait for trigger to create profile
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // Update profile with name and surname
       if (data.user) {
-        await supabase
-          .from("profiles")
-          .update({ name, surname })
-          .eq("user_id", data.user.id);
+        await supabase.from("profiles").update({ name, surname }).eq("user_id", data.user.id);
       }
 
       if (data.session && data.user) {
         onSuccess(data.user);
       } else {
-        // Email confirmation required
-        setError("Kayit basarili! Lutfen e-postanizi kontrol edin ve dogrulayin, ardindan giris yapin.");
+        setError("Kayıt başarılı! Lütfen e-postanızı kontrol edin ve doğrulayın, ardından giriş yapın.");
         setTab("login");
       }
     } catch {
-      setError("Bir hata olustu.");
+      setError("Bir hata oluştu.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleOAuth = async () => {
-    // Save returnPath for OAuth callback
     const redirectPath = returnPath || window.location.pathname;
     const returnTo = redirectPath.startsWith("/editor/") ? redirectPath : undefined;
 
@@ -198,13 +179,11 @@ function AuthModalSheet({ onClose, onSuccess, returnPath }: SheetProps) {
 
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: {
-        redirectTo: redirectUrl,
-      },
+      options: { redirectTo: redirectUrl },
     });
 
     if (oauthError) {
-      setError("Google ile giris yapilamadi.");
+      setError("Google ile giriş yapılamadı.");
     }
   };
 
@@ -221,10 +200,10 @@ function AuthModalSheet({ onClose, onSuccess, returnPath }: SheetProps) {
         <div className="flex items-center justify-between pb-3 border-b border-white/10">
           <div>
             <h3 className="text-lg font-bold text-white">
-              {tab === "login" ? "Giris Yap" : "Hesap Olustur"}
+              {tab === "login" ? "Giriş Yap" : "Hesap Oluştur"}
             </h3>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Devam etmek icin giris yapin veya kayit olun
+              Devam etmek için giriş yapın veya kayıt olun
             </p>
           </div>
           <button
@@ -245,22 +224,20 @@ function AuthModalSheet({ onClose, onSuccess, returnPath }: SheetProps) {
           <button
             onClick={() => setTab("login")}
             className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all ${
-              tab === "login"
-                ? "bg-pink-500 text-white"
-                : "text-zinc-400 hover:text-white"
+              tab === "login" ? "text-white" : "text-zinc-400 hover:text-white"
             }`}
+            style={tab === "login" ? { background: "lab(49.5493% 79.8381 2.31768)" } : undefined}
           >
-            Giris Yap
+            Giriş Yap
           </button>
           <button
             onClick={() => setTab("register")}
             className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all ${
-              tab === "register"
-                ? "bg-pink-500 text-white"
-                : "text-zinc-400 hover:text-white"
+              tab === "register" ? "text-white" : "text-zinc-400 hover:text-white"
             }`}
+            style={tab === "register" ? { background: "lab(49.5493% 79.8381 2.31768)" } : undefined}
           >
-            Kayit Ol
+            Kayıt Ol
           </button>
         </div>
 
@@ -280,32 +257,18 @@ function AuthModalSheet({ onClose, onSuccess, returnPath }: SheetProps) {
               required
               maxLength={255}
               autoComplete="email"
-              className="w-full bg-transparent border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-pink-500/50 transition"
+              className="input-modern w-full"
             />
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Sifre"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                maxLength={128}
-                autoComplete="current-password"
-                className="w-full bg-transparent border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-pink-500/50 transition pr-12"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition"
-              >
-                {showPassword ? (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                ) : (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                )}
-              </button>
-            </div>
+            <PasswordInput
+              placeholder="Şifre"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              maxLength={128}
+              autoComplete="current-password"
+              className="input-modern w-full"
+            />
             <button
               type="submit"
               disabled={loading}
@@ -314,7 +277,7 @@ function AuthModalSheet({ onClose, onSuccess, returnPath }: SheetProps) {
               {loading ? (
                 <span className="inline-block w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
               ) : (
-                "Giris Yap"
+                "Giriş Yap"
               )}
             </button>
           </form>
@@ -332,7 +295,7 @@ function AuthModalSheet({ onClose, onSuccess, returnPath }: SheetProps) {
                 required
                 maxLength={50}
                 autoComplete="given-name"
-                className="w-full bg-transparent border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-pink-500/50 transition"
+                className="input-modern w-full"
               />
               <input
                 type="text"
@@ -342,7 +305,7 @@ function AuthModalSheet({ onClose, onSuccess, returnPath }: SheetProps) {
                 required
                 maxLength={50}
                 autoComplete="family-name"
-                className="w-full bg-transparent border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-pink-500/50 transition"
+                className="input-modern w-full"
               />
             </div>
             <input
@@ -353,32 +316,18 @@ function AuthModalSheet({ onClose, onSuccess, returnPath }: SheetProps) {
               required
               maxLength={255}
               autoComplete="email"
-              className="w-full bg-transparent border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-pink-500/50 transition"
+              className="input-modern w-full"
             />
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Sifre (en az 6 karakter)"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                maxLength={128}
-                autoComplete="new-password"
-                className="w-full bg-transparent border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-pink-500/50 transition pr-12"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition"
-              >
-                {showPassword ? (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                ) : (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                )}
-              </button>
-            </div>
+            <PasswordInput
+              placeholder="Şifre (en az 6 karakter)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              maxLength={128}
+              autoComplete="new-password"
+              className="input-modern w-full"
+            />
             <label className="flex items-start gap-3 cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -388,13 +337,13 @@ function AuthModalSheet({ onClose, onSuccess, returnPath }: SheetProps) {
               />
               <span className="text-xs text-zinc-400 leading-snug">
                 <Link href="/terms" target="_blank" className="text-pink-500 hover:text-pink-400 underline">
-                  Kullanim Kosullari
+                  Kullanım Koşulları
                 </Link>
-                &apos;ni ve{" "}
+                &apos;nı ve{" "}
                 <Link href="/privacy" target="_blank" className="text-pink-500 hover:text-pink-400 underline">
-                  Gizlilik Politikasi
+                  Gizlilik Politikası
                 </Link>
-                &apos;ni kabul ediyorum.
+                &apos;nı kabul ediyorum.
               </span>
             </label>
             <button
@@ -405,7 +354,7 @@ function AuthModalSheet({ onClose, onSuccess, returnPath }: SheetProps) {
               {loading ? (
                 <span className="inline-block w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
               ) : (
-                "Kayit Ol"
+                "Kayıt Ol"
               )}
             </button>
           </form>

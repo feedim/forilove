@@ -12,6 +12,7 @@ import { usePurchaseConfirm } from '@/components/PurchaseConfirmModal';
 import { getActivePrice, isDiscountActive } from '@/lib/discount';
 import type { CouponInfo } from '@/components/PurchaseConfirmModal';
 import MusicPickerModal from '@/components/MusicPickerModal';
+import { useAuthModal } from '@/components/AuthModal';
 
 declare global { interface Window { YT: any; onYouTubeIframeAPIReady: (() => void) | undefined; } }
 
@@ -28,7 +29,7 @@ interface TemplateHook {
   locked?: boolean;
 }
 
-export default function NewEditorPage({ params }: { params: Promise<{ templateId: string }> }) {
+export default function NewEditorPage({ params, guestMode = false }: { params: Promise<{ templateId: string }>; guestMode?: boolean }) {
   const resolvedParams = use(params);
   const [template, setTemplate] = useState<any>(null);
   const [project, setProject] = useState<any>(null);
@@ -71,6 +72,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
   const router = useRouter();
   const supabase = createClient();
   const { confirm } = usePurchaseConfirm();
+  const { requireAuth } = useAuthModal();
   // Deferred uploads: store File objects keyed by hook key, upload on publish
   const pendingUploadsRef = useRef<Record<string, File>>({});
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -449,6 +451,61 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
 
   const loadData = async () => {
     try {
+      // Guest mode: skip auth, just load template
+      if (guestMode) {
+        const { data: templateData } = await supabase
+          .from("templates")
+          .select("id, name, slug, coin_price, discount_price, discount_label, discount_expires_at, html_content, created_by, purchase_count")
+          .eq("id", resolvedParams.templateId)
+          .eq("is_active", true)
+          .single();
+
+        if (!templateData) {
+          toast.error("Şablon bulunamadı");
+          router.push("/templates");
+          return;
+        }
+
+        setTemplate(templateData);
+
+        const htmlContent = templateData.html_content;
+        if (htmlContent) {
+          const parsedHooks = parseHooksFromHTML(htmlContent);
+          setHooks(parsedHooks);
+          let initialValues = extractDefaults(parsedHooks);
+
+          // Restore guest edits from localStorage (OAuth return)
+          try {
+            const sp = new URLSearchParams(window.location.search);
+            if (sp.get("auth_return") === "true") {
+              const guestEdits = localStorage.getItem("forilove_guest_edits");
+              if (guestEdits) {
+                const parsed = JSON.parse(guestEdits);
+                if (parsed.templateId === resolvedParams.templateId && parsed.values) {
+                  initialValues = parsed.values;
+                }
+                localStorage.removeItem("forilove_guest_edits");
+              }
+            }
+          } catch {}
+
+          setValues(initialValues);
+
+          // Show demo HTML
+          let demoHtml = htmlContent;
+          if (demoHtml.includes('HOOK_')) {
+            Object.entries(initialValues).forEach(([key, value]) => {
+              const regex = new RegExp(`HOOK_${key}`, 'g');
+              demoHtml = demoHtml.replace(regex, value || '');
+            });
+          }
+          setPreviewHtml(demoHtml);
+        }
+
+        setLoading(false);
+        return;
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         router.push("/login");
@@ -1005,12 +1062,118 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
   };
 
   const handlePublish = () => {
+    if (guestMode) {
+      handleGuestPublish();
+      return;
+    }
     if (!project) return;
     // Pre-fill draft fields with current values
     setDraftTitle(project.title || "");
     setDraftSlug(project.slug?.replace(/-[a-z0-9]{6,}$/, "") || "");
     setDraftDescription(project.description || "");
     setShowDetailsModal(true);
+  };
+
+  const handleGuestPublish = async () => {
+    setPurchasing(true);
+    try {
+      const user = await requireAuth(`/editor/${resolvedParams.templateId}`);
+      if (!user) { setPurchasing(false); return; }
+
+      // Save guest edits to localStorage before redirect
+      localStorage.setItem('forilove_guest_edits', JSON.stringify({
+        templateId: resolvedParams.templateId,
+        values: valuesRef.current,
+      }));
+
+      // Check if already purchased
+      const { data: existingPurchase } = await supabase
+        .from("purchases")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("template_id", resolvedParams.templateId)
+        .eq("payment_status", "completed")
+        .maybeSingle();
+
+      if (!existingPurchase) {
+        const coinPrice = getActivePrice(template);
+
+        if (coinPrice === 0) {
+          const { error: purchaseError } = await supabase.from("purchases").insert({
+            user_id: user.id,
+            template_id: resolvedParams.templateId,
+            coins_spent: 0,
+            payment_method: "coins",
+            payment_status: "completed",
+          });
+          if (purchaseError) {
+            toast.error("Satın alma hatası");
+            setPurchasing(false);
+            return;
+          }
+        } else {
+          const { data: profile } = await supabase.from("profiles").select("coin_balance").eq("user_id", user.id).single();
+          const guestCoinBalance = profile?.coin_balance || 0;
+
+          let displayOriginalPrice: number | undefined;
+          let displayDiscountLabel: string | undefined;
+          if (isDiscountActive(template)) {
+            displayOriginalPrice = template.coin_price;
+            displayDiscountLabel = template.discount_label;
+          }
+
+          const purchaseResult = await confirm({
+            itemName: template.name,
+            description: "Şablonu satın alıp düzenlemeye başlayın",
+            coinCost: coinPrice,
+            originalPrice: displayOriginalPrice,
+            discountLabel: displayDiscountLabel,
+            currentBalance: guestCoinBalance,
+            icon: "template",
+            allowCoupon: true,
+            onConfirm: async (couponInfo?: CouponInfo) => {
+              let verifiedPrice = coinPrice;
+              if (couponInfo) {
+                const { data: couponCheck } = await supabase.rpc("validate_coupon", { p_code: couponInfo.code, p_user_id: user.id });
+                if (couponCheck?.valid) {
+                  verifiedPrice = Math.max(0, Math.round(verifiedPrice * (1 - couponCheck.discount_percent / 100)));
+                } else {
+                  return { success: false, error: couponCheck?.error || "Kupon doğrulanamadı" };
+                }
+              }
+              let newBalance = 0;
+              if (verifiedPrice > 0) {
+                const { data: spendResult, error: spendError } = await supabase.rpc("spend_coins", {
+                  p_user_id: user.id, p_amount: verifiedPrice,
+                  p_description: `Şablon satın alındı: ${template.name}`,
+                  p_reference_id: template.id, p_reference_type: "template",
+                });
+                if (spendError) throw spendError;
+                if (!spendResult[0]?.success) return { success: false, error: spendResult[0]?.message || "Coin harcama başarısız" };
+                newBalance = spendResult[0].new_balance;
+              } else {
+                const { data: balanceData } = await supabase.from("profiles").select("coin_balance").eq("user_id", user.id).single();
+                newBalance = balanceData?.coin_balance ?? 0;
+              }
+              const { error: pErr } = await supabase.from("purchases").insert({
+                user_id: user.id, template_id: template.id, coins_spent: verifiedPrice,
+                payment_method: "coins", payment_status: "completed",
+              });
+              if (pErr) throw pErr;
+              return { success: true, newBalance };
+            },
+          });
+          if (!purchaseResult?.success) { setPurchasing(false); return; }
+        }
+      }
+
+      toast.success("Yönlendiriliyorsunuz...");
+      router.push(`/dashboard/editor/${resolvedParams.templateId}`);
+    } catch (err: any) {
+      toast.error(err.message || "Bir hata oluştu");
+    } finally {
+      setPurchasing(false);
+    }
   };
 
   const generateSlug = (text: string) => {
@@ -1318,11 +1481,22 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
     const allLockedKeys = hooks.filter(h => h.locked && !unlockedFields.has(h.key)).map(h => h.key);
     if (allLockedKeys.length === 0) return;
 
+    // Guest mode: require auth first
+    if (guestMode) {
+      const authUser = await requireAuth(`/editor/${resolvedParams.templateId}`);
+      if (!authUser) return;
+      // Save edits before purchase flow
+      localStorage.setItem('forilove_guest_edits', JSON.stringify({
+        templateId: resolvedParams.templateId,
+        values: valuesRef.current,
+      }));
+    }
+
     const result = await confirm({
       itemName: "Tüm Kilitleri Aç",
       description: "Bu şablondaki tüm kilitli alanları düzenleyebilirsiniz",
       coinCost: TEMPLATE_UNLOCK_COST,
-      currentBalance: coinBalance,
+      currentBalance: guestMode ? 0 : coinBalance,
       icon: 'template',
       allowCoupon: true,
       onConfirm: async () => {
@@ -1539,22 +1713,24 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
       {/* Header */}
       <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-xl min-h-[73px]">
         <nav className="w-full px-3 sm:px-6 flex items-center justify-between min-h-[73px]">
-          <button onClick={() => { if (window.history.length > 1) { router.back(); } else { router.push('/dashboard'); } }} className="flex items-center gap-2 transition-colors">
+          <button onClick={() => { if (guestMode) { router.push('/templates'); } else if (window.history.length > 1) { router.back(); } else { router.push('/dashboard'); } }} className="flex items-center gap-2 transition-colors">
             <ArrowLeft className="h-5 w-5" />
             <span className="font-medium">Geri</span>
           </button>
           <h1 className="text-lg sm:text-xl font-bold max-w-[200px] sm:max-w-[300px] truncate md:absolute md:left-[120px] md:border-l md:border-white/10 md:pl-4">{template?.name}</h1>
-          {/* Mobile: Paylaş button in header */}
-          {isPurchased && project && (
+          {/* Mobile: Paylaş/Yayına Al button in header */}
+          {(guestMode || (isPurchased && project)) && (
             <div className="md:hidden">
               <button
                 onClick={handlePublish}
-                disabled={saving}
+                disabled={saving || purchasing}
                 className="btn-primary shrink-0 px-4 py-2 text-sm whitespace-nowrap"
               >
-                {saving
-                  ? (project.is_published ? "Güncelleniyor..." : "Paylaşılıyor...")
-                  : (project.is_published ? "Güncelle" : "Paylaş")
+                {guestMode
+                  ? (purchasing ? "Yükleniyor..." : "Yayına Al")
+                  : saving
+                    ? (project!.is_published ? "Güncelleniyor..." : "Paylaşılıyor...")
+                    : (project!.is_published ? "Güncelle" : "Paylaş")
                 }
               </button>
             </div>
@@ -1563,6 +1739,25 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
           <div className="hidden md:flex items-center gap-2 max-w-[calc(100vw-480px)]">
             {loading ? (
               <div className="text-sm text-zinc-400">Yükleniyor...</div>
+            ) : guestMode ? (
+              <>
+                <div className="btn-secondary shrink-0 flex items-center rounded-full overflow-hidden" style={{ padding: '0 1rem' }}>
+                  <button onClick={undo} disabled={!canUndo} className="flex items-center justify-center px-1.5 disabled:opacity-30 disabled:cursor-not-allowed" style={{ height: 38 }} aria-label="Geri al" title="Geri Al (Ctrl+Z)">
+                    <Undo2 className="h-[25px] w-[25px] text-white/70" />
+                  </button>
+                  <div className="w-px h-5 bg-white/15 shrink-0" />
+                  <button onClick={redo} disabled={!canRedo} className="flex items-center justify-center px-1.5 disabled:opacity-30 disabled:cursor-not-allowed" style={{ height: 38 }} aria-label="Yinele" title="Yinele (Ctrl+Shift+Z)">
+                    <Redo2 className="h-[25px] w-[25px] text-white/70" />
+                  </button>
+                </div>
+                <button onClick={handlePreview} className="btn-secondary shrink-0 flex items-center gap-2 px-4 py-2 text-sm whitespace-nowrap">
+                  <Eye className="h-4 w-4" />
+                  Önizleme
+                </button>
+                <button onClick={handlePublish} disabled={purchasing} className="btn-primary shrink-0 px-4 py-2 text-sm ml-2 whitespace-nowrap">
+                  {purchasing ? "Yükleniyor..." : "Yayına Al"}
+                </button>
+              </>
             ) : !isPurchased ? (
               <button
                 onClick={handlePurchase}
@@ -1741,25 +1936,43 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
           />
         </div>
 
-        {/* Mobile Bottom Bar — Not Purchased */}
+        {/* Mobile Bottom Bar — Not Purchased (or Guest Mode toolbar) */}
         {!isPurchased && !loading && (
           <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-xl border-t border-white/10">
-            <div className="flex items-center gap-3 px-4 py-3">
-              <button
-                onClick={handlePreview}
-                className="btn-secondary flex-1 py-2.5 text-sm text-center whitespace-nowrap truncate"
-              >
-                Önizleme
-              </button>
-              <button
-                onClick={handlePurchase}
-                disabled={purchasing}
-                className="btn-primary flex-1 py-2.5 text-sm flex items-center justify-center gap-2 whitespace-nowrap truncate"
-              >
-                <Coins className="h-4 w-4 text-yellow-300" />
-                {purchasing ? "..." : getActivePrice(template) === 0 ? "Ücretsiz" : `${getActivePrice(template)} FL`}
-              </button>
-            </div>
+            {guestMode ? (
+              <div className="flex items-center gap-2 px-3 py-2">
+                <div className="btn-secondary shrink-0 flex items-center rounded-full overflow-hidden" style={{ padding: '0 1rem' }}>
+                  <button onClick={undo} disabled={!canUndo} className="flex items-center justify-center px-1.5 disabled:opacity-30 disabled:cursor-not-allowed" style={{ height: 38 }} aria-label="Geri al">
+                    <Undo2 className="h-[25px] w-[25px] text-white/70" />
+                  </button>
+                  <div className="w-px h-5 bg-white/15 shrink-0" />
+                  <button onClick={redo} disabled={!canRedo} className="flex items-center justify-center px-1.5 disabled:opacity-30 disabled:cursor-not-allowed" style={{ height: 38 }} aria-label="Yinele">
+                    <Redo2 className="h-[25px] w-[25px] text-white/70" />
+                  </button>
+                </div>
+                <button onClick={handlePreview} className="btn-secondary flex-1 py-2.5 text-sm flex items-center justify-center gap-2">
+                  <Eye className="h-4 w-4" />
+                  Önizleme
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 px-4 py-3">
+                <button
+                  onClick={handlePreview}
+                  className="btn-secondary flex-1 py-2.5 text-sm text-center whitespace-nowrap truncate"
+                >
+                  Önizleme
+                </button>
+                <button
+                  onClick={handlePurchase}
+                  disabled={purchasing}
+                  className="btn-primary flex-1 py-2.5 text-sm flex items-center justify-center gap-2 whitespace-nowrap truncate"
+                >
+                  <Coins className="h-4 w-4 text-yellow-300" />
+                  {purchasing ? "..." : getActivePrice(template) === 0 ? "Ücretsiz" : `${getActivePrice(template)} FL`}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
