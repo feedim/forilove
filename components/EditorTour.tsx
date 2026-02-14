@@ -231,7 +231,7 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
   const PAD = 8;
   const vw = typeof window !== "undefined" ? window.innerWidth : 400;
   const vh = typeof window !== "undefined" ? window.innerHeight : 800;
-  const ACCENT = "#ec4899";
+  const ACCENT = "lab(49.5493% 79.8381 2.31768)";
 
   // Clamp rect to viewport — prevents spotlight & tooltip from going off-screen
   const rect = rawRect ? clampRect(rawRect, vw, vh) : null;
@@ -314,7 +314,7 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
             height: rect.height + PAD * 2,
             borderRadius: 12,
             border: `2px solid ${ACCENT}`,
-            boxShadow: `0 0 0 1px ${ACCENT}40, 0 0 24px ${ACCENT}30`,
+            boxShadow: `0 0 0 1px rgba(227,0,118,0.25), 0 0 24px rgba(227,0,118,0.2)`,
             transition: "all 0.3s ease",
           }}
         />
