@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Percent } from "lucide-react";
 
 const PROMO_STORAGE_KEY = "forilove_pending_promo";
 const PROMO_INFO_KEY = "forilove_promo_info";
@@ -56,9 +55,10 @@ export default function PromoBanner() {
   if (!promoInfo) return null;
 
   return (
-    <div className="w-full bg-pink-600 text-white text-center py-2 px-4 text-sm font-medium flex items-center justify-center gap-2 z-50 relative">
-      <Percent className="h-3.5 w-3.5" />
-      <span>%{promoInfo.discount} indirim kodu uygulandı!</span>
+    <div className="sticky top-0 z-50 flex items-center justify-center" style={{ height: 30, background: 'lab(49.5493% 79.8381 2.31768)' }}>
+      <span className="text-white" style={{ fontSize: 11, fontWeight: 600 }}>
+        %{promoInfo.discount} indirim uygulandı — Kod: {promoInfo.code}
+      </span>
     </div>
   );
 }
