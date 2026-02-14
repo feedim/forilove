@@ -248,6 +248,54 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Anti-theft: block devtools shortcuts, right-click, detect devtools, console warning
+  useEffect(() => {
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key === 'F12') { e.preventDefault(); return; }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && ['I','J','C'].includes(e.key.toUpperCase())) { e.preventDefault(); return; }
+      if ((e.ctrlKey || e.metaKey) && e.key.toUpperCase() === 'U') { e.preventDefault(); return; }
+      if ((e.ctrlKey || e.metaKey) && e.key.toUpperCase() === 'S') { e.preventDefault(); return; }
+    };
+    const handleContextMenu = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+      e.preventDefault();
+    };
+    // Detect DevTools open — clear iframe content when detected
+    let devtoolsInterval: ReturnType<typeof setInterval> | null = null;
+    const checkDevTools = () => {
+      const threshold = 160;
+      const widthDiff = window.outerWidth - window.innerWidth;
+      const heightDiff = window.outerHeight - window.innerHeight;
+      if (widthDiff > threshold || heightDiff > threshold) {
+        const iframe = document.querySelector('iframe');
+        if (iframe?.contentDocument) {
+          try {
+            const doc = iframe.contentDocument;
+            doc.open();
+            doc.write('<html><body style="background:#000;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif"><p>Geliştirici araçları açık</p></body></html>');
+            doc.close();
+          } catch {}
+        }
+      }
+    };
+    devtoolsInterval = setInterval(checkDevTools, 1500);
+    // Console warning
+    try {
+      console.clear();
+      console.log('%c⚠️ DUR!', 'color:red;font-size:40px;font-weight:bold');
+      console.log('%cBu alan geliştiriciler içindir. Birisi size buraya bir şey yapıştırmanızı söylediyse, bu bir dolandırıcılık girişimidir.', 'font-size:16px');
+      console.log('%cŞablon HTML içerikleri telif hakkı ile korunmaktadır. İzinsiz kopyalama yasal işlem gerektirir.', 'font-size:13px;color:gray');
+    } catch {}
+    document.addEventListener('keydown', handleKeydown, true);
+    document.addEventListener('contextmenu', handleContextMenu);
+    return () => {
+      document.removeEventListener('keydown', handleKeydown, true);
+      document.removeEventListener('contextmenu', handleContextMenu);
+      if (devtoolsInterval) clearInterval(devtoolsInterval);
+    };
+  }, []);
+
   // YouTube IFrame API player — lifecycle tied to musicUrl only (NOT play state)
   // Play/pause is handled directly via handleMusicToggle to preserve mobile gesture context
   useEffect(() => {
@@ -1010,11 +1058,11 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
             var elKey = el.getAttribute('data-editable');
             if (LOCKED_SET.has(elKey)) {
               el.style.position = el.style.position || 'relative';
-              el.style.opacity = '0.45';
+              el.style.opacity = '0.8';
               el.style.padding = el.style.padding || '11px';
               var overlay = document.createElement('div');
-              overlay.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(227,0,118,0.07);pointer-events:none;z-index:2;border-radius:inherit;';
-              overlay.innerHTML = '<span style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(227,0,118,0.7);backdrop-filter:blur(4px)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>';
+              overlay.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(227,0,118,0.05);pointer-events:none;z-index:2;border-radius:inherit;';
+              overlay.innerHTML = '<span style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:rgba(227,0,118,0.65);backdrop-filter:blur(4px)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>';
               el.appendChild(overlay);
             }
 
@@ -1047,6 +1095,35 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
       `;
       doc.body.appendChild(script);
 
+      // Anti-theft protection — block right-click, selection, devtools, source inspection in iframe
+      const protectScript = doc.createElement('script');
+      protectScript.textContent = `
+        document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+        document.addEventListener('selectstart', function(e) { e.preventDefault(); });
+        document.addEventListener('dragstart', function(e) { e.preventDefault(); });
+        document.addEventListener('copy', function(e) { e.preventDefault(); });
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'F12') { e.preventDefault(); return; }
+          if ((e.ctrlKey || e.metaKey) && e.shiftKey && ['I','J','C'].includes(e.key.toUpperCase())) { e.preventDefault(); return; }
+          if ((e.ctrlKey || e.metaKey) && e.key.toUpperCase() === 'U') { e.preventDefault(); return; }
+          if ((e.ctrlKey || e.metaKey) && e.key.toUpperCase() === 'S') { e.preventDefault(); return; }
+          if ((e.ctrlKey || e.metaKey) && e.key.toUpperCase() === 'A') { e.preventDefault(); return; }
+        });
+        // Override outerHTML getters to prevent console HTML extraction (innerHTML left intact for DOM ops)
+        try {
+          Object.defineProperty(document.documentElement, 'outerHTML', { get: function() { return '<html></html>'; }, configurable: true });
+          Object.defineProperty(document.body, 'outerHTML', { get: function() { return '<body></body>'; }, configurable: true });
+        } catch(e) {}
+        // Disable common extraction methods
+        try {
+          XMLSerializer.prototype.serializeToString = function() { return ''; };
+        } catch(e) {}
+      `;
+      doc.body.appendChild(protectScript);
+
+      // Strip template metadata attributes to prevent easy extraction
+      doc.querySelectorAll('[data-hook]').forEach(function(el) { el.removeAttribute('data-hook'); });
+
       writeToPreview(doc.documentElement.outerHTML);
     }
   };
@@ -1068,6 +1145,14 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
       });
     } else {
       previewInitRef.current = true;
+      // Clear srcDoc attribute after first render so HTML isn't visible in DevTools element inspector
+      if (iframe) {
+        const onLoad = () => {
+          iframe.removeAttribute('srcdoc');
+          iframe.removeEventListener('load', onLoad);
+        };
+        iframe.addEventListener('load', onLoad);
+      }
     }
   };
 

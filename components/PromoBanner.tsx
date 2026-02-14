@@ -14,23 +14,7 @@ export default function PromoBanner() {
 
   useEffect(() => {
     const init = async () => {
-      // Don't show on dashboard (promo already applied after signup)
-      if (pathname?.startsWith("/dashboard")) {
-        setPromoInfo(null);
-        return;
-      }
-
-      // Promo sadece yeni kullanıcılar için — giriş yapmış kullanıcılara gösterme
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        // Mevcut kullanıcı — banner gösterme ama pending_promo'yu tut (satın almada kullanılacak)
-        localStorage.removeItem(PROMO_INFO_KEY);
-        setPromoInfo(null);
-        return;
-      }
-
-      // 1. Check URL for ?promo=CODE
+      // 1. ALWAYS capture ?promo=CODE from URL first (works for both logged-in and guest users)
       const urlPromo = searchParams.get("promo");
       if (urlPromo && /^[a-zA-Z0-9]{3,20}$/.test(urlPromo)) {
         const normalizedCode = urlPromo.toUpperCase();
@@ -39,21 +23,32 @@ export default function PromoBanner() {
           const res = await fetch(`/api/promo/check?code=${normalizedCode}`);
           const data = await res.json();
           if (data.valid) {
-            const info = { code: normalizedCode, discount: data.discount_percent };
-            localStorage.setItem(PROMO_INFO_KEY, JSON.stringify(info));
-            setPromoInfo(info);
+            localStorage.setItem(PROMO_INFO_KEY, JSON.stringify({ code: normalizedCode, discount: data.discount_percent }));
           } else {
             localStorage.removeItem(PROMO_STORAGE_KEY);
             localStorage.removeItem(PROMO_INFO_KEY);
-            setPromoInfo(null);
           }
         } catch {
-          // Network error - keep the code, just don't show banner
+          // Network error - keep the code stored
         }
+      }
+
+      // Don't show banner on dashboard or editor/preview (breaks layout with calc heights)
+      if (pathname?.startsWith("/dashboard") || pathname?.startsWith("/editor")) {
+        setPromoInfo(null);
         return;
       }
 
-      // 2. No URL param - check localStorage
+      // Banner only for guests — logged-in users get auto-apply via PurchaseConfirmModal
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        localStorage.removeItem(PROMO_INFO_KEY);
+        setPromoInfo(null);
+        return;
+      }
+
+      // Show banner from localStorage
       const stored = localStorage.getItem(PROMO_INFO_KEY);
       if (stored) {
         try {

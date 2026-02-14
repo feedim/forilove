@@ -27,6 +27,30 @@ export function HTMLTemplateRender({ project, musicUrl }: { project: any; musicU
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setIsEmbed(params.get('embed') === '1');
+    // Reset layout background so template CSS takes effect
+    document.documentElement.style.backgroundColor = 'transparent';
+    document.body.style.backgroundColor = 'transparent';
+    return () => {
+      document.documentElement.style.backgroundColor = '';
+      document.body.style.backgroundColor = '';
+    };
+  }, []);
+
+  // Anti-theft: block devtools shortcuts, right-click, selection on public pages
+  useEffect(() => {
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key === 'F12') { e.preventDefault(); return; }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && ['I','J','C'].includes(e.key.toUpperCase())) { e.preventDefault(); return; }
+      if ((e.ctrlKey || e.metaKey) && e.key.toUpperCase() === 'U') { e.preventDefault(); return; }
+      if ((e.ctrlKey || e.metaKey) && e.key.toUpperCase() === 'S') { e.preventDefault(); return; }
+    };
+    const handleContextMenu = (e: MouseEvent) => { e.preventDefault(); };
+    document.addEventListener('keydown', handleKeydown, true);
+    document.addEventListener('contextmenu', handleContextMenu);
+    return () => {
+      document.removeEventListener('keydown', handleKeydown, true);
+      document.removeEventListener('contextmenu', handleContextMenu);
+    };
   }, []);
 
   // Add error handling for template scripts
@@ -175,13 +199,14 @@ export function HTMLTemplateRender({ project, musicUrl }: { project: any; musicU
   // Extract scripts before DOMPurify strips them
   const { cleanHtml, scripts: templateScripts } = extractScripts(html);
 
-  // Sanitize HTML with DOMPurify before rendering
-  const sanitizedHtml = DOMPurify.sanitize(cleanHtml, {
+  // Sanitize HTML and strip template metadata to hinder HTML theft
+  let sanitizedHtml = DOMPurify.sanitize(cleanHtml, {
     WHOLE_DOCUMENT: true,
     ADD_TAGS: ['iframe', 'video', 'audio', 'source', 'style', 'link'],
-    ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'target', 'data-editable', 'data-type', 'data-label', 'data-locked', 'media', 'data-list-item-class', 'data-list-sep-class', 'data-list-sep-html', 'data-list-duplicate'],
-    ALLOW_DATA_ATTR: true,
+    ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'target', 'media'],
+    ALLOW_DATA_ATTR: false,
   });
+  sanitizedHtml = sanitizedHtml.replace(/\s*data-(?:editable|type|hook|locked|label|clickable|area|area-label|css-property|list-[a-z-]+|duplicate)="[^"]*"/g, '');
 
   // Run extracted template scripts after DOM render — wait for paint then execute
   useEffect(() => {

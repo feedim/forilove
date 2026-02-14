@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, BarChart3, User, Wallet, Send, Globe, HelpCircle, Shield } from "lucide-react";
+import { ArrowLeft, BarChart3, User, Wallet, Send, Globe, HelpCircle, Shield, Link2, Copy, Check, Info } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import MobileBottomNav from "@/components/MobileBottomNav";
 
@@ -13,6 +13,10 @@ export default function AffiliateDashboardPage() {
   const [sponsorBalance, setSponsorBalance] = useState<any>(null);
   const [sponsorUsers, setSponsorUsers] = useState<any[]>([]);
   const [sponsorPeriod, setSponsorPeriod] = useState<"today" | "yesterday" | "last7d" | "last14d" | "thisMonth">("last7d");
+  const [promoCode, setPromoCode] = useState<string>("");
+  const [urlInput, setUrlInput] = useState("");
+  const [generatedUrl, setGeneratedUrl] = useState("");
+  const [urlCopied, setUrlCopied] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -42,6 +46,9 @@ export default function AffiliateDashboardPage() {
         setSponsorAnalytics(data.analytics || null);
         setSponsorBalance(data.balance || null);
         setSponsorUsers(data.recentUsers || []);
+        if (data.promos && data.promos.length > 0) {
+          setPromoCode(data.promos[0].code || "");
+        }
       }
     } catch {
       /* silent */
@@ -191,6 +198,89 @@ export default function AffiliateDashboardPage() {
                 <p className="text-sm text-zinc-500">Henüz linkinizden kayıt olan kullanıcı yok.</p>
               )}
             </div>
+
+            {/* URL Generator */}
+            {promoCode && (
+              <div className="bg-zinc-900 rounded-2xl p-6 mb-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Link2 className="h-5 w-5 text-pink-500" />
+                  <h3 className="font-semibold">İndirimli Link Oluştur</h3>
+                </div>
+                <p className="text-xs text-zinc-500 mb-3">Herhangi bir Forilove URL'sini yapıştırın, promo kodunuz otomatik eklenir.</p>
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={urlInput}
+                    onChange={(e) => { setUrlInput(e.target.value); setGeneratedUrl(""); setUrlCopied(false); }}
+                    placeholder="https://forilove.com/editor/..."
+                    className="flex-1 bg-transparent border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-pink-500/50 transition"
+                  />
+                  <button
+                    onClick={() => {
+                      const trimmed = urlInput.trim();
+                      if (!trimmed) return;
+                      try {
+                        let url: URL;
+                        if (trimmed.startsWith('http')) {
+                          url = new URL(trimmed);
+                        } else if (trimmed.startsWith('forilove.com') || trimmed.startsWith('www.forilove.com')) {
+                          url = new URL('https://' + trimmed);
+                        } else {
+                          url = new URL('https://forilove.com' + (trimmed.startsWith('/') ? '' : '/') + trimmed);
+                        }
+                        if (!url.hostname.includes('forilove.com') && !url.hostname.includes('localhost')) {
+                          setGeneratedUrl(""); return;
+                        }
+                        url.searchParams.set('promo', promoCode);
+                        setGeneratedUrl(url.toString());
+                        setUrlCopied(false);
+                      } catch {
+                        setGeneratedUrl("");
+                      }
+                    }}
+                    className="px-4 py-2.5 bg-pink-600 hover:bg-pink-500 rounded-lg text-xs font-bold transition shrink-0"
+                  >
+                    Üret
+                  </button>
+                </div>
+                {generatedUrl && (
+                  <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg p-3">
+                    <p className="text-sm text-pink-400 flex-1 break-all font-mono">{generatedUrl}</p>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(generatedUrl);
+                        setUrlCopied(true);
+                        setTimeout(() => setUrlCopied(false), 2000);
+                      }}
+                      className="shrink-0 p-2 rounded-lg hover:bg-white/10 transition"
+                    >
+                      {urlCopied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4 text-zinc-400" />}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Promo Kullanım Notu */}
+            {promoCode && (
+              <div className="bg-pink-500/5 border border-pink-500/20 rounded-2xl p-5 mb-6">
+                <div className="flex items-start gap-3">
+                  <Info className="h-5 w-5 text-pink-400 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-semibold text-pink-400 mb-2">Promo Kodunuz: {promoCode}</h4>
+                    <p className="text-xs text-zinc-400 leading-relaxed mb-3">
+                      Herhangi bir Forilove URL'sinin sonuna <span className="text-pink-400 font-mono">?promo={promoCode}</span> ekleyerek indirimli link paylaşabilirsiniz. Bu linkten giren kullanıcılar kayıt olana kadar takip edilir.
+                    </p>
+                    <div className="space-y-1.5 text-xs text-zinc-500 font-mono">
+                      <p>forilove.com<span className="text-pink-400">?promo={promoCode}</span></p>
+                      <p>forilove.com/templates<span className="text-pink-400">?promo={promoCode}</span></p>
+                      <p>forilove.com/editor/...<span className="text-pink-400">?promo={promoCode}</span></p>
+                      <p>forilove.com/register<span className="text-pink-400">?promo={promoCode}</span></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Hızlı Linkler */}
             <div className="space-y-3">

@@ -209,7 +209,6 @@ export default function MyPagesPage() {
                 id={project.id}
                 title={project.title}
                 subtitle={project.templates?.name}
-                viewCount={project.view_count || 0}
                 editHref={`/dashboard/editor/${project.template_id}`}
                 viewHref={`/p/${project.slug}`}
                 shareUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/p/${project.slug}`}

@@ -22,8 +22,10 @@ export default function PreviewPage() {
   const [musicUrl, setMusicUrl] = useState<string>("");
   const [loaded, setLoaded] = useState(false);
 
-  // Ensure scroll works on mobile (especially Android)
+  // Reset layout background so template CSS takes effect + ensure scroll works on mobile
   useEffect(() => {
+    document.documentElement.style.backgroundColor = 'transparent';
+    document.body.style.backgroundColor = 'transparent';
     document.documentElement.style.overscrollBehavior = 'auto';
     document.body.style.overscrollBehavior = 'auto';
     document.documentElement.style.overflow = 'auto';
@@ -33,6 +35,8 @@ export default function PreviewPage() {
     // Force touch scrolling on iOS/Android
     (document.body.style as any).webkitOverflowScrolling = 'touch';
     return () => {
+      document.documentElement.style.backgroundColor = '';
+      document.body.style.backgroundColor = '';
       document.documentElement.style.overscrollBehavior = '';
       document.body.style.overscrollBehavior = '';
       document.documentElement.style.overflow = '';
@@ -42,13 +46,37 @@ export default function PreviewPage() {
     };
   }, []);
 
+  // Anti-theft: block devtools shortcuts, right-click, text selection on preview page
+  useEffect(() => {
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key === 'F12') { e.preventDefault(); return; }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && ['I','J','C'].includes(e.key.toUpperCase())) { e.preventDefault(); return; }
+      if ((e.ctrlKey || e.metaKey) && e.key.toUpperCase() === 'U') { e.preventDefault(); return; }
+      if ((e.ctrlKey || e.metaKey) && e.key.toUpperCase() === 'S') { e.preventDefault(); return; }
+    };
+    const handleContextMenu = (e: MouseEvent) => { e.preventDefault(); };
+    const handleSelectStart = (e: Event) => { e.preventDefault(); };
+    document.addEventListener('keydown', handleKeydown, true);
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('selectstart', handleSelectStart);
+    return () => {
+      document.removeEventListener('keydown', handleKeydown, true);
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('selectstart', handleSelectStart);
+    };
+  }, []);
+
   useEffect(() => {
     const raw = localStorage.getItem("forilove_preview");
     if (!raw) return;
     try {
       const data = JSON.parse(raw);
       const { cleanHtml, scripts } = extractScripts(data.html || "");
-      setHtml(DOMPurify.sanitize(cleanHtml, { WHOLE_DOCUMENT: true, ADD_TAGS: ["style", "link", "iframe"], ADD_ATTR: ["target", "allow", "allowfullscreen", "frameborder", "data-editable", "data-type", "data-hook", "data-locked"], ALLOW_DATA_ATTR: true, ADD_DATA_URI_TAGS: ["img", "a", "source"] }));
+      // Sanitize then strip template metadata attributes to hinder HTML theft
+      let sanitized = DOMPurify.sanitize(cleanHtml, { WHOLE_DOCUMENT: true, ADD_TAGS: ["style", "link", "iframe"], ADD_ATTR: ["target", "allow", "allowfullscreen", "frameborder"], ALLOW_DATA_ATTR: false, ADD_DATA_URI_TAGS: ["img", "a", "source"] });
+      // Remove data-area attributes too (used for section toggling)
+      sanitized = sanitized.replace(/\s*data-(?:editable|type|hook|locked|label|clickable|area|area-label|css-property|list-[a-z-]+|duplicate)="[^"]*"/g, '');
+      setHtml(sanitized);
       setTemplateScripts(scripts);
       setMusicUrl(data.musicUrl || "");
       if (data.templateName) {
