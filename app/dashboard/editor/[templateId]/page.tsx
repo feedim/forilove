@@ -83,6 +83,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
   const [canRedo, setCanRedo] = useState(false);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(true);
+  const handleFieldUnlockRef = useRef<(key: string) => void>(() => {});
 
   const R2_DOMAINS = ['pub-104d06222a3641f0853ce1540130365b.r2.dev', 'pub-180c00d0fd394407a8fe289a038f2de2.r2.dev'];
   const r2Proxy = typeof window !== 'undefined' ? `${window.location.origin}/api/r2/` : '/api/r2/';
@@ -187,7 +188,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== 'null' && event.origin !== window.location.origin) return;
       if (event.data?.type === 'UNLOCK_HOOK' && typeof event.data.key === 'string' && /^[a-zA-Z0-9_-]+$/.test(event.data.key)) {
-        handleFieldUnlock(event.data.key);
+        handleFieldUnlockRef.current(event.data.key);
       } else if (event.data?.type === 'EDIT_HOOK' && typeof event.data.key === 'string' && /^[a-zA-Z0-9_-]+$/.test(event.data.key)) {
         // Use valuesRef to avoid stale closure
         setIsChangingImage(false);
@@ -1344,6 +1345,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
     // Open edit modal for the clicked field
     openEditModal(hookKey);
   };
+  handleFieldUnlockRef.current = handleFieldUnlock;
 
   const handleImageUpload = async (file: File) => {
     if (!currentHook || !editingHook) return;
@@ -1563,7 +1565,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                           const el = document.getElementById('editor-toolbar-scroll');
                           if (el) el.scrollBy({ left: -200, behavior: 'smooth' });
                         }}
-                        className="shrink-0 flex items-center justify-center rounded-full bg-transparent hover:bg-white/10 border border-white/10 transition active:scale-95" style={{ width: 49, height: 49 }}
+                        className="btn-secondary shrink-0 flex items-center justify-center transition active:scale-95" style={{ width: 49, height: 49 }}
                         aria-label="Sola kaydır"
                       >
                         <ArrowLeft className="h-4 w-4" />
@@ -1684,7 +1686,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                           const el = document.getElementById('editor-toolbar-scroll');
                           if (el) el.scrollBy({ left: 200, behavior: 'smooth' });
                         }}
-                        className="shrink-0 flex items-center justify-center rounded-full bg-transparent hover:bg-white/10 border border-white/10 transition active:scale-95" style={{ width: 49, height: 49 }}
+                        className="btn-secondary shrink-0 flex items-center justify-center transition active:scale-95" style={{ width: 49, height: 49 }}
                         aria-label="Sağa kaydır"
                       >
                         <ArrowLeft className="h-4 w-4 rotate-180" />
