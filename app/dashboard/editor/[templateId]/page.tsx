@@ -2150,8 +2150,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
             >
               <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
                 <div>
-                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    <LayoutGrid className="h-5 w-5 text-pink-400" />
+                  <h3 className="text-lg font-bold text-white">
                     Bölümler
                   </h3>
                   <p className="text-xs text-zinc-400">Görünmesini istemediğiniz alanları kapatabilirsiniz</p>
