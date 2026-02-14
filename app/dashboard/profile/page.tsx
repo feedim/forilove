@@ -233,10 +233,10 @@ export default function ProfilePage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || 'Promo olusturulamadi');
+        toast.error(data.error || 'Promo oluşturulamadı');
         return;
       }
-      toast.success(`Promo linki olusturuldu: ${data.promo.code}`);
+      toast.success(`Promo linki oluşturuldu: ${data.promo.code}`);
       setPromos([data.promo, ...promos]);
       setPromoForm({ code: '', discountPercent: 15, maxSignups: 500, expiryHours: 720, isFree: false });
     } catch {
@@ -526,7 +526,7 @@ export default function ProfilePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Indirim %</label>
+                  <label className="block text-xs text-gray-400 mb-1">İndirim %</label>
                   <input
                     type="number"
                     value={couponForm.isFree ? 100 : couponForm.discountPercent}
@@ -616,11 +616,11 @@ export default function ProfilePage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-white/5 rounded-xl p-4">
-                <p className="text-xs text-gray-400 mb-1">Toplam Kayit</p>
+                <p className="text-xs text-gray-400 mb-1">Toplam Kayıt</p>
                 <p className="text-2xl font-bold">{sponsorAnalytics.totalSignups}</p>
               </div>
               <div className="bg-white/5 rounded-xl p-4">
-                <p className="text-xs text-gray-400 mb-1">Toplam Satis</p>
+                <p className="text-xs text-gray-400 mb-1">Toplam Satış</p>
                 <p className="text-2xl font-bold">{sponsorAnalytics.totalPurchases}</p>
               </div>
               <div className="bg-white/5 rounded-xl p-4">
@@ -628,11 +628,11 @@ export default function ProfilePage() {
                 <p className="text-2xl font-bold text-pink-500">%{sponsorAnalytics.commissionRate}</p>
               </div>
               <div className="bg-white/5 rounded-xl p-4">
-                <p className="text-xs text-gray-400 mb-1">Toplam Kazanc</p>
+                <p className="text-xs text-gray-400 mb-1">Toplam Kazanç</p>
                 <p className="text-2xl font-bold text-pink-500">{sponsorAnalytics.totalEarnings.toLocaleString('tr-TR')} <span className="text-sm text-gray-400">TRY</span></p>
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-3">Indiriminiz ne kadar dusukse, komisyonunuz o kadar yuksek olur. (Min. %5 — Maks. %20)</p>
+            <p className="text-xs text-gray-500 mt-3">İndiriminiz ne kadar düşükse, komisyonunuz o kadar yüksek olur. (Min. %5 — Maks. %20)</p>
           </div>
         )}
 
@@ -641,7 +641,7 @@ export default function ProfilePage() {
           <div className="bg-zinc-900 rounded-2xl p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <User className="h-5 w-5 text-pink-500" />
-              <h3 className="font-semibold">Son Kayit Olan Kullanicilar</h3>
+              <h3 className="font-semibold">Son Kayıt Olan Kullanıcılar</h3>
             </div>
             {sponsorUsers.length > 0 ? (
               <div className="space-y-3">
@@ -661,7 +661,7 @@ export default function ProfilePage() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500">Henuz linkinizden kayit olan kullanici yok.</p>
+              <p className="text-sm text-gray-500">Henüz linkinizden kayıt olan kullanıcı yok.</p>
             )}
           </div>
         )}
@@ -674,8 +674,8 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-3">
                   <Wallet className="h-5 w-5 text-pink-500" />
                   <div>
-                    <h3 className="font-semibold">Odeme Bilgileri</h3>
-                    <p className="text-xs text-gray-500">IBAN ve hesap bilgilerinizi girin</p>
+                    <h3 className="font-semibold">Ödeme Bilgileri</h3>
+                    <p className="text-xs text-gray-500">IBAN ve hesap bilgilerinizi giriniz</p>
                   </div>
                 </div>
                 <ArrowLeft className="h-4 w-4 text-gray-400 rotate-180 group-hover:translate-x-1 transition-transform" />
@@ -701,9 +701,9 @@ export default function ProfilePage() {
           <div className="bg-zinc-900 rounded-2xl p-6 mb-6">
             <div className="flex items-center gap-2 mb-1">
               <Globe className="h-5 w-5 text-pink-500" />
-              <h3 className="font-semibold">{profile?.role === 'affiliate' ? 'Affiliate Link' : 'Indirim Linkleri'}</h3>
+              <h3 className="font-semibold">{profile?.role === 'affiliate' ? 'Affiliate Link' : 'İndirim Linkleri'}</h3>
             </div>
-            <p className="text-xs text-gray-500 mb-4">{profile?.role === 'affiliate' ? 'Takipcilerinize paylasacaginiz indirim linkiniz. Max %20 indirim.' : 'Kayit linklerinden gelen kullanicilar otomatik kupon alir.'}</p>
+            <p className="text-xs text-gray-500 mb-4">{profile?.role === 'affiliate' ? 'Takipçilerinize paylaşacağınız indirim linkiniz. Max %20 indirim.' : 'Kayıt linklerinden gelen kullanıcılar otomatik kupon alır.'}</p>
 
             {/* Create Promo Form - sponsors limited to 1 */}
             {(profile?.role === 'admin' || promos.length === 0) && <div className="space-y-3 mb-5">
@@ -720,7 +720,7 @@ export default function ProfilePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Indirim % {profile?.role === 'affiliate' ? '(min 5, max 20)' : ''}</label>
+                  <label className="block text-xs text-gray-400 mb-1">İndirim % {profile?.role === 'affiliate' ? '(min 5, max 20)' : ''}</label>
                   <input
                     type="number"
                     value={promoForm.isFree ? 100 : promoForm.discountPercent}

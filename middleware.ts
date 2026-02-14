@@ -143,7 +143,7 @@ export async function middleware(request: NextRequest) {
 
     // Cache role in cookie for 5 minutes
     const response = NextResponse.next()
-    response.cookies.set('fl-role', role, { maxAge: 300, httpOnly: true, sameSite: 'lax', path: '/' })
+    response.cookies.set('fl-role', role, { maxAge: 300, httpOnly: true, secure: true, sameSite: 'lax', path: '/' })
     return response
   }
 

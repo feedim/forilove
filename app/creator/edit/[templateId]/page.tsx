@@ -106,35 +106,35 @@ export default function EditŞablonPage({ params }: { params: Promise<{ template
 
     // Client-side validation — same rules as editor
     if (!trimmedName || trimmedName.length < 2) {
-      toast.error("Sablon adi en az 2 karakter olmali");
+      toast.error("Şablon adı en az 2 karakter olmalı");
       return;
     }
     if (trimmedName.length > 60) {
-      toast.error("Sablon adi en fazla 60 karakter olabilir");
+      toast.error("Şablon adı en fazla 60 karakter olabilir");
       return;
     }
     if (trimmedSlug.length < 5) {
-      toast.error("Slug en az 5 karakter olmali");
+      toast.error("Slug en az 5 karakter olmalı");
       return;
     }
     if (!/^[a-z0-9-]+$/.test(trimmedSlug)) {
-      toast.error("Slug sadece kucuk harf, rakam ve tire icermelidir");
+      toast.error("Slug sadece küçük harf, rakam ve tire içermelidir");
       return;
     }
     if (trimmedDesc.length > 50) {
-      toast.error("Aciklama en fazla 50 karakter olabilir");
+      toast.error("Açıklama en fazla 50 karakter olabilir");
       return;
     }
     if (coinPrice < 1 || coinPrice > 9999) {
-      toast.error("Fiyat 1-9999 arasinda olmali");
+      toast.error("Fiyat 1-9999 arasında olmalı");
       return;
     }
     if (discountPrice !== null && (discountPrice < 1 || discountPrice >= coinPrice)) {
-      toast.error("Indirimli fiyat 1 ile orijinal fiyat arasinda olmali");
+      toast.error("İndirimli fiyat 1 ile orijinal fiyat arasında olmalı");
       return;
     }
     if (!htmlContent || htmlContent.trim() === "") {
-      toast.error("HTML icerigi bos olamaz");
+      toast.error("HTML içeriği boş olamaz");
       return;
     }
 
@@ -264,16 +264,16 @@ export default function EditŞablonPage({ params }: { params: Promise<{ template
                   type="text"
                   value={slug}
                   readOnly
-                  placeholder="otomatik-olusturulur"
+                  placeholder="otomatik-oluşturulur"
                   className="flex-1 bg-transparent text-sm text-white/50 outline-none py-3 pr-3 cursor-not-allowed"
                   tabIndex={-1}
                 />
               </div>
-              <p className="text-[11px] text-gray-500 mt-1">Sablon adindan otomatik olusturulur</p>
+              <p className="text-[11px] text-gray-500 mt-1">Şablon adından otomatik oluşturulur</p>
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1.5">Aciklama</label>
+              <label className="block text-sm text-gray-400 mb-1.5">Açıklama</label>
               <input
                 type="text"
                 value={description}

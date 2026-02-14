@@ -169,22 +169,22 @@ export async function POST(request: NextRequest) {
     const { code, discountPercent, maxSignups, expiryHours } = body;
 
     if (!code || typeof code !== "string" || code.trim().length < 3 || code.trim().length > 10) {
-      return NextResponse.json({ error: "Promo kodu 3-10 karakter olmali" }, { status: 400 });
+      return NextResponse.json({ error: "Promo kodu 3-10 karakter olmalı" }, { status: 400 });
     }
 
     // Affiliates: min 5%, max 20% discount
     const MIN_AFFILIATE_DISCOUNT = 5;
     const effectiveDiscount = Math.min(discountPercent || MIN_AFFILIATE_DISCOUNT, user.role === "admin" ? 100 : MAX_AFFILIATE_DISCOUNT);
     if (user.role === "affiliate" && effectiveDiscount < MIN_AFFILIATE_DISCOUNT) {
-      return NextResponse.json({ error: "Indirim en az %5 olmali" }, { status: 400 });
+      return NextResponse.json({ error: "İndirim en az %5 olmalı" }, { status: 400 });
     }
     if (effectiveDiscount < 1) {
-      return NextResponse.json({ error: "Indirim en az %1 olmali" }, { status: 400 });
+      return NextResponse.json({ error: "İndirim en az %1 olmalı" }, { status: 400 });
     }
 
     const cleanCode = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (cleanCode.length < 3) {
-      return NextResponse.json({ error: "Promo kodu en az 3 harf/rakam olmali" }, { status: 400 });
+      return NextResponse.json({ error: "Promo kodu en az 3 harf/rakam olmalı" }, { status: 400 });
     }
 
     const admin = createAdminClient();
@@ -198,7 +198,7 @@ export async function POST(request: NextRequest) {
         .limit(1);
 
       if (existingOwn && existingOwn.length > 0) {
-        return NextResponse.json({ error: "Sadece 1 promo kodu olusturabilirsiniz" }, { status: 400 });
+        return NextResponse.json({ error: "Sadece 1 promo kodu oluşturabilirsiniz" }, { status: 400 });
       }
     }
 
@@ -257,7 +257,7 @@ export async function PUT(request: NextRequest) {
     // Clean IBAN
     const cleanIban = iban.replace(/\s/g, '').toUpperCase();
     if (cleanIban.length < 15 || cleanIban.length > 34) {
-      return NextResponse.json({ error: "Gecersiz IBAN" }, { status: 400 });
+      return NextResponse.json({ error: "Geçersiz IBAN" }, { status: 400 });
     }
 
     const admin = createAdminClient();
@@ -300,7 +300,7 @@ export async function DELETE(request: NextRequest) {
       .single();
 
     if (!promo || (promo.created_by !== user.id && user.role !== "admin")) {
-      return NextResponse.json({ error: "Bu promo size ait degil" }, { status: 403 });
+      return NextResponse.json({ error: "Bu promo size ait değil" }, { status: 403 });
     }
 
     await admin.from("promo_signups").delete().eq("promo_link_id", promoId);

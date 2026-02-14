@@ -74,13 +74,13 @@ export default function WelcomeCouponModal({ code, discountPercent, expiresAt, o
             onClick={handleCopy}
             className="px-4 py-2 bg-yellow-500 text-black text-sm font-semibold rounded-lg hover:bg-yellow-400 transition shrink-0"
           >
-            {copied ? "Kopyalandi!" : "Kopyala"}
+            {copied ? "Kopyalandı!" : "Kopyala"}
           </button>
         </div>
 
         {/* Info */}
         <p className="text-xs text-gray-500 text-center">
-          {daysLeft !== null ? `${daysLeft} gun gecerli` : "Sureli kupon"} · Sablon satin aliminda gecerli · 1 kullanim
+          {daysLeft !== null ? `${daysLeft} gün geçerli` : "Süreli kupon"} · Şablon satın alımında geçerli · 1 kullanım
         </p>
 
         {/* Close Button */}

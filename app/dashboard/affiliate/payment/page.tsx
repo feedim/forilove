@@ -69,11 +69,11 @@ export default function AffiliatePaymentPage() {
         toast.error(data.error || "Kaydedilemedi");
         return;
       }
-      toast.success("Odeme bilgileri kaydedildi");
+      toast.success("Ödeme bilgileri kaydedildi");
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch {
-      toast.error("Bir hata olustu");
+      toast.error("Bir hata oluştu");
     } finally {
       setSaving(false);
     }
@@ -93,7 +93,7 @@ export default function AffiliatePaymentPage() {
             <ArrowLeft className="h-5 w-5" />
             <span className="font-medium">Geri</span>
           </button>
-          <h1 className="text-lg font-semibold">Odeme Bilgileri</h1>
+          <h1 className="text-lg font-semibold">Ödeme Bilgileri</h1>
           <div className="w-16" />
         </nav>
       </header>
@@ -108,7 +108,7 @@ export default function AffiliatePaymentPage() {
             <div className="bg-zinc-900 rounded-2xl p-6 mb-6">
               <div className="flex items-center gap-2 mb-2">
                 <Wallet className="h-5 w-5 text-pink-500" />
-                <h2 className="font-semibold text-lg">Odeme Bilgileri</h2>
+                <h2 className="font-semibold text-lg">Ödeme Bilgileri</h2>
               </div>
               <p className="text-xs text-gray-500 mb-6">Kazanclariniz bu hesaba aktarilacaktir.</p>
 
@@ -151,14 +151,14 @@ export default function AffiliatePaymentPage() {
             </div>
 
             <div className="bg-zinc-900 rounded-2xl p-6">
-              <h3 className="font-semibold mb-3">Odeme Bilgilendirmesi</h3>
+              <h3 className="font-semibold mb-3">Ödeme Bilgilendirmesi</h3>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li>• Ilk 24 saat icindeki satislardan elde edilen kazanclar pesin olarak odenir.</li>
-                <li>• Sonrasinda odemeler haftada bir (7 gunde bir) yapilir.</li>
-                <li>• Minimum odeme tutari 100 TRY&apos;dir.</li>
-                <li>• IBAN bilginizin dogru oldugundan emin olun.</li>
-                <li>• Odeme bilgilerinizi istediginiz zaman güncelleyebilirsiniz.</li>
-                <li>• Sorulariniz icin: <a href="mailto:affiliate@forilove.com" className="text-pink-500 hover:text-pink-400">affiliate@forilove.com</a></li>
+                <li>• İlk 24 saat içindeki satışlardan elde edilen kazançlar peşin olarak ödenir.</li>
+                <li>• Sonrasında ödemeler haftada bir (7 günde bir) yapılır.</li>
+                <li>• Minimum ödeme tutarı 100 TRY&apos;dir.</li>
+                <li>• IBAN bilginizin doğru olduğundan emin olun.</li>
+                <li>• Ödeme bilgilerinizi istediğiniz zaman güncelleyebilirsiniz.</li>
+                <li>• Sorularınız için: <a href="mailto:affiliate@forilove.com" className="text-pink-500 hover:text-pink-400">affiliate@forilove.com</a></li>
               </ul>
             </div>
           </>
