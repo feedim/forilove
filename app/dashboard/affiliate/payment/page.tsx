@@ -282,10 +282,10 @@ export default function AffiliatePaymentPage() {
 
             {/* 2FA Gate for Affiliates */}
             {userRole === "affiliate" && !mfaEnabled && (
-              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-6 mb-6">
+              <div className="bg-zinc-900 rounded-2xl p-6 mb-6">
                 <div className="flex items-center gap-2 mb-2">
-                  <Shield className="h-5 w-5 text-yellow-400" />
-                  <h3 className="font-semibold text-yellow-400">2FA Zorunlu</h3>
+                  <Shield className="h-5 w-5 text-pink-500" />
+                  <h3 className="font-semibold">2FA Zorunlu</h3>
                 </div>
                 <p className="text-sm text-zinc-400 mb-4">
                   IBAN bilgisi eklemek ve ödeme talebi oluşturmak için iki faktörlü doğrulamayı etkinleştirmeniz gerekmektedir.

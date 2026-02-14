@@ -173,10 +173,10 @@ export default function AdminPromosPage() {
 
             {/* 2FA Gate for Affiliates */}
             {isAffiliate && !mfaEnabled && (
-              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 mb-5">
+              <div className="bg-white/5 rounded-xl p-4 mb-5">
                 <div className="flex items-center gap-2 mb-2">
-                  <Shield className="h-4 w-4 text-yellow-400" />
-                  <p className="text-sm font-semibold text-yellow-400">2FA Zorunlu</p>
+                  <Shield className="h-4 w-4 text-pink-500" />
+                  <p className="text-sm font-semibold">2FA Zorunlu</p>
                 </div>
                 <p className="text-xs text-zinc-400 mb-3">
                   İndirim linki oluşturmak için iki faktörlü doğrulamayı etkinleştirmeniz gerekmektedir.

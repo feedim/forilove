@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
-// GET: Check MFA status
+// GET: Check MFA status from profiles table
 export async function GET() {
   try {
     const supabase = await createClient();
@@ -10,27 +11,22 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data, error } = await supabase.auth.mfa.listFactors();
-    if (error) throw error;
-
-    const totpFactors = data?.totp || [];
-    const verified = totpFactors.filter((f: any) => f.status === "verified");
+    const admin = createAdminClient();
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("mfa_enabled")
+      .eq("user_id", user.id)
+      .single();
 
     return NextResponse.json({
-      enabled: verified.length > 0,
-      factors: totpFactors.map((f: any) => ({
-        id: f.id,
-        status: f.status,
-        friendly_name: f.friendly_name,
-      })),
+      enabled: profile?.mfa_enabled === true,
     });
-  } catch (error) {
-    if (process.env.NODE_ENV === "development") console.error("MFA status error:", error);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  } catch {
+    return NextResponse.json({ enabled: false });
   }
 }
 
-// POST: Enroll or verify MFA
+// POST: Enable MFA (requires verified email)
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -39,41 +35,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { action, factorId, code } = body;
-
-    if (action === "enroll") {
-      const { data, error } = await supabase.auth.mfa.enroll({
-        factorType: "totp",
-        friendlyName: "Authenticator App",
-      });
-      if (error) throw error;
-
-      return NextResponse.json({
-        factorId: data.id,
-        qr: data.totp.qr_code,
-        secret: data.totp.secret,
-        uri: data.totp.uri,
-      });
+    if (!user.email_confirmed_at) {
+      return NextResponse.json({ error: "Önce e-posta adresinizi doğrulayın" }, { status: 400 });
     }
 
-    if (action === "verify") {
-      if (!factorId || !code) {
-        return NextResponse.json({ error: "Factor ID ve doğrulama kodu gerekli" }, { status: 400 });
-      }
+    const body = await request.json();
+    const { action } = body;
 
-      const challenge = await supabase.auth.mfa.challenge({ factorId });
-      if (challenge.error) throw challenge.error;
+    const admin = createAdminClient();
 
-      const verify = await supabase.auth.mfa.verify({
-        factorId,
-        challengeId: challenge.data.id,
-        code,
-      });
-
-      if (verify.error) {
-        return NextResponse.json({ error: "Doğrulama kodu yanlış" }, { status: 400 });
-      }
+    if (action === "enable") {
+      await admin
+        .from("profiles")
+        .update({ mfa_enabled: true })
+        .eq("user_id", user.id);
 
       return NextResponse.json({ success: true });
     }
@@ -85,8 +60,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE: Unenroll MFA factor
-export async function DELETE(request: NextRequest) {
+// DELETE: Disable MFA
+export async function DELETE() {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -94,19 +69,27 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { factorId } = body;
+    const admin = createAdminClient();
 
-    if (!factorId) {
-      return NextResponse.json({ error: "Factor ID gerekli" }, { status: 400 });
+    // Check if affiliate - affiliates can't disable
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single();
+
+    if (profile?.role === "affiliate") {
+      return NextResponse.json({ error: "Affiliate hesapları 2FA'yı kapatamaz" }, { status: 403 });
     }
 
-    const { error } = await supabase.auth.mfa.unenroll({ factorId });
-    if (error) throw error;
+    await admin
+      .from("profiles")
+      .update({ mfa_enabled: false })
+      .eq("user_id", user.id);
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    if (process.env.NODE_ENV === "development") console.error("MFA unenroll error:", error);
+    if (process.env.NODE_ENV === "development") console.error("MFA disable error:", error);
     return NextResponse.json({ error: "Bir hata oluştu" }, { status: 500 });
   }
 }
