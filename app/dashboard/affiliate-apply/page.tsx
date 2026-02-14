@@ -35,7 +35,7 @@ export default function AffiliateApplyPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [existingApplication, setExistingApplication] = useState<any>(null);
-  const [emailVerified, setEmailVerified] = useState(true);
+  const [emailVerified, setEmailVerified] = useState(false);
   const [form, setForm] = useState({ socialMedia: "", followers: "", description: "" });
   const router = useRouter();
   const supabase = createClient();
@@ -49,11 +49,10 @@ export default function AffiliateApplyPage() {
           return;
         }
         setUser(authUser);
-        setEmailVerified(!!authUser.email_confirmed_at);
 
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("user_id, name, surname, role")
+          .select("user_id, name, surname, role, email_verified")
           .eq("user_id", authUser.id)
           .single();
 
@@ -63,6 +62,7 @@ export default function AffiliateApplyPage() {
         }
 
         setProfile(profileData);
+        setEmailVerified(profileData?.email_verified || false);
 
         // Check existing application
         const res = await fetch("/api/affiliate/apply");
@@ -223,7 +223,10 @@ export default function AffiliateApplyPage() {
             {!emailVerified && (
               <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 mb-4">
                 <p className="text-sm text-red-400 font-medium">E-posta adresiniz doğrulanmamış</p>
-                <p className="text-xs text-zinc-400 mt-1">Affiliate programına başvurmak için e-posta adresinizin doğrulanmış olması gerekmektedir.</p>
+                <p className="text-xs text-zinc-400 mt-1">
+                  Affiliate programına başvurmak için e-posta adresinizin doğrulanmış olması gerekmektedir.{" "}
+                  <a href="/dashboard/security" className="text-pink-500 hover:text-pink-400 font-semibold">Doğrula →</a>
+                </p>
               </div>
             )}
 
