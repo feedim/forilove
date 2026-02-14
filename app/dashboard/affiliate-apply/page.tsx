@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, TrendingUp } from "lucide-react";
+import { ArrowLeft, TrendingUp, CheckCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -11,6 +11,8 @@ export default function AffiliateApplyPage() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState({ socialMedia: "", followers: "", description: "" });
   const router = useRouter();
   const supabase = createClient();
@@ -52,19 +54,34 @@ export default function AffiliateApplyPage() {
     return user?.email?.split("@")[0] || "Kullanıcı";
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.socialMedia.trim() || !form.followers.trim()) {
       toast.error("Sosyal medya hesabı ve takipçi sayısı zorunludur");
       return;
     }
-    const name = getDisplayName();
-    const email = user?.email || "";
-    const subject = encodeURIComponent(`Affiliate Başvurusu - ${name}`);
-    const body = encodeURIComponent(
-      `Ad Soyad: ${name}\nE-posta: ${email}\nSosyal Medya: ${form.socialMedia}\nTakipçi Sayısı: ${form.followers}${form.description ? `\nAçıklama: ${form.description}` : ""}`
-    );
-    window.location.href = `mailto:affiliate@forilove.com?subject=${subject}&body=${body}`;
-    toast.success("Mail uygulamanız açılacak, başvurunuzu gönderin!");
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/affiliate/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          socialMedia: form.socialMedia,
+          followers: form.followers,
+          description: form.description,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Başvuru gönderilemedi");
+        return;
+      }
+      setSubmitted(true);
+      toast.success("Başvurunuz alındı!");
+    } catch {
+      toast.error("Bir hata oluştu");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -103,77 +120,91 @@ export default function AffiliateApplyPage() {
       </header>
 
       <main className="container mx-auto px-3 sm:px-6 py-4 sm:py-8 pb-24 md:pb-16 max-w-lg">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 rounded-full bg-pink-500/10 flex items-center justify-center">
-            <TrendingUp className="h-6 w-6 text-pink-500" />
+        {submitted ? (
+          <div className="bg-zinc-900 rounded-2xl p-8 text-center">
+            <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+            <h2 className="text-xl font-bold mb-2">Başvurunuz Alındı!</h2>
+            <p className="text-sm text-gray-400 mb-6">Başvurunuz inceleniyor. En kısa sürede size dönüş yapılacaktır.</p>
+            <button onClick={() => router.push("/dashboard/profile")} className="btn-primary px-6 py-3 text-sm">
+              Profile Dön
+            </button>
           </div>
-          <div>
-            <h2 className="text-xl font-bold">Affiliate Programına Başvur</h2>
-            <p className="text-sm text-gray-500">Takipçilerinize özel indirim linkleri oluşturun, her satıştan %15-%30 komisyon kazanın.</p>
-          </div>
-        </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-full bg-pink-500/10 flex items-center justify-center">
+                <TrendingUp className="h-6 w-6 text-pink-500" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">Affiliate Programına Başvur</h2>
+                <p className="text-sm text-gray-500">Takipçilerinize özel indirim linkleri oluşturun, her satıştan %15-%30 komisyon kazanın.</p>
+              </div>
+            </div>
 
-        <div className="bg-zinc-900 rounded-2xl p-6 space-y-4">
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">Ad Soyad</label>
-            <input
-              type="text"
-              value={getDisplayName()}
-              readOnly
-              className="input-modern w-full text-sm opacity-60 cursor-not-allowed"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">E-posta</label>
-            <input
-              type="email"
-              value={user?.email || ""}
-              readOnly
-              className="input-modern w-full text-sm opacity-60 cursor-not-allowed"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">Sosyal Medya Hesabı <span className="text-pink-500">*</span></label>
-            <input
-              type="url"
-              value={form.socialMedia}
-              onChange={(e) => setForm({ ...form, socialMedia: e.target.value })}
-              placeholder="https://instagram.com/kullaniciadi"
-              className="input-modern w-full text-sm"
-              maxLength={200}
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">Takipçi Sayısı <span className="text-pink-500">*</span></label>
-            <input
-              type="text"
-              value={form.followers}
-              onChange={(e) => setForm({ ...form, followers: e.target.value })}
-              placeholder="Örn: 10.000"
-              className="input-modern w-full text-sm"
-              maxLength={20}
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">Neden Başvuruyorsunuz? <span className="text-gray-600">(opsiyonel)</span></label>
-            <textarea
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value.slice(0, 300) })}
-              placeholder="Kısaca kendinizden bahsedin..."
-              className="input-modern w-full text-sm resize-none"
-              rows={3}
-              maxLength={300}
-            />
-            <p className="text-[10px] text-gray-600 text-right mt-0.5">{form.description.length}/300</p>
-          </div>
+            <div className="bg-zinc-900 rounded-2xl p-6 space-y-4">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Ad Soyad</label>
+                <input
+                  type="text"
+                  value={getDisplayName()}
+                  readOnly
+                  className="input-modern w-full text-sm opacity-60 cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">E-posta</label>
+                <input
+                  type="email"
+                  value={user?.email || ""}
+                  readOnly
+                  className="input-modern w-full text-sm opacity-60 cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Sosyal Medya Hesabı <span className="text-pink-500">*</span></label>
+                <input
+                  type="url"
+                  value={form.socialMedia}
+                  onChange={(e) => setForm({ ...form, socialMedia: e.target.value })}
+                  placeholder="https://instagram.com/kullaniciadi"
+                  className="input-modern w-full text-sm"
+                  maxLength={200}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Takipçi Sayısı <span className="text-pink-500">*</span></label>
+                <input
+                  type="text"
+                  value={form.followers}
+                  onChange={(e) => setForm({ ...form, followers: e.target.value })}
+                  placeholder="Örn: 10.000"
+                  className="input-modern w-full text-sm"
+                  maxLength={20}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Neden Başvuruyorsunuz? <span className="text-gray-600">(opsiyonel)</span></label>
+                <textarea
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value.slice(0, 300) })}
+                  placeholder="Kısaca kendinizden bahsedin..."
+                  className="input-modern w-full text-sm resize-none"
+                  rows={3}
+                  maxLength={300}
+                />
+                <p className="text-[10px] text-gray-600 text-right mt-0.5">{form.description.length}/300</p>
+              </div>
 
-          <button
-            onClick={handleSubmit}
-            className="btn-primary w-full py-3 text-sm font-semibold"
-          >
-            Gönder
-          </button>
-        </div>
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="btn-primary w-full py-3 text-sm font-semibold"
+              >
+                {submitting ? "Gönderiliyor..." : "Gönder"}
+              </button>
+            </div>
+          </>
+        )}
       </main>
 
       <MobileBottomNav />
