@@ -1062,6 +1062,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
       coinCost: AI_COST,
       currentBalance: coinBalance,
       icon: 'ai',
+      allowCoupon: true,
       onConfirm: async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Oturum bulunamadı');
