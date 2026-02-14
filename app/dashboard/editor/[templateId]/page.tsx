@@ -1061,7 +1061,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
     try {
       // Only send AI-fillable hooks (no images, no area toggles)
       // Send current values (user edits) instead of original template defaults
-      const fillableTypes = new Set(['text', 'textarea', 'color', 'date', 'url']);
+      const fillableTypes = new Set(['text', 'textarea', 'color', 'date', 'url', 'image', 'background-image']);
       const currentValues = valuesRef.current;
       const userHooks = hooks
         .filter(h => !h.key.startsWith('__') && fillableTypes.has(h.type))
@@ -1070,7 +1070,12 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
       const res = await fetch('/api/ai/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: aiPrompt.trim(), hooks: userHooks, htmlContent: template?.html_content || '' }),
+        body: JSON.stringify({
+          prompt: aiPrompt.trim(),
+          hooks: userHooks,
+          htmlContent: template?.html_content || '',
+          templateName: template?.name || '',
+        }),
       });
 
       const data = await res.json();
@@ -1683,28 +1688,14 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                     >
                       İptal
                     </button>
-                    {coinBalance >= AI_COST ? (
-                      <button
-                        onClick={handleAIGenerate}
-                        disabled={!aiPrompt.trim()}
-                        className="flex-1 btn-primary py-3 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        <Sparkles className="h-4 w-4" />
-                        Oluştur
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          setShowAIModal(false);
-                          sessionStorage.setItem('forilove_return_url', `/dashboard/editor/${resolvedParams.templateId}`);
-                          router.push('/dashboard/coins');
-                        }}
-                        className="flex-1 btn-primary py-3 flex items-center justify-center gap-2"
-                      >
-                        <Coins className="h-4 w-4 text-yellow-300" />
-                        Coin Yükle
-                      </button>
-                    )}
+                    <button
+                      onClick={handleAIGenerate}
+                      disabled={!aiPrompt.trim()}
+                      className="flex-1 btn-primary py-3 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      Oluştur
+                    </button>
                   </div>
                 </>
               )}
