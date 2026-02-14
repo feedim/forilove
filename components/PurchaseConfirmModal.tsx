@@ -110,6 +110,31 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
     return () => { document.body.style.overflow = ""; };
   }, []);
 
+  // Auto-apply promo code from localStorage (set by PromoBanner / ?promo=CODE)
+  useEffect(() => {
+    if (!options.allowCoupon) return;
+    const storedPromo = localStorage.getItem("forilove_pending_promo");
+    if (storedPromo && !appliedCoupon) {
+      setCouponCode(storedPromo);
+      setCouponOpen(true);
+      // Auto-validate
+      (async () => {
+        setCouponLoading(true);
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+          const { data } = await supabase.rpc('validate_coupon', {
+            p_code: storedPromo,
+            p_user_id: user.id,
+          });
+          if (data?.valid) {
+            setAppliedCoupon({ code: storedPromo, couponId: data.coupon_id, discountPercent: data.discount_percent });
+          }
+        } catch {} finally { setCouponLoading(false); }
+      })();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleApplyCoupon = async () => {
     const trimmed = couponCode.trim();
     if (!trimmed) return;

@@ -162,6 +162,17 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Capture ?promo=CODE from URL and store in localStorage for PurchaseConfirmModal
+  useEffect(() => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      const promoCode = sp.get('promo');
+      if (promoCode && /^[a-zA-Z0-9]{3,20}$/.test(promoCode)) {
+        localStorage.setItem('forilove_pending_promo', promoCode.toUpperCase());
+      }
+    } catch {}
+  }, []);
+
   // Refresh coin balance when user returns to tab (e.g. after buying coins in new tab)
   useEffect(() => {
     const handleVisibility = async () => {
@@ -1704,7 +1715,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                 className="btn-primary shrink-0 px-4 py-2 text-sm whitespace-nowrap flex items-center gap-1.5"
               >
                 {saving || purchasing
-                  ? (project?.is_published ? "Güncelleniyor..." : "Paylaşılıyor...")
+                  ? (project?.is_published ? "Güncelleniyor..." : !isPurchased && template?.coin_price > 0 ? "Satın Alınıyor..." : "Paylaşılıyor...")
                   : project?.is_published ? "Güncelle"
                   : !isPurchased && template?.coin_price > 0
                     ? <><Coins className="h-4 w-4 text-yellow-400" />{template.coin_price} FL</>
@@ -1860,7 +1871,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                       className="btn-primary shrink-0 px-4 py-2 text-sm ml-2 whitespace-nowrap flex items-center gap-1.5"
                     >
                       {saving || purchasing
-                        ? (project?.is_published ? "Güncelleniyor..." : "Paylaşılıyor...")
+                        ? (project?.is_published ? "Güncelleniyor..." : !isPurchased && template?.coin_price > 0 ? "Satın Alınıyor..." : "Paylaşılıyor...")
                         : project?.is_published ? "Güncelle"
                         : !isPurchased && template?.coin_price > 0
                           ? <><Coins className="h-4 w-4 text-yellow-400" />{template.coin_price} FL</>

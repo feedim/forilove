@@ -24,8 +24,7 @@ export default function PromoBanner() {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        // Mevcut kullanıcı — promo verilerini temizle ve banner gösterme
-        localStorage.removeItem(PROMO_STORAGE_KEY);
+        // Mevcut kullanıcı — banner gösterme ama pending_promo'yu tut (satın almada kullanılacak)
         localStorage.removeItem(PROMO_INFO_KEY);
         setPromoInfo(null);
         return;
