@@ -2049,6 +2049,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                     onClick={() => setShowMusicModal(true)}
                     className="btn-secondary shrink-0 flex items-center gap-2 px-4 py-2.5 text-sm whitespace-nowrap"
                   >
+                    <Music className="h-4 w-4" />
                     Müzik Ekle
                   </button>
                 )}
@@ -2070,6 +2071,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                   onClick={handlePreview}
                   className="btn-secondary shrink-0 flex items-center gap-2 px-4 py-2.5 text-sm whitespace-nowrap"
                 >
+                  <Eye className="h-4 w-4" />
                   Önizleme
                 </button>
               </div>
