@@ -178,7 +178,7 @@ export default function Home() {
       </section>
 
       {/* Template Showcase */}
-      <section className="border-t border-white/10 py-24">
+      <section className="border-t border-white/10 pt-24 pb-8">
         <div className="w-full px-4 sm:px-6 lg:px-10">
           <div className="max-w-6xl mx-auto">
             <div ref={templateReveal.ref} className={`text-center mb-12 ${templateReveal.isVisible ? 'animate-fade-up' : 'opacity-0'}`}>
