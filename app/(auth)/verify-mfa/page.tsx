@@ -62,8 +62,8 @@ export default function VerifyMfaPage() {
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (code.length !== 6) {
-      toast.error("6 haneli kodu girin");
+    if (code.length < 6) {
+      toast.error("Doğrulama kodunu girin");
       return;
     }
 
@@ -118,10 +118,10 @@ export default function VerifyMfaPage() {
             placeholder="000000"
             value={code}
             onChange={(e) => {
-              const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+              const val = e.target.value.replace(/\D/g, "").slice(0, 8);
               setCode(val);
             }}
-            maxLength={6}
+            maxLength={8}
             autoFocus
             className="input-modern w-full text-center text-2xl font-mono tracking-[0.5em]"
           />
@@ -130,7 +130,7 @@ export default function VerifyMfaPage() {
         <button
           type="submit"
           className="btn-primary w-full text-lg h-12"
-          disabled={loading || code.length !== 6}
+          disabled={loading || code.length < 6}
         >
           {loading ? (
             <span className="flex items-center justify-center gap-2">

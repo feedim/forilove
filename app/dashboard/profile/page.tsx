@@ -181,7 +181,7 @@ export default function ProfilePage() {
   };
 
   const handleVerifyEmailCode = async () => {
-    if (emailCode.length !== 6 || !user?.email) return;
+    if (emailCode.length < 6 || !user?.email) return;
     setVerifyingCode(true);
     try {
       const { error } = await supabase.auth.verifyOtp({
@@ -828,14 +828,14 @@ export default function ProfilePage() {
                         type="text"
                         inputMode="numeric"
                         value={emailCode}
-                        onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                        onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
                         placeholder="000000"
-                        maxLength={6}
+                        maxLength={8}
                         className="input-modern flex-1 text-center font-mono tracking-[0.3em]"
                       />
                       <button
                         onClick={handleVerifyEmailCode}
-                        disabled={verifyingCode || emailCode.length !== 6}
+                        disabled={verifyingCode || emailCode.length < 6}
                         className="btn-primary px-4 py-2 text-sm flex items-center gap-1.5"
                       >
                         {verifyingCode ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
