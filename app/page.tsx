@@ -245,7 +245,7 @@ export default function Home() {
                   <div className="w-px flex-1 bg-white/10" />
                 </div>
                 <div className="flex-1 pt-1 pb-12">
-                  <h3 className="text-2xl font-bold mb-3">Şablon Seçin</h3>
+                  <h3 className="text-xl font-bold mb-3">Şablon Seçin</h3>
                   <p className="text-gray-400 text-lg leading-relaxed mb-4">
                     Özel günleriniz için tasarlanmış profesyonel şablonlar arasından beğendiğinizi seçin. Her biri farklı tema ve stilde.
                   </p>
@@ -265,7 +265,7 @@ export default function Home() {
                   <div className="w-px flex-1 bg-white/10" />
                 </div>
                 <div className="flex-1 pt-1 pb-12">
-                  <h3 className="text-2xl font-bold mb-3">Özelleştirin</h3>
+                  <h3 className="text-xl font-bold mb-3">Özelleştirin</h3>
                   <p className="text-gray-400 text-lg leading-relaxed mb-4">
                     Fotoğraflarınızı ekleyin, metinleri düzenleyin, renkleri değiştirin. Basit editörümüz ile her şeyi kolayca özelleştirin.
                   </p>
@@ -286,7 +286,7 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="flex-1 pt-1">
-                  <h3 className="text-2xl font-bold mb-3">Paylaşın</h3>
+                  <h3 className="text-xl font-bold mb-3">Paylaşın</h3>
                   <p className="text-gray-400 text-lg leading-relaxed mb-4">
                     Özel linkinizi alın ve sevdiklerinizle paylaşın. WhatsApp, Instagram veya dilediğiniz platformda anında erişilebilir.
                   </p>

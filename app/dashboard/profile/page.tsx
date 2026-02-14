@@ -31,6 +31,11 @@ export default function ProfilePage() {
   const [promoForm, setPromoForm] = useState({ code: '', discountPercent: 15, maxSignups: 500, expiryHours: 720, isFree: false });
   const [promoCreating, setPromoCreating] = useState(false);
   const [copiedPromo, setCopiedPromo] = useState<string | null>(null);
+  const [sponsorAnalytics, setSponsorAnalytics] = useState<any>(null);
+  const [sponsorUsers, setSponsorUsers] = useState<any[]>([]);
+  const [affiliateIban, setAffiliateIban] = useState("");
+  const [affiliateHolder, setAffiliateHolder] = useState("");
+  const [savingPayment, setSavingPayment] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -77,12 +82,18 @@ export default function ProfilePage() {
             setPromos(promosData.promos || []);
           }
         } catch { /* silent */ }
-      } else if (profileData?.role === 'sponsor') {
+      } else if (profileData?.role === 'affiliate') {
         try {
-          const promosRes = await fetch('/api/sponsor/promos');
-          if (promosRes.ok) {
-            const promosData = await promosRes.json();
-            setPromos(promosData.promos || []);
+          const res = await fetch('/api/affiliate/promos');
+          if (res.ok) {
+            const data = await res.json();
+            setPromos(data.promos || []);
+            setSponsorAnalytics(data.analytics || null);
+            setSponsorUsers(data.recentUsers || []);
+            if (data.paymentInfo) {
+              setAffiliateIban(data.paymentInfo.iban || '');
+              setAffiliateHolder(data.paymentInfo.holderName || '');
+            }
           }
         } catch { /* silent */ }
       }
@@ -214,8 +225,8 @@ export default function ProfilePage() {
     }
     setPromoCreating(true);
     try {
-      const isSponsor = profile?.role === 'sponsor';
-      const apiUrl = isSponsor ? '/api/sponsor/promos' : '/api/admin/coupons';
+      const isSponsor = profile?.role === 'affiliate';
+      const apiUrl = isSponsor ? '/api/affiliate/promos' : '/api/admin/coupons';
       const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -244,8 +255,8 @@ export default function ProfilePage() {
 
   const handleDeletePromo = async (promoId: string) => {
     try {
-      const isSponsor = profile?.role === 'sponsor';
-      const apiUrl = isSponsor ? '/api/sponsor/promos' : '/api/admin/coupons';
+      const isSponsor = profile?.role === 'affiliate';
+      const apiUrl = isSponsor ? '/api/affiliate/promos' : '/api/admin/coupons';
       const res = await fetch(apiUrl, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
@@ -259,6 +270,31 @@ export default function ProfilePage() {
       toast.success('Promo silindi');
     } catch {
       toast.error('Bir hata olustu');
+    }
+  };
+
+  const handleSavePaymentInfo = async () => {
+    if (!affiliateIban.trim() || !affiliateHolder.trim()) {
+      toast.error("IBAN ve ad soyad gerekli");
+      return;
+    }
+    setSavingPayment(true);
+    try {
+      const res = await fetch('/api/affiliate/promos', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ iban: affiliateIban, holderName: affiliateHolder }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Kaydedilemedi');
+        return;
+      }
+      toast.success('Odeme bilgileri kaydedildi');
+    } catch {
+      toast.error('Bir hata olustu');
+    } finally {
+      setSavingPayment(false);
     }
   };
 
@@ -603,14 +639,110 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Promo Linkleri - Admin & Sponsor */}
-        {(profile?.role === 'admin' || profile?.role === 'sponsor') && (
+        {/* Affiliate Analytics */}
+        {profile?.role === 'affiliate' && sponsorAnalytics && (
+          <div className="bg-zinc-900 rounded-2xl p-6 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <BarChart3 className="h-5 w-5 text-pink-500" />
+              <h3 className="font-semibold">Affiliate Program</h3>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white/5 rounded-xl p-4">
+                <p className="text-xs text-gray-400 mb-1">Toplam Kayit</p>
+                <p className="text-2xl font-bold">{sponsorAnalytics.totalSignups}</p>
+              </div>
+              <div className="bg-white/5 rounded-xl p-4">
+                <p className="text-xs text-gray-400 mb-1">Toplam Satis</p>
+                <p className="text-2xl font-bold">{sponsorAnalytics.totalPurchases}</p>
+              </div>
+              <div className="bg-white/5 rounded-xl p-4">
+                <p className="text-xs text-gray-400 mb-1">Komisyon Oranı</p>
+                <p className="text-2xl font-bold text-green-500">%{sponsorAnalytics.commissionRate}</p>
+              </div>
+              <div className="bg-white/5 rounded-xl p-4">
+                <p className="text-xs text-gray-400 mb-1">Toplam Kazanc</p>
+                <p className="text-2xl font-bold text-green-500">{sponsorAnalytics.totalEarnings.toLocaleString('tr-TR')} <span className="text-sm text-gray-400">TRY</span></p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-3">Indiriminiz ne kadar dusukse, komisyonunuz o kadar yuksek olur. (Toplam: %40)</p>
+          </div>
+        )}
+
+        {/* Affiliate Son Kullanıcılar */}
+        {profile?.role === 'affiliate' && sponsorUsers.length > 0 && (
+          <div className="bg-zinc-900 rounded-2xl p-6 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <User className="h-5 w-5 text-pink-500" />
+              <h3 className="font-semibold">Son Kayit Olan Kullanicilar</h3>
+            </div>
+            <div className="space-y-3">
+              {sponsorUsers.map((u: any, i: number) => (
+                <div key={i} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-semibold text-gray-300 shrink-0">
+                      {u.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{u.name}</p>
+                      <p className="text-xs text-gray-500">{new Date(u.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}</p>
+                    </div>
+                  </div>
+                  <span className="text-sm font-bold text-yellow-500 shrink-0">{u.coin_balance} FL</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Affiliate Ödeme Bilgileri */}
+        {profile?.role === 'affiliate' && (
+          <div className="bg-zinc-900 rounded-2xl p-6 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Wallet className="h-5 w-5 text-pink-500" />
+              <h3 className="font-semibold">Odeme Bilgileri</h3>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">IBAN</label>
+                <input
+                  type="text"
+                  value={affiliateIban}
+                  onChange={(e) => setAffiliateIban(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                  placeholder="TR000000000000000000000000"
+                  maxLength={34}
+                  className="input-modern w-full text-sm font-mono tracking-wider"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Hesap Sahibi (Ad Soyad)</label>
+                <input
+                  type="text"
+                  value={affiliateHolder}
+                  onChange={(e) => setAffiliateHolder(e.target.value)}
+                  placeholder="Ad Soyad"
+                  maxLength={100}
+                  className="input-modern w-full text-sm"
+                />
+              </div>
+              <button
+                onClick={handleSavePaymentInfo}
+                disabled={savingPayment || !affiliateIban.trim() || !affiliateHolder.trim()}
+                className="btn-primary w-full py-2.5 text-sm"
+              >
+                {savingPayment ? 'Kaydediliyor...' : 'Odeme Bilgilerini Kaydet'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Promo Linkleri - Admin & Affiliate */}
+        {(profile?.role === 'admin' || profile?.role === 'affiliate') && (
           <div className="bg-zinc-900 rounded-2xl p-6 mb-6">
             <div className="flex items-center gap-2 mb-1">
               <Globe className="h-5 w-5 text-pink-500" />
-              <h3 className="font-semibold">Indirim Linkleri</h3>
+              <h3 className="font-semibold">{profile?.role === 'affiliate' ? 'Indirim Linkim' : 'Indirim Linkleri'}</h3>
             </div>
-            <p className="text-xs text-gray-500 mb-4">Kayit linklerinden gelen kullanicilar otomatik kupon alir.</p>
+            <p className="text-xs text-gray-500 mb-4">{profile?.role === 'affiliate' ? 'Takipcilerinize paylasacaginiz indirim linkiniz. Max %20 indirim.' : 'Kayit linklerinden gelen kullanicilar otomatik kupon alir.'}</p>
 
             {/* Create Promo Form - sponsors limited to 1 */}
             {(profile?.role === 'admin' || promos.length === 0) && <div className="space-y-3 mb-5">
@@ -627,27 +759,29 @@ export default function ProfilePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Indirim %</label>
+                  <label className="block text-xs text-gray-400 mb-1">Indirim % {profile?.role === 'affiliate' ? '(max 20)' : ''}</label>
                   <input
                     type="number"
                     value={promoForm.isFree ? 100 : promoForm.discountPercent}
-                    onChange={(e) => setPromoForm({ ...promoForm, discountPercent: Math.min(100, Math.max(1, parseInt(e.target.value) || 1)) })}
+                    onChange={(e) => setPromoForm({ ...promoForm, discountPercent: Math.min(profile?.role === 'affiliate' ? 20 : 100, Math.max(1, parseInt(e.target.value) || 1)) })}
                     min={1}
-                    max={100}
+                    max={profile?.role === 'affiliate' ? 20 : 100}
                     disabled={promoForm.isFree}
                     className="input-modern w-full text-sm disabled:opacity-50"
                   />
                 </div>
               </div>
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={promoForm.isFree}
-                  onChange={(e) => setPromoForm({ ...promoForm, isFree: e.target.checked })}
-                  className="cursor-pointer"
-                />
-                <span className="text-sm text-gray-400">Bedava (ucretsiz satin alma)</span>
-              </label>
+              {profile?.role === 'admin' && (
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={promoForm.isFree}
+                    onChange={(e) => setPromoForm({ ...promoForm, isFree: e.target.checked })}
+                    className="cursor-pointer"
+                  />
+                  <span className="text-sm text-gray-400">Bedava (ucretsiz satin alma)</span>
+                </label>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Max Kayit</label>
