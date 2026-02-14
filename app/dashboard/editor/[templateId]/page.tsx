@@ -1747,7 +1747,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
   }
 
   return (
-    <div className="h-[100dvh] bg-black text-white flex flex-col overflow-hidden">
+    <div className="h-[100dvh] bg-black text-white flex flex-col overflow-hidden" style={{ overscrollBehavior: 'none' }}>
       {/* Header */}
       <header className="shrink-0 z-50 bg-black/90 backdrop-blur-xl min-h-[73px]">
         <nav className="w-full px-3 sm:px-6 flex items-center justify-between min-h-[73px]">
@@ -1937,7 +1937,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
       {/* Main Editor Layout */}
       <div className="relative flex-1 min-h-0">
         {/* Live Preview - Full Width, account for mobile bottom bar */}
-        <div className="h-[calc(100%-56px)] md:h-full overflow-y-auto bg-white">
+        <div className="h-[calc(100%-56px)] md:h-full overflow-hidden bg-white" style={{ overscrollBehavior: 'contain' }}>
           <iframe
             ref={iframeRef}
             srcDoc={previewHtml}
