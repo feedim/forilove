@@ -22,13 +22,23 @@ export default function PreviewPage() {
   const [musicUrl, setMusicUrl] = useState<string>("");
   const [loaded, setLoaded] = useState(false);
 
-  // Disable overscroll bounce
+  // Ensure scroll works on mobile (especially Android)
   useEffect(() => {
-    document.documentElement.style.overscrollBehavior = 'none';
-    document.body.style.overscrollBehavior = 'none';
+    document.documentElement.style.overscrollBehavior = 'auto';
+    document.body.style.overscrollBehavior = 'auto';
+    document.documentElement.style.overflow = 'auto';
+    document.body.style.overflow = 'auto';
+    document.documentElement.style.height = 'auto';
+    document.body.style.height = 'auto';
+    // Force touch scrolling on iOS/Android
+    (document.body.style as any).webkitOverflowScrolling = 'touch';
     return () => {
       document.documentElement.style.overscrollBehavior = '';
       document.body.style.overscrollBehavior = '';
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+      document.documentElement.style.height = '';
+      document.body.style.height = '';
     };
   }, []);
 
