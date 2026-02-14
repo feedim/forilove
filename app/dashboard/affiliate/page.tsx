@@ -200,87 +200,111 @@ export default function AffiliateDashboardPage() {
             </div>
 
             {/* URL Generator */}
-            {promoCode && (
-              <div className="bg-zinc-900 rounded-2xl p-6 mb-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Link2 className="h-5 w-5 text-pink-500" />
-                  <h3 className="font-semibold">İndirimli Link Oluştur</h3>
-                </div>
-                <p className="text-xs text-zinc-500 mb-3">Herhangi bir Forilove URL'sini yapıştırın, promo kodunuz otomatik eklenir.</p>
-                <div className="flex gap-2 mb-3">
-                  <input
-                    type="text"
-                    value={urlInput}
-                    onChange={(e) => { setUrlInput(e.target.value); setGeneratedUrl(""); setUrlCopied(false); }}
-                    placeholder="https://forilove.com/editor/..."
-                    className="flex-1 bg-transparent border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-pink-500/50 transition"
-                  />
-                  <button
-                    onClick={() => {
-                      const trimmed = urlInput.trim();
-                      if (!trimmed) return;
-                      try {
-                        let url: URL;
-                        if (trimmed.startsWith('http')) {
-                          url = new URL(trimmed);
-                        } else if (trimmed.startsWith('forilove.com') || trimmed.startsWith('www.forilove.com')) {
-                          url = new URL('https://' + trimmed);
-                        } else {
-                          url = new URL('https://forilove.com' + (trimmed.startsWith('/') ? '' : '/') + trimmed);
-                        }
-                        if (!url.hostname.includes('forilove.com') && !url.hostname.includes('localhost')) {
-                          setGeneratedUrl(""); return;
-                        }
-                        url.searchParams.set('promo', promoCode);
-                        setGeneratedUrl(url.toString());
-                        setUrlCopied(false);
-                      } catch {
-                        setGeneratedUrl("");
-                      }
-                    }}
-                    className="px-4 py-2.5 bg-pink-600 hover:bg-pink-500 rounded-lg text-xs font-bold transition shrink-0"
-                  >
-                    Üret
-                  </button>
-                </div>
-                {generatedUrl && (
-                  <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg p-3">
-                    <p className="text-sm text-pink-400 flex-1 break-all font-mono">{generatedUrl}</p>
+            <div className="bg-zinc-900 rounded-2xl p-6 mb-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Link2 className="h-5 w-5 text-pink-500" />
+                <h3 className="font-semibold">İndirimli Link Oluştur</h3>
+              </div>
+              {promoCode ? (
+                <>
+                  <p className="text-xs text-zinc-500 mb-3">Herhangi bir Forilove URL'sini yapıştırın, promo kodunuz otomatik eklenir.</p>
+                  <div className="flex gap-2 mb-3">
+                    <input
+                      type="text"
+                      value={urlInput}
+                      onChange={(e) => { setUrlInput(e.target.value); setGeneratedUrl(""); setUrlCopied(false); }}
+                      placeholder="https://forilove.com/editor/..."
+                      className="flex-1 bg-transparent border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-pink-500/50 transition"
+                    />
                     <button
                       onClick={() => {
-                        navigator.clipboard.writeText(generatedUrl);
-                        setUrlCopied(true);
-                        setTimeout(() => setUrlCopied(false), 2000);
+                        const trimmed = urlInput.trim();
+                        if (!trimmed) return;
+                        try {
+                          let url: URL;
+                          if (trimmed.startsWith('http')) {
+                            url = new URL(trimmed);
+                          } else if (trimmed.startsWith('forilove.com') || trimmed.startsWith('www.forilove.com')) {
+                            url = new URL('https://' + trimmed);
+                          } else {
+                            url = new URL('https://forilove.com' + (trimmed.startsWith('/') ? '' : '/') + trimmed);
+                          }
+                          if (!url.hostname.includes('forilove.com') && !url.hostname.includes('localhost')) {
+                            setGeneratedUrl(""); return;
+                          }
+                          url.searchParams.set('promo', promoCode);
+                          setGeneratedUrl(url.toString());
+                          setUrlCopied(false);
+                        } catch {
+                          setGeneratedUrl("");
+                        }
                       }}
-                      className="shrink-0 p-2 rounded-lg hover:bg-white/10 transition"
+                      className="px-4 py-2.5 bg-pink-600 hover:bg-pink-500 rounded-lg text-xs font-bold transition shrink-0"
                     >
-                      {urlCopied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4 text-zinc-400" />}
+                      Üret
                     </button>
                   </div>
-                )}
-              </div>
-            )}
+                  {generatedUrl && (
+                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg p-3">
+                      <p className="text-sm text-pink-400 flex-1 break-all font-mono">{generatedUrl}</p>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(generatedUrl);
+                          setUrlCopied(true);
+                          setTimeout(() => setUrlCopied(false), 2000);
+                        }}
+                        className="shrink-0 p-2 rounded-lg hover:bg-white/10 transition"
+                      >
+                        {urlCopied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4 text-zinc-400" />}
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="bg-white/5 rounded-xl p-4">
+                  <p className="text-sm text-zinc-400 mb-3">Henüz bir promo kodunuz yok. Link oluşturmak için önce bir promo kodu oluşturun.</p>
+                  <Link href="/dashboard/admin/promos" className="inline-flex items-center gap-2 px-4 py-2 bg-pink-600 hover:bg-pink-500 rounded-lg text-xs font-bold transition">
+                    <Globe className="h-3.5 w-3.5" />
+                    Promo Kodu Oluştur
+                  </Link>
+                </div>
+              )}
+            </div>
 
             {/* Promo Kullanım Notu */}
-            {promoCode && (
-              <div className="bg-pink-500/5 border border-pink-500/20 rounded-2xl p-5 mb-6">
-                <div className="flex items-start gap-3">
-                  <Info className="h-5 w-5 text-pink-400 shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="text-sm font-semibold text-pink-400 mb-2">Promo Kodunuz: {promoCode}</h4>
-                    <p className="text-xs text-zinc-400 leading-relaxed mb-3">
-                      Herhangi bir Forilove URL'sinin sonuna <span className="text-pink-400 font-mono">?promo={promoCode}</span> ekleyerek indirimli link paylaşabilirsiniz. Bu linkten giren kullanıcılar kayıt olana kadar takip edilir.
-                    </p>
-                    <div className="space-y-1.5 text-xs text-zinc-500 font-mono">
-                      <p>forilove.com<span className="text-pink-400">?promo={promoCode}</span></p>
-                      <p>forilove.com/templates<span className="text-pink-400">?promo={promoCode}</span></p>
-                      <p>forilove.com/editor/...<span className="text-pink-400">?promo={promoCode}</span></p>
-                      <p>forilove.com/register<span className="text-pink-400">?promo={promoCode}</span></p>
-                    </div>
-                  </div>
+            <div className="bg-pink-500/5 border border-pink-500/20 rounded-2xl p-5 mb-6">
+              <div className="flex items-start gap-3">
+                <Info className="h-5 w-5 text-pink-400 shrink-0 mt-0.5" />
+                <div>
+                  {promoCode ? (
+                    <>
+                      <h4 className="text-sm font-semibold text-pink-400 mb-2">Promo Kodunuz: {promoCode}</h4>
+                      <p className="text-xs text-zinc-400 leading-relaxed mb-3">
+                        Herhangi bir Forilove URL&apos;sinin sonuna <span className="text-pink-400 font-mono">?promo={promoCode}</span> ekleyerek indirimli link paylaşabilirsiniz. Bu linkten giren kullanıcılar kayıt olana kadar takip edilir.
+                      </p>
+                      <div className="space-y-1.5 text-xs text-zinc-500 font-mono">
+                        <p>forilove.com<span className="text-pink-400">?promo={promoCode}</span></p>
+                        <p>forilove.com/templates<span className="text-pink-400">?promo={promoCode}</span></p>
+                        <p>forilove.com/editor/...<span className="text-pink-400">?promo={promoCode}</span></p>
+                        <p>forilove.com/register<span className="text-pink-400">?promo={promoCode}</span></p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <h4 className="text-sm font-semibold text-pink-400 mb-2">Nasıl Çalışır?</h4>
+                      <p className="text-xs text-zinc-400 leading-relaxed mb-3">
+                        Promo kodunuzu oluşturduktan sonra herhangi bir Forilove URL&apos;sinin sonuna <span className="text-pink-400 font-mono">?promo=KODUNUZ</span> ekleyerek indirimli link paylaşabilirsiniz. Bu linkten giren kullanıcılar kayıt olana kadar takip edilir.
+                      </p>
+                      <div className="space-y-1.5 text-xs text-zinc-500 font-mono">
+                        <p>forilove.com<span className="text-pink-400">?promo=KODUNUZ</span></p>
+                        <p>forilove.com/templates<span className="text-pink-400">?promo=KODUNUZ</span></p>
+                        <p>forilove.com/register<span className="text-pink-400">?promo=KODUNUZ</span></p>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
-            )}
+            </div>
 
             {/* Hızlı Linkler */}
             <div className="space-y-3">

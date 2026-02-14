@@ -1,8 +1,9 @@
 import Link from "next/link";
 import DOMPurify from "isomorphic-dompurify";
-import { Heart, Coins, Bookmark, Eye, Users } from "lucide-react";
-import { useRef } from "react";
+import { Heart, Coins, Bookmark, Eye, Users, Share2 } from "lucide-react";
+import { useRef, useState } from "react";
 import { isDiscountActive } from "@/lib/discount";
+import { ShareSheet } from "@/components/ShareIconButton";
 
 interface TemplateCardProps {
   template: any;
@@ -36,6 +37,7 @@ export default function TemplateCard({
   const isPublished = template.projectStatus === 'published';
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const hasDiscount = isDiscountActive(template);
+  const [shareOpen, setShareOpen] = useState(false);
 
   // Deterministic fake social proof count (80–329 range) for templates with 0 purchases
   const socialProofCount = template.purchase_count > 0
@@ -82,25 +84,45 @@ export default function TemplateCard({
         )}
       </div>
 
-      {/* Top Right: Save Button or View Count */}
+      {/* Top Right: Share + Save Buttons or View Count */}
       {exploreMode ? (
         <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm">
           <Eye className="h-3.5 w-3.5 text-zinc-300" />
           <span className="text-xs font-medium text-zinc-300">{exploreViewCount.toLocaleString()}</span>
         </div>
-      ) : showSaveButton ? (
-        <button
-          onClick={handleSaveClick}
-          className="absolute top-3 right-3 z-10 p-3 rounded-xl bg-black/50 hover:bg-black/70 backdrop-blur-sm transition-all pointer-events-auto flex items-center justify-center active:scale-95"
-          aria-label={isSaved ? 'Kaydedilenlerden çıkar' : 'Kaydet'}
-        >
-          <Bookmark
-            className={`h-6 w-6 transition-all ${isSaved ? 'scale-110' : 'text-white'}`}
-            style={isSaved ? { fill: '#e30076', color: '#e30076' } : {}}
-            aria-hidden="true"
-          />
-        </button>
-      ) : null}
+      ) : (
+        <div className="absolute top-3 right-3 z-10 flex items-center gap-2 pointer-events-auto">
+          {/* Share Button */}
+          <button
+            onClick={(e) => { e.stopPropagation(); setShareOpen(true); }}
+            className="p-3 rounded-xl bg-black/50 hover:bg-black/70 backdrop-blur-sm transition-all flex items-center justify-center active:scale-95"
+            aria-label="Paylaş"
+          >
+            <Share2 className="h-5 w-5 text-white" aria-hidden="true" />
+          </button>
+          {/* Save Button */}
+          {showSaveButton && (
+            <button
+              onClick={handleSaveClick}
+              className="p-3 rounded-xl bg-black/50 hover:bg-black/70 backdrop-blur-sm transition-all flex items-center justify-center active:scale-95"
+              aria-label={isSaved ? 'Kaydedilenlerden çıkar' : 'Kaydet'}
+            >
+              <Bookmark
+                className={`h-6 w-6 transition-all ${isSaved ? 'scale-110' : 'text-white'}`}
+                style={isSaved ? { fill: '#e30076', color: '#e30076' } : {}}
+                aria-hidden="true"
+              />
+            </button>
+          )}
+        </div>
+      )}
+      {/* Share Sheet */}
+      <ShareSheet
+        url={typeof window !== 'undefined' ? `${window.location.origin}/editor/${template.id}` : `/editor/${template.id}`}
+        title={template.name || 'Şablon'}
+        isOpen={shareOpen}
+        onClose={() => setShareOpen(false)}
+      />
 
       {/* Content Overlay */}
       <div className="absolute inset-0 p-6 flex flex-col justify-between bg-gradient-to-t from-black via-black/50 to-transparent">
