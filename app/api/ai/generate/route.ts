@@ -9,82 +9,6 @@ interface HookInput {
   defaultValue: string;
 }
 
-// ─── Curated Unsplash Photos ───────────────────────────────────────────────
-// Static Unsplash URLs keyed by theme keyword. No API key needed.
-const UNSPLASH_PHOTOS: Record<string, string[]> = {
-  couple: [
-    "https://images.unsplash.com/photo-1529634597503-139d3726fed5?w=800&q=80",
-    "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=800&q=80",
-    "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=800&q=80",
-    "https://images.unsplash.com/photo-1507894009593-5d27ef5a7522?w=800&q=80",
-  ],
-  wedding: [
-    "https://images.unsplash.com/photo-1519741497674-611481863552?w=800&q=80",
-    "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800&q=80",
-    "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=800&q=80",
-    "https://images.unsplash.com/photo-1606800052052-a08af7148866?w=800&q=80",
-  ],
-  sunset: [
-    "https://images.unsplash.com/photo-1495616811223-4d98c6e9c869?w=800&q=80",
-    "https://images.unsplash.com/photo-1507400492013-162706c8c05e?w=800&q=80",
-    "https://images.unsplash.com/photo-1472120435266-95c21eebd5de?w=800&q=80",
-  ],
-  flowers: [
-    "https://images.unsplash.com/photo-1490750967868-88aa4f44baee?w=800&q=80",
-    "https://images.unsplash.com/photo-1487530811176-3780de880c2d?w=800&q=80",
-    "https://images.unsplash.com/photo-1455659817273-f96807779a8a?w=800&q=80",
-    "https://images.unsplash.com/photo-1508610048659-a06b669e3321?w=800&q=80",
-  ],
-  nature: [
-    "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&q=80",
-    "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800&q=80",
-    "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800&q=80",
-  ],
-  heart: [
-    "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=800&q=80",
-    "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=800&q=80",
-    "https://images.unsplash.com/photo-1518568814500-bf0f8d125f46?w=800&q=80",
-  ],
-  birthday: [
-    "https://images.unsplash.com/photo-1558636508-e0db3814bd1d?w=800&q=80",
-    "https://images.unsplash.com/photo-1513151233558-d860c5398176?w=800&q=80",
-    "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=800&q=80",
-  ],
-  travel: [
-    "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80",
-    "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800&q=80",
-    "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80",
-  ],
-  night: [
-    "https://images.unsplash.com/photo-1507400492013-162706c8c05e?w=800&q=80",
-    "https://images.unsplash.com/photo-1475274047050-1d0c55b91f6f?w=800&q=80",
-    "https://images.unsplash.com/photo-1532978379173-523e16f371f2?w=800&q=80",
-  ],
-  cafe: [
-    "https://images.unsplash.com/photo-1445116572660-236099ec97a0?w=800&q=80",
-    "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&q=80",
-    "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800&q=80",
-  ],
-};
-
-function getUnsplashUrl(keyword: string): string {
-  const kw = keyword.toLowerCase().trim();
-  // Direct match
-  if (UNSPLASH_PHOTOS[kw]) {
-    const photos = UNSPLASH_PHOTOS[kw];
-    return photos[Math.floor(Math.random() * photos.length)];
-  }
-  // Partial match
-  for (const [cat, photos] of Object.entries(UNSPLASH_PHOTOS)) {
-    if (kw.includes(cat) || cat.includes(kw)) {
-      return photos[Math.floor(Math.random() * photos.length)];
-    }
-  }
-  // Fallback to couple photos
-  const fallback = UNSPLASH_PHOTOS.couple;
-  return fallback[Math.floor(Math.random() * fallback.length)];
-}
-
 // ─── Template Context Extraction ───────────────────────────────────────────
 function extractTemplateContext(html: string, templateName: string): string {
   const parts: string[] = [];
@@ -159,7 +83,7 @@ function checkRateLimit(userId: string): boolean {
 
 // ─── Sanitize Hooks ────────────────────────────────────────────────────────
 function sanitizeHooks(hooks: any[]): HookInput[] {
-  const allowedTypes = new Set(["text", "textarea", "color", "date", "url", "image", "background-image"]);
+  const allowedTypes = new Set(["text", "textarea", "color", "date", "url"]);
   return hooks
     .filter((h) => h && typeof h.key === "string" && h.key.length <= 64 && allowedTypes.has(h.type))
     .map((h) => ({
@@ -168,28 +92,6 @@ function sanitizeHooks(hooks: any[]): HookInput[] {
       label: (typeof h.label === "string" ? h.label : h.key).slice(0, 100),
       defaultValue: (typeof h.defaultValue === "string" ? h.defaultValue : "").slice(0, 500),
     }));
-}
-
-// ─── Post-process: Replace [IMG:keyword] with Unsplash URLs ────────────────
-function resolveImagePlaceholders(values: Record<string, string>, hooks: HookInput[]): Record<string, string> {
-  const imageTypes = new Set(["image", "background-image"]);
-  const result = { ...values };
-
-  for (const hook of hooks) {
-    if (!imageTypes.has(hook.type)) continue;
-    const val = result[hook.key];
-    if (!val) continue;
-
-    const imgMatch = val.match(/\[IMG:([^\]]+)\]/);
-    if (imgMatch) {
-      result[hook.key] = getUnsplashUrl(imgMatch[1]);
-    } else if (!val.startsWith('http') && !val.startsWith('data:')) {
-      // AI returned a keyword directly instead of [IMG:keyword] format
-      result[hook.key] = getUnsplashUrl(val);
-    }
-  }
-
-  return result;
 }
 
 // ─── Main Handler ──────────────────────────────────────────────────────────
@@ -249,16 +151,8 @@ export async function POST(req: NextRequest) {
     const today = new Date();
     const todayStr = `${String(today.getDate()).padStart(2, '0')}.${String(today.getMonth() + 1).padStart(2, '0')}.${today.getFullYear()}`;
 
-    // Separate text and image hooks
-    const imageTypes = new Set(["image", "background-image"]);
-    const textHooks = hooks.filter(h => !imageTypes.has(h.type));
-    const imageHooks = hooks.filter(h => imageTypes.has(h.type));
-
     // Build field descriptions
     const fieldLines = hooks.map((h) => {
-      if (imageTypes.has(h.type)) {
-        return `"${h.key}": GÖRSEL ALANI — [IMG:anahtar_kelime] formatında döndür. Anahtar kelime İngilizce olmalı (couple, sunset, flowers, wedding, nature, heart, birthday, travel, night, cafe). (label: "${h.label}")`;
-      }
       const defaultLen = h.defaultValue ? h.defaultValue.length : 0;
       const lenHint = defaultLen > 0 ? ` (~${defaultLen} karakter)` : '';
       const exampleHint = h.defaultValue && h.defaultValue.length > 0 && h.defaultValue.length <= 80
@@ -294,7 +188,6 @@ YAZIM KURALLARI:
 - date: GG.AA.YYYY formatında. Kullanıcı tarih verdiyse onu kullan, yoksa ${todayStr}.
 - color: HEX renk kodu. Şablon temasına uygun seç.
 - url: Her zaman "" (boş string) döndür.
-- image/background-image: [IMG:anahtar_kelime] formatında döndür. Anahtar kelimeler: couple, sunset, flowers, wedding, nature, heart, birthday, travel, night, cafe.
 
 YASAKLAR:
 - Klişe romantik kalıplar KULLANMA: "kalbimin derinliklerinde", "sonsuz aşk", "yıldızlar kadar", "gökyüzündeki yıldızlar", "kalpten kalbe" gibi ifadeler YASAK.
@@ -368,15 +261,11 @@ Tüm ${hooks.length} alanı doldur: ${requiredKeys}`;
       }
     }
 
-    // Post-process: resolve [IMG:keyword] → Unsplash URLs
-    const finalValues = resolveImagePlaceholders(filteredValues, hooks);
-
     // Log coverage
     const aiFilledCount = Object.keys(aiValues).filter(k => validKeys.has(k)).length;
-    const imageFilledCount = imageHooks.filter(h => finalValues[h.key] && finalValues[h.key].startsWith('http')).length;
-    console.log(`AI generate: ${aiFilledCount}/${hooks.length} fields filled (${imageFilledCount} images resolved)`);
+    console.log(`AI generate: ${aiFilledCount}/${hooks.length} fields filled by AI, ${hooks.length - aiFilledCount} used defaults`);
 
-    return NextResponse.json({ values: finalValues });
+    return NextResponse.json({ values: filteredValues });
   } catch (error: any) {
     console.error("AI generate error:", error);
     const message = error.message || "AI oluşturma hatası";

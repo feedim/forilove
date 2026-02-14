@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, use } from "react";
+import { useEffect, useState, useRef, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Eye, ChevronDown, ChevronUp, PanelLeftClose, PanelLeft, X, Heart, Coins, Upload, Music, Play, Pause, Globe, Lock, LayoutGrid, Undo2, Redo2, Sparkles, Trash2 } from "lucide-react";
@@ -52,9 +52,10 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
   const [editorMusicPlaying, setEditorMusicPlaying] = useState(false);
   const [editorMusicProgress, setEditorMusicProgress] = useState(0);
   const editorYtPlayerRef = useRef<any>(null);
-  const editorYtContainerRef = useRef<HTMLDivElement>(null);
   const editorYtIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const editorYtDestroyedRef = useRef(false);
+  const editorYtReadyRef = useRef(false);
+  const editorMusicAutoPlayRef = useRef(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isChangingImage, setIsChangingImage] = useState(false);
   const [areas, setAreas] = useState<{ key: string; label: string }[]>([]);
@@ -206,20 +207,27 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // YouTube IFrame API player for editor music with real progress tracking
+  // YouTube IFrame API player — lifecycle tied to musicUrl only (NOT play state)
+  // Play/pause is handled directly via handleMusicToggle to preserve mobile gesture context
   useEffect(() => {
     const videoId = musicUrl ? extractVideoId(musicUrl) : null;
-    if (!videoId || !editorMusicPlaying) {
-      // Cleanup when stopped or no URL
+
+    if (!videoId) {
+      // No music — full cleanup
       if (editorYtIntervalRef.current) { clearInterval(editorYtIntervalRef.current); editorYtIntervalRef.current = null; }
       try { editorYtPlayerRef.current?.destroy?.(); } catch {}
       editorYtPlayerRef.current = null;
+      editorYtReadyRef.current = false;
       editorYtDestroyedRef.current = true;
       setEditorMusicProgress(0);
+      setEditorMusicPlaying(false);
       return;
     }
 
     editorYtDestroyedRef.current = false;
+    editorYtReadyRef.current = false;
+    const shouldAutoplay = editorMusicAutoPlayRef.current;
+    editorMusicAutoPlayRef.current = false;
 
     const startTracking = () => {
       if (editorYtIntervalRef.current) clearInterval(editorYtIntervalRef.current);
@@ -233,7 +241,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
       }, 500);
     };
 
-    // Create container for YT player - must be on-screen for mobile browsers
+    // Create hidden container for YT player
     const container = document.createElement('div');
     container.style.cssText = 'position:fixed;bottom:0;left:0;width:1px;height:1px;opacity:0.01;pointer-events:none;z-index:-1;overflow:hidden;';
     document.body.appendChild(container);
@@ -246,7 +254,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
     iframe.setAttribute('webkit-playsinline', '');
     iframe.style.cssText = 'border:none;width:1px;height:1px;';
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&loop=1&playlist=${videoId}&controls=0&disablekb=1&fs=0&modestbranding=1&playsinline=1&rel=0&origin=${encodeURIComponent(origin)}`;
+    iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=${shouldAutoplay ? 1 : 0}&loop=1&playlist=${videoId}&controls=0&disablekb=1&fs=0&modestbranding=1&playsinline=1&rel=0&origin=${encodeURIComponent(origin)}`;
     container.appendChild(iframe);
 
     if (!window.YT && !document.querySelector('script[src*="youtube.com/iframe_api"]')) {
@@ -263,14 +271,23 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
         events: {
           onReady: () => {
             if (editorYtDestroyedRef.current) return;
+            editorYtReadyRef.current = true;
             editorYtPlayerRef.current?.setVolume?.(80);
-            try { editorYtPlayerRef.current?.playVideo?.(); } catch {}
-            startTracking();
+            if (shouldAutoplay) {
+              try { editorYtPlayerRef.current?.playVideo?.(); } catch {}
+            }
           },
           onStateChange: (event: any) => {
             if (editorYtDestroyedRef.current) return;
-            if (event.data === 1) startTracking();
-            else if (event.data === 0) { setEditorMusicProgress(100); }
+            if (event.data === 1) { // PLAYING
+              setEditorMusicPlaying(true);
+              startTracking();
+            } else if (event.data === 2) { // PAUSED
+              setEditorMusicPlaying(false);
+              if (editorYtIntervalRef.current) { clearInterval(editorYtIntervalRef.current); editorYtIntervalRef.current = null; }
+            } else if (event.data === 0) { // ENDED
+              setEditorMusicProgress(100);
+            }
           },
         },
       });
@@ -290,13 +307,25 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
 
     return () => {
       editorYtDestroyedRef.current = true;
+      editorYtReadyRef.current = false;
       if (editorYtIntervalRef.current) { clearInterval(editorYtIntervalRef.current); editorYtIntervalRef.current = null; }
       if (pollTimer) clearInterval(pollTimer);
       try { editorYtPlayerRef.current?.destroy?.(); } catch {}
       editorYtPlayerRef.current = null;
       if (container.parentNode) container.parentNode.removeChild(container);
     };
-  }, [editorMusicPlaying, musicUrl]);
+  }, [musicUrl]);
+
+  // Direct play/pause handler — called from click, preserves mobile user gesture context
+  const handleMusicToggle = useCallback(() => {
+    if (!editorYtPlayerRef.current) return;
+    if (editorMusicPlaying) {
+      try { editorYtPlayerRef.current.pauseVideo(); } catch {}
+    } else {
+      try { editorYtPlayerRef.current.playVideo(); } catch {}
+    }
+    // Actual state update comes from onStateChange callback above
+  }, [editorMusicPlaying]);
 
   const loadData = async () => {
     try {
@@ -1061,7 +1090,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
     try {
       // Only send AI-fillable hooks (no images, no area toggles)
       // Send current values (user edits) instead of original template defaults
-      const fillableTypes = new Set(['text', 'textarea', 'color', 'date', 'url', 'image', 'background-image']);
+      const fillableTypes = new Set(['text', 'textarea', 'color', 'date', 'url']);
       const currentValues = valuesRef.current;
       const userHooks = hooks
         .filter(h => !h.key.startsWith('__') && fillableTypes.has(h.type))
@@ -1379,9 +1408,9 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                       )}
                       {musicUrl ? (
                         <div className="btn-secondary shrink-0 flex items-center rounded-full overflow-hidden" style={{ padding: '0 1rem' }}>
-                          {/* Play/Pause */}
+                          {/* Play/Pause — direct handler for mobile gesture context */}
                           <button
-                            onClick={() => setEditorMusicPlaying(!editorMusicPlaying)}
+                            onClick={handleMusicToggle}
                             className="flex items-center justify-center px-1.5"
                             style={{ height: 38 }}
                             aria-label={editorMusicPlaying ? "Durdur" : "Oynat"}
@@ -1540,9 +1569,9 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                 </button>
                 {musicUrl ? (
                   <div className="btn-secondary shrink-0 flex items-center rounded-full overflow-hidden" style={{ padding: '0 1rem' }}>
-                    {/* Play/Pause */}
+                    {/* Play/Pause — direct handler for mobile gesture context */}
                     <button
-                      onClick={() => setEditorMusicPlaying(!editorMusicPlaying)}
+                      onClick={handleMusicToggle}
                       aria-label={editorMusicPlaying ? "Müziği durdur" : "Müziği oynat"}
                       className="flex items-center justify-center px-1.5"
                       style={{ height: 38 }}
@@ -1565,12 +1594,12 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
                           <span style={{ position: 'absolute', top: -6, right: 2, fontSize: 8, opacity: 0.5, color: 'lab(49.5493% 79.8381 2.31768)', animation: 'floatNote2 3s ease-in-out infinite 0.8s' }}>&#9834;</span>
                         </div>
                       )}
-                      {/* Spinning ring */}
+                      {/* Progress ring — real progress like desktop */}
                       {editorMusicPlaying && (
                         <svg width="40" height="40" viewBox="0 0 40 40" className="absolute inset-0 -rotate-90" style={{ pointerEvents: 'none' }}>
                           <circle cx="20" cy="20" r="18" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="2.5" />
                           <circle cx="20" cy="20" r="18" fill="none" strokeWidth="2.5" strokeLinecap="round"
-                            style={{ stroke: 'lab(49.5493% 79.8381 2.31768)', strokeDasharray: `${2 * Math.PI * 18}`, strokeDashoffset: `${2 * Math.PI * 18 * 0.25}`, animation: 'editorRingSpin 8s linear infinite' }}
+                            style={{ stroke: 'lab(49.5493% 79.8381 2.31768)', strokeDasharray: `${2 * Math.PI * 18}`, strokeDashoffset: `${2 * Math.PI * 18 * (1 - editorMusicProgress / 100)}`, transition: 'stroke-dashoffset 0.4s' }}
                           />
                         </svg>
                       )}
@@ -2094,15 +2123,14 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
         isOpen={showMusicModal}
         onClose={() => setShowMusicModal(false)}
         onSelect={(url) => {
+          editorMusicAutoPlayRef.current = true;
           setMusicUrl(url);
           saveMusicToDb(url);
-          setEditorMusicPlaying(true);
           setShowMusicModal(false);
         }}
         currentUrl={musicUrl}
         onRemove={() => {
           setMusicUrl("");
-          setEditorMusicPlaying(false);
           saveMusicToDb("");
           setShowMusicModal(false);
         }}
