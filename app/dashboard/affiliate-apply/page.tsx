@@ -35,6 +35,7 @@ export default function AffiliateApplyPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [existingApplication, setExistingApplication] = useState<any>(null);
+  const [emailVerified, setEmailVerified] = useState(true);
   const [form, setForm] = useState({ socialMedia: "", followers: "", description: "" });
   const router = useRouter();
   const supabase = createClient();
@@ -48,6 +49,7 @@ export default function AffiliateApplyPage() {
           return;
         }
         setUser(authUser);
+        setEmailVerified(!!authUser.email_confirmed_at);
 
         const { data: profileData } = await supabase
           .from("profiles")
@@ -171,7 +173,7 @@ export default function AffiliateApplyPage() {
                   {existingApplication.status === "approved" && "Başvurunuz Onaylandı!"}
                   {existingApplication.status === "rejected" && "Başvurunuz Reddedildi"}
                 </h2>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-zinc-500">
                   {new Date(existingApplication.created_at).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}
                 </p>
               </div>
@@ -179,7 +181,7 @@ export default function AffiliateApplyPage() {
 
             <div className="space-y-2 mb-5">
               <div className="flex justify-between text-sm py-2 border-b border-white/5">
-                <span className="text-gray-400">Durum</span>
+                <span className="text-zinc-400">Durum</span>
                 <span className={`font-medium px-2.5 py-0.5 rounded-full text-xs ${
                   existingApplication.status === "pending" ? "bg-yellow-500/20 text-yellow-400" :
                   existingApplication.status === "approved" ? "bg-green-500/20 text-green-400" :
@@ -189,16 +191,16 @@ export default function AffiliateApplyPage() {
                 </span>
               </div>
               <div className="flex justify-between text-sm py-2 border-b border-white/5">
-                <span className="text-gray-400">Sosyal Medya</span>
+                <span className="text-zinc-400">Sosyal Medya</span>
                 <span className="text-white truncate max-w-[200px]">{existingApplication.social_media}</span>
               </div>
               <div className="flex justify-between text-sm py-2 border-b border-white/5">
-                <span className="text-gray-400">Takipçi</span>
+                <span className="text-zinc-400">Takipçi</span>
                 <span className="text-white">{Number(existingApplication.followers).toLocaleString("tr-TR")}</span>
               </div>
             </div>
 
-            <p className="text-xs text-gray-500 mb-4">
+            <p className="text-xs text-zinc-500 mb-4">
               Aklınıza takılan sorular ve destek için <a href="mailto:affiliate@forilove.com" className="text-pink-500 hover:text-pink-400">affiliate@forilove.com</a>
             </p>
 
@@ -214,13 +216,20 @@ export default function AffiliateApplyPage() {
               </div>
               <div>
                 <h2 className="text-xl font-bold">Affiliate Programına Başvur</h2>
-                <p className="text-sm text-gray-500">Takipçilerinize özel indirim linkleri oluşturun, her satıştan %15-%30 komisyon kazanın.</p>
+                <p className="text-sm text-zinc-500">Takipçilerinize özel indirim linkleri oluşturun, her satıştan %15-%30 komisyon kazanın.</p>
               </div>
             </div>
 
+            {!emailVerified && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 mb-4">
+                <p className="text-sm text-red-400 font-medium">E-posta adresiniz doğrulanmamış</p>
+                <p className="text-xs text-zinc-400 mt-1">Affiliate programına başvurmak için e-posta adresinizin doğrulanmış olması gerekmektedir.</p>
+              </div>
+            )}
+
             <div className="bg-zinc-900 rounded-2xl p-6 space-y-4">
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Ad Soyad</label>
+                <label className="block text-xs text-zinc-400 mb-1">Ad Soyad</label>
                 <input
                   type="text"
                   value={getDisplayName()}
@@ -230,7 +239,7 @@ export default function AffiliateApplyPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">E-posta</label>
+                <label className="block text-xs text-zinc-400 mb-1">E-posta</label>
                 <input
                   type="email"
                   value={user?.email || ""}
@@ -240,7 +249,7 @@ export default function AffiliateApplyPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Sosyal Medya Linki <span className="text-pink-500">*</span></label>
+                <label className="block text-xs text-zinc-400 mb-1">Sosyal Medya Linki <span className="text-pink-500">*</span></label>
                 <input
                   type="url"
                   value={form.socialMedia}
@@ -249,10 +258,10 @@ export default function AffiliateApplyPage() {
                   className="input-modern w-full text-sm"
                   maxLength={200}
                 />
-                <p className="text-[10px] text-gray-600 mt-0.5">Instagram, TikTok, YouTube, X, Facebook, Twitch, Threads, Kick, Pinterest, LinkedIn</p>
+                <p className="text-[10px] text-zinc-600 mt-0.5">Instagram, TikTok, YouTube, X, Facebook, Twitch, Threads, Kick, Pinterest, LinkedIn</p>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Takipçi Sayısı <span className="text-pink-500">*</span></label>
+                <label className="block text-xs text-zinc-400 mb-1">Takipçi Sayısı <span className="text-pink-500">*</span></label>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -265,10 +274,10 @@ export default function AffiliateApplyPage() {
                   className="input-modern w-full text-sm"
                   maxLength={15}
                 />
-                <p className="text-[10px] text-gray-600 mt-0.5">Takipçi sayısı zorunlu değildir ancak onay ihtimalinizi arttırır.</p>
+                <p className="text-[10px] text-zinc-600 mt-0.5">Takipçi sayısı zorunlu değildir ancak onay ihtimalinizi arttırır.</p>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Neden Başvuruyorsunuz? <span className="text-gray-600">(opsiyonel)</span></label>
+                <label className="block text-xs text-zinc-400 mb-1">Neden Başvuruyorsunuz? <span className="text-zinc-600">(opsiyonel)</span></label>
                 <textarea
                   value={form.description}
                   onChange={(e) => {
@@ -280,18 +289,18 @@ export default function AffiliateApplyPage() {
                   rows={3}
                   maxLength={300}
                 />
-                <p className="text-[10px] text-gray-600 text-right mt-0.5">{form.description.length}/300</p>
+                <p className="text-[10px] text-zinc-600 text-right mt-0.5">{form.description.length}/300</p>
               </div>
 
               <button
                 onClick={handleSubmit}
-                disabled={submitting}
-                className="btn-primary w-full py-3 text-sm font-semibold"
+                disabled={submitting || !emailVerified}
+                className="btn-primary w-full py-3 text-sm font-semibold disabled:opacity-50"
               >
                 {submitting ? "Gönderiliyor..." : "Gönder"}
               </button>
 
-              <p className="text-xs text-gray-500 text-center">
+              <p className="text-xs text-zinc-500 text-center">
                 Aklınıza takılan sorular ve destek için <a href="mailto:affiliate@forilove.com" className="text-pink-500 hover:text-pink-400">affiliate@forilove.com</a>
               </p>
             </div>

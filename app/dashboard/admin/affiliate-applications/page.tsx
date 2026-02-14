@@ -109,17 +109,17 @@ export default function AdminAffiliateApplicationsPage() {
                 <div className="bg-zinc-900 rounded-2xl p-4 text-center">
                   <Clock className="h-5 w-5 text-yellow-500 mx-auto mb-1" />
                   <p className="text-xl font-bold text-yellow-500">{summary.pendingCount}</p>
-                  <p className="text-xs text-gray-400">Bekleyen</p>
+                  <p className="text-xs text-zinc-400">Bekleyen</p>
                 </div>
                 <div className="bg-zinc-900 rounded-2xl p-4 text-center">
                   <CheckCircle className="h-5 w-5 text-green-500 mx-auto mb-1" />
                   <p className="text-xl font-bold text-green-500">{summary.approvedCount}</p>
-                  <p className="text-xs text-gray-400">Onaylanan</p>
+                  <p className="text-xs text-zinc-400">Onaylanan</p>
                 </div>
                 <div className="bg-zinc-900 rounded-2xl p-4 text-center">
                   <XCircle className="h-5 w-5 text-red-500 mx-auto mb-1" />
                   <p className="text-xl font-bold text-red-500">{summary.rejectedCount}</p>
-                  <p className="text-xs text-gray-400">Reddedilen</p>
+                  <p className="text-xs text-zinc-400">Reddedilen</p>
                 </div>
               </div>
             )}
@@ -131,7 +131,7 @@ export default function AdminAffiliateApplicationsPage() {
                   key={f}
                   onClick={() => setFilter(f)}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition shrink-0 ${
-                    filter === f ? "bg-pink-500 text-white" : "bg-zinc-800 text-gray-400 hover:text-white"
+                    filter === f ? "bg-pink-500 text-white" : "bg-zinc-800 text-zinc-400 hover:text-white"
                   }`}
                 >
                   {f === "all" ? "Tümü" : f === "pending" ? "Bekleyen" : f === "approved" ? "Onaylanan" : "Reddedilen"}
@@ -146,8 +146,8 @@ export default function AdminAffiliateApplicationsPage() {
             <div className="space-y-4">
               {filteredApps.length === 0 ? (
                 <div className="bg-zinc-900 rounded-2xl p-8 text-center">
-                  <Users className="h-8 w-8 text-gray-600 mx-auto mb-2" />
-                  <p className="text-gray-500">
+                  <Users className="h-8 w-8 text-zinc-600 mx-auto mb-2" />
+                  <p className="text-zinc-500">
                     {filter === "pending" ? "Bekleyen başvuru yok" : "Bu kategoride başvuru yok"}
                   </p>
                 </div>
@@ -159,8 +159,8 @@ export default function AdminAffiliateApplicationsPage() {
                       <div className="flex items-start justify-between mb-3">
                         <div>
                           <p className="font-semibold">{app.full_name || "İsimsiz"}</p>
-                          <p className="text-xs text-gray-500">{app.email}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">
+                          <p className="text-xs text-zinc-500">{app.email}</p>
+                          <p className="text-xs text-zinc-500 mt-0.5">
                             {new Date(app.created_at).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                           </p>
                         </div>
@@ -176,7 +176,7 @@ export default function AdminAffiliateApplicationsPage() {
                       {/* Details */}
                       <div className="bg-white/5 rounded-xl p-3 mb-3 space-y-1.5">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-400">Sosyal Medya</span>
+                          <span className="text-zinc-400">Sosyal Medya</span>
                           {(() => {
                             try {
                               const url = app.social_media.startsWith("http") ? app.social_media : `https://${app.social_media}`;
@@ -189,20 +189,20 @@ export default function AdminAffiliateApplicationsPage() {
                                   </a>
                                 );
                               }
-                              return <span className="text-gray-300 truncate max-w-[220px]">{app.social_media}</span>;
+                              return <span className="text-zinc-300 truncate max-w-[220px]">{app.social_media}</span>;
                             } catch {
-                              return <span className="text-gray-300 truncate max-w-[220px]">{app.social_media}</span>;
+                              return <span className="text-zinc-300 truncate max-w-[220px]">{app.social_media}</span>;
                             }
                           })()}
                         </div>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-400">Takipçi</span>
+                          <span className="text-zinc-400">Takipçi</span>
                           <span className="text-white font-medium">{Number(app.followers).toLocaleString("tr-TR")}</span>
                         </div>
                         {app.description && (
                           <div className="text-sm pt-1 border-t border-white/5">
-                            <span className="text-gray-400">Açıklama: </span>
-                            <span className="text-gray-300">{app.description}</span>
+                            <span className="text-zinc-400">Açıklama: </span>
+                            <span className="text-zinc-300">{app.description}</span>
                           </div>
                         )}
                       </div>

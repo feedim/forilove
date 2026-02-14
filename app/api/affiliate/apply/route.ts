@@ -70,6 +70,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Check email verification
+    if (!user.email_confirmed_at) {
+      return NextResponse.json({ error: "E-posta adresiniz doğrulanmamış. Lütfen önce e-postanızı doğrulayın." }, { status: 400 });
+    }
+
     const admin = createAdminClient();
     const { data: profile } = await admin
       .from("profiles")

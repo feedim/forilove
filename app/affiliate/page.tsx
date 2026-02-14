@@ -76,7 +76,7 @@ export default function AffiliatePage() {
             Forilove
             <span className="block text-pink-500 mt-3">Affiliate Program</span>
           </h1>
-          <p className="text-lg text-gray-400 mb-10 max-w-2xl mx-auto">
+          <p className="text-lg text-zinc-400 mb-10 max-w-2xl mx-auto">
             Takipçilerinize özel indirim linkleri oluşturun, her satıştan %15 ile %30 arası komisyon kazanın.
           </p>
           <Link href="/contact" className="btn-primary px-8 py-3 text-lg">
@@ -96,7 +96,7 @@ export default function AffiliatePage() {
                   <step.icon className="h-7 w-7 text-pink-500" />
                 </div>
                 <h3 className="text-lg font-bold mb-2">{step.title}</h3>
-                <p className="text-sm text-gray-400">{step.description}</p>
+                <p className="text-sm text-zinc-400">{step.description}</p>
               </div>
             ))}
           </div>
@@ -107,7 +107,7 @@ export default function AffiliatePage() {
       <section className="border-t border-white/10 py-20">
         <div className="container mx-auto px-4 sm:px-6 max-w-2xl">
           <h2 className="text-3xl font-bold text-center mb-4">Komisyon Tablosu</h2>
-          <p className="text-gray-400 text-center mb-10">İndiriminiz ne kadar düşükse, komisyonunuz o kadar yüksek! (Min. %5 — Maks. %20)</p>
+          <p className="text-zinc-400 text-center mb-10">İndiriminiz ne kadar düşükse, komisyonunuz o kadar yüksek! (Min. %5 — Maks. %20)</p>
           <div className="bg-zinc-900 rounded-2xl overflow-hidden border border-white/10">
             <div className="grid grid-cols-3 gap-0 text-center text-sm font-semibold border-b border-white/10 bg-white/5">
               <div className="p-4">İndirim</div>
@@ -138,22 +138,22 @@ export default function AffiliatePage() {
             <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6">
               <Clock className="h-8 w-8 text-pink-500 mb-3" />
               <h3 className="font-bold mb-2">İlk 24 Saat</h3>
-              <p className="text-sm text-gray-400">İlk 24 saat içindeki satışlardan elde edilen kazançlar peşin olarak ödenir.</p>
+              <p className="text-sm text-zinc-400">İlk 24 saat içindeki satışlardan elde edilen kazançlar peşin olarak ödenir.</p>
             </div>
             <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6">
               <Wallet className="h-8 w-8 text-pink-500 mb-3" />
               <h3 className="font-bold mb-2">Haftalık Ödemeler</h3>
-              <p className="text-sm text-gray-400">Sonrasında kazançlarınız haftada bir (7 günde bir) IBAN hesabınıza aktarılır.</p>
+              <p className="text-sm text-zinc-400">Sonrasında kazançlarınız haftada bir (7 günde bir) IBAN hesabınıza aktarılır.</p>
             </div>
             <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6">
               <Shield className="h-8 w-8 text-pink-500 mb-3" />
               <h3 className="font-bold mb-2">Minimum Ödeme</h3>
-              <p className="text-sm text-gray-400">Minimum ödeme tutarı 100 TRY&apos;dir. Bu tutarın altındaki bakiyeler bir sonraki ödeme dönemine aktarılır.</p>
+              <p className="text-sm text-zinc-400">Minimum ödeme tutarı 100 TRY&apos;dir. Bu tutarın altındaki bakiyeler bir sonraki ödeme dönemine aktarılır.</p>
             </div>
             <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6">
               <TrendingUp className="h-8 w-8 text-pink-500 mb-3" />
               <h3 className="font-bold mb-2">Gerçek Zamanlı Takip</h3>
-              <p className="text-sm text-gray-400">Profilinizdeki panelden tüm kayıtları, satışları ve kazancınızı anlık olarak izleyin.</p>
+              <p className="text-sm text-zinc-400">Profilinizdeki panelden tüm kayıtları, satışları ve kazancınızı anlık olarak izleyin.</p>
             </div>
           </div>
         </div>
@@ -163,7 +163,7 @@ export default function AffiliatePage() {
       <section className="border-t border-white/10 py-20">
         <div className="container mx-auto px-4 sm:px-6 max-w-3xl text-center">
           <h2 className="text-3xl font-bold mb-4">Affiliate Paneliniz</h2>
-          <p className="text-gray-400 mb-10">Kazançlarınızı, kayıtları ve satışları gerçek zamanlı takip edin.</p>
+          <p className="text-zinc-400 mb-10">Kazançlarınızı, kayıtları ve satışları gerçek zamanlı takip edin.</p>
           <div className="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
             <div className="rounded-2xl overflow-hidden border border-white/10">
               <img src="/affiliate/panel-1.jpg" alt="Affiliate Panel - Kazanç Takibi" className="w-full" />
@@ -195,7 +195,7 @@ export default function AffiliatePage() {
             {faqs.map((faq, i) => (
               <div key={i} className="bg-zinc-900 border border-white/10 rounded-2xl p-6">
                 <h3 className="font-bold mb-2">{faq.q}</h3>
-                <p className="text-sm text-gray-400">{faq.a}</p>
+                <p className="text-sm text-zinc-400">{faq.a}</p>
               </div>
             ))}
           </div>
@@ -206,15 +206,15 @@ export default function AffiliatePage() {
       <section className="border-t border-white/10 py-20">
         <div className="container mx-auto px-4 sm:px-6 max-w-2xl text-center">
           <h2 className="text-3xl font-bold mb-4">Hazır mısınız?</h2>
-          <p className="text-gray-400 mb-4">Affiliate programına katılın ve içeriklerinizden gelir elde etmeye başlayın.</p>
-          <p className="text-sm text-gray-500 mb-6">Başvuru için giriş yapmanız ve profilinizden başvurmanız gerekmektedir.</p>
+          <p className="text-zinc-400 mb-4">Affiliate programına katılın ve içeriklerinizden gelir elde etmeye başlayın.</p>
+          <p className="text-sm text-zinc-500 mb-6">Başvuru için giriş yapmanız ve profilinizden başvurmanız gerekmektedir.</p>
           <Link href="/register" className="btn-primary px-8 py-3 text-lg">
             Şimdi Başvur
           </Link>
-          <p className="text-xs text-gray-500 mt-6">
+          <p className="text-xs text-zinc-500 mt-6">
             Aklınıza takılan sorular ve destek için: <a href="mailto:affiliate@forilove.com" className="text-pink-500 hover:text-pink-400">affiliate@forilove.com</a>
           </p>
-          <p className="text-xs text-gray-300 mt-1">Beklenmedik durumlarda e-posta adresiniz üzerinden iletişime geçilecektir.</p>
+          <p className="text-xs text-zinc-300 mt-1">Beklenmedik durumlarda e-posta adresiniz üzerinden iletişime geçilecektir.</p>
         </div>
       </section>
 
