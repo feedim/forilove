@@ -29,9 +29,16 @@ export default function TemplatesPage() {
         .eq("is_active", true)
         .eq("is_public", true)
         .order("purchase_count", { ascending: false, nullsFirst: false })
-        .limit(TEMPLATE_LIMIT);
+        .limit(12);
 
-      setTemplates(templatesData || []);
+      // Client-side: ucretsiz once, sonra populerlik
+      const sorted = (templatesData || []).sort((a: any, b: any) => {
+        const aFree = a.coin_price === 0 ? 0 : 1;
+        const bFree = b.coin_price === 0 ? 0 : 1;
+        if (aFree !== bFree) return aFree - bFree;
+        return (b.purchase_count || 0) - (a.purchase_count || 0);
+      }).slice(0, TEMPLATE_LIMIT);
+      setTemplates(sorted);
     } catch (error) {
       console.error("Error loading templates:", error);
     } finally {
@@ -40,8 +47,7 @@ export default function TemplatesPage() {
   };
 
   const handleTemplateClick = (templateId: string) => {
-    // Redirect to register if not authenticated
-    window.location.href = '/register';
+    window.location.href = `/editor/${templateId}`;
   };
 
   return (

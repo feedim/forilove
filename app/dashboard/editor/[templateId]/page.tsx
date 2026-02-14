@@ -610,6 +610,22 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
               }
               setProject(newProject);
               setValues(defaultValues);
+
+              // Load guest edits from localStorage (from guest editor)
+              try {
+                const guestEdits = localStorage.getItem('forilove_guest_edits');
+                if (guestEdits) {
+                  const parsed = JSON.parse(guestEdits);
+                  if (parsed.templateId === resolvedParams.templateId && parsed.values) {
+                    setValues(parsed.values);
+                    if (newProject?.id) {
+                      await supabase.from("projects").update({ hook_values: parsed.values })
+                        .eq("id", newProject.id);
+                    }
+                  }
+                  localStorage.removeItem('forilove_guest_edits');
+                }
+              } catch {}
             }
           }
         }
@@ -908,8 +924,8 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
               if (editable) {
                 var eKey = editable.getAttribute('data-editable');
                 if (LOCKED_SET.has(eKey)) {
-                  editable.style.outline = '2px solid rgba(236,72,153,0.5)';
-                  editable.style.boxShadow = '0 0 0 4px rgba(236,72,153,0.1)';
+                  editable.style.outline = '2px solid rgba(255,255,255,0.6)';
+                  editable.style.boxShadow = '0 0 0 4px rgba(0,0,0,0.15)';
                 } else {
                   editable.style.outline = '2px solid #ec4899';
                   editable.style.boxShadow = '0 0 0 4px rgba(236, 72, 153, 0.1)';
@@ -931,8 +947,8 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
               el.style.opacity = '0.45';
               el.style.padding = el.style.padding || '11px';
               var overlay = document.createElement('div');
-              overlay.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(236,72,153,0.08);pointer-events:none;z-index:2;border-radius:inherit;';
-              overlay.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+              overlay.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.15);pointer-events:none;z-index:2;border-radius:inherit;';
+              overlay.innerHTML = '<span style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>';
               el.appendChild(overlay);
             }
 
@@ -1308,7 +1324,7 @@ export default function NewEditorPage({ params }: { params: Promise<{ templateId
       coinCost: TEMPLATE_UNLOCK_COST,
       currentBalance: coinBalance,
       icon: 'template',
-      allowCoupon: false,
+      allowCoupon: true,
       onConfirm: async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Oturum bulunamadı');

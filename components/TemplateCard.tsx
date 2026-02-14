@@ -143,7 +143,7 @@ export default function TemplateCard({
               </Link>
               {template.id && (
                 <Link
-                  href={`/dashboard/editor/${template.id}`}
+                  href={`/editor/${template.id}`}
                   className="btn-secondary w-full py-2.5 text-sm text-center pointer-events-auto"
                 >
                   Şablonu Kullan

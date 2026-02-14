@@ -4,6 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import { PurchaseConfirmProvider } from "@/components/PurchaseConfirmModal";
+import { AuthModalProvider } from "@/components/AuthModal";
 import PromoBanner from "@/components/PromoBanner";
 import { Suspense } from "react";
 
@@ -111,7 +112,9 @@ export default function RootLayout({
         </Script>
         <Suspense><PromoBanner /></Suspense>
         <PurchaseConfirmProvider>
+        <AuthModalProvider>
         {children}
+        </AuthModalProvider>
         <Toaster
           position="bottom-center"
           reverseOrder={false}

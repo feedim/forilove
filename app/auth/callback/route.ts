@@ -76,10 +76,14 @@ export async function GET(request: NextRequest) {
     return mfaResponse;
   }
 
-  // Normal flow - redirect to dashboard
+  // Normal flow — returnTo varsa editore don
+  const returnTo = requestUrl.searchParams.get("returnTo");
+  const safeReturnTo = returnTo?.startsWith('/editor/') ? returnTo : null;
+  const redirectTarget = safeReturnTo ? `${safeReturnTo}?auth_return=true` : "/dashboard";
+
   const normalResponse = new NextResponse(
     `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>
-      <script>window.location.replace("/dashboard")</script>
+      <script>window.location.replace(${JSON.stringify(redirectTarget)})</script>
     </body></html>`,
     { headers: { "Content-Type": "text/html" } }
   );

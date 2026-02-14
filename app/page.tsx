@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Heart, Shield, CreditCard, Headphones, RefreshCcw, Smartphone, Star, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import PublicHeader from "@/components/PublicHeader";
@@ -68,6 +69,7 @@ export default function Home() {
   const [templates, setTemplates] = useState<any[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(true);
   const supabase = createClient();
+  const router = useRouter();
 
   // Scroll reveal refs
   const statsReveal = useScrollReveal();
@@ -90,8 +92,16 @@ export default function Home() {
           .eq("is_active", true)
           .eq("is_public", true)
           .order("purchase_count", { ascending: false, nullsFirst: false })
-          .limit(6);
-        setTemplates(data || []);
+          .limit(12);
+
+        // Client-side: ucretsiz once, sonra populerlik
+        const sorted = (data || []).sort((a: any, b: any) => {
+          const aFree = a.coin_price === 0 ? 0 : 1;
+          const bFree = b.coin_price === 0 ? 0 : 1;
+          if (aFree !== bFree) return aFree - bFree;
+          return (b.purchase_count || 0) - (a.purchase_count || 0);
+        }).slice(0, 6);
+        setTemplates(sorted);
       } catch (error) {
         console.error("Error loading templates:", error);
       } finally {
@@ -192,7 +202,7 @@ export default function Home() {
                       isSaved={false}
                       showSaveButton={false}
                       showPrice={true}
-                      onClick={() => { window.location.href = '/register'; }}
+                      onClick={() => { router.push(`/editor/${template.id}`); }}
                     />
                   </div>
                 ))}
