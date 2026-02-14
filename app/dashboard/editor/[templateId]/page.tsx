@@ -1806,8 +1806,8 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                     </button>
                     <div
                       id="editor-toolbar-scroll"
-                      className="flex-1 min-w-0 flex items-center justify-end gap-2 overflow-x-auto scrollbar-hide ml-[5px] bg-white/5 overflow-hidden"
-                      style={{ borderRadius: '3rem' }}
+                      className="flex-1 min-w-0 flex items-center justify-end gap-2 overflow-x-auto scrollbar-hide ml-[5px] bg-white/5"
+                      style={{ borderRadius: '3rem', padding: '4px' }}
                     >
                       <div className="btn-secondary shrink-0 flex items-center rounded-full overflow-hidden" style={{ padding: '0 1rem' }}>
                         <button
