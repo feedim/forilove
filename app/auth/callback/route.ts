@@ -76,6 +76,30 @@ export async function GET(request: NextRequest) {
     return mfaResponse;
   }
 
+  // Popup mode — send postMessage to opener and close
+  const isPopup = requestUrl.searchParams.get("popup") === "true";
+
+  if (isPopup) {
+    const popupResponse = new NextResponse(
+      `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>
+        <script>
+          if (window.opener) {
+            window.opener.postMessage({ type: 'AUTH_CALLBACK_COMPLETE' }, window.location.origin);
+          }
+          window.close();
+        </script>
+        <p style="font-family:sans-serif;text-align:center;margin-top:40px;color:#666">Giriş başarılı! Bu pencere kapanacak...</p>
+      </body></html>`,
+      { headers: { "Content-Type": "text/html" } }
+    );
+
+    latestCookies.forEach(({ name, value, options }) => {
+      popupResponse.cookies.set(name, value, options);
+    });
+
+    return popupResponse;
+  }
+
   // Normal flow — returnTo varsa editore don
   const returnTo = requestUrl.searchParams.get("returnTo");
   const safeReturnTo = returnTo?.startsWith('/editor/') ? returnTo : null;

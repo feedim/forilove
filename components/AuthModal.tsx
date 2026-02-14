@@ -170,21 +170,59 @@ function AuthModalSheet({ onClose, onSuccess, returnPath }: SheetProps) {
   };
 
   const handleOAuth = async () => {
-    const redirectPath = returnPath || window.location.pathname;
-    const returnTo = redirectPath.startsWith("/editor/") ? redirectPath : undefined;
+    const redirectUrl = `${window.location.origin}/auth/callback?popup=true`;
 
-    const redirectUrl = returnTo
-      ? `${window.location.origin}/auth/callback?returnTo=${encodeURIComponent(returnTo)}`
-      : `${window.location.origin}/auth/callback`;
-
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+    const { data: oauthData, error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: redirectUrl },
+      options: { redirectTo: redirectUrl, skipBrowserRedirect: true },
     });
 
-    if (oauthError) {
+    if (oauthError || !oauthData?.url) {
       setError("Google ile giriş yapılamadı.");
+      return;
     }
+
+    // Open OAuth in popup — main page stays intact
+    const w = 500, h = 600;
+    const left = window.screenX + (window.innerWidth - w) / 2;
+    const top = window.screenY + (window.innerHeight - h) / 2;
+    const popup = window.open(oauthData.url, "oauth_popup", `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`);
+
+    if (!popup) {
+      setError("Popup engellenmiş olabilir. Lütfen popup izni verin.");
+      return;
+    }
+
+    setLoading(true);
+
+    // Listen for postMessage from callback page
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type === "AUTH_CALLBACK_COMPLETE") {
+        window.removeEventListener("message", handleMessage);
+        clearInterval(pollTimer);
+        setLoading(false);
+        // Session cookies are set — get user
+        supabase.auth.getUser().then(({ data: { user } }) => {
+          if (user) onSuccess(user);
+          else setError("Giriş doğrulanamadı. Lütfen tekrar deneyin.");
+        });
+      }
+    };
+    window.addEventListener("message", handleMessage);
+
+    // Fallback: poll for popup close (user closed without completing)
+    const pollTimer = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(pollTimer);
+        window.removeEventListener("message", handleMessage);
+        setLoading(false);
+        // Check if auth completed before popup closed
+        supabase.auth.getUser().then(({ data: { user } }) => {
+          if (user) onSuccess(user);
+        });
+      }
+    }, 500);
   };
 
   return createPortal(
