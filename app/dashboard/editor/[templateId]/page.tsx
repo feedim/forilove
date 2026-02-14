@@ -117,6 +117,12 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
   const updateToolbarArrows = () => {
     const el = document.getElementById('editor-toolbar-scroll');
     if (!el) return;
+    const hasOverflow = el.scrollWidth > el.clientWidth + 5;
+    if (!hasOverflow) {
+      setShowLeftArrow(false);
+      setShowRightArrow(false);
+      return;
+    }
     setShowLeftArrow(el.scrollLeft > 5);
     setShowRightArrow(el.scrollLeft < el.scrollWidth - el.clientWidth - 5);
   };
@@ -125,11 +131,15 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
     const el = document.getElementById('editor-toolbar-scroll');
     if (!el) return;
     el.addEventListener('scroll', updateToolbarArrows);
-    // Check initial state
-    const timer = setTimeout(updateToolbarArrows, 100);
+    // ResizeObserver for reliable detection when toolbar content changes size
+    const ro = new ResizeObserver(updateToolbarArrows);
+    ro.observe(el);
+    const inner = el.firstElementChild;
+    if (inner) ro.observe(inner as Element);
+    updateToolbarArrows();
     return () => {
       el.removeEventListener('scroll', updateToolbarArrows);
-      clearTimeout(timer);
+      ro.disconnect();
     };
   }); // runs on every render to catch when toolbar appears
 
@@ -2074,7 +2084,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
             onClick={() => { if (!aiLoading) setShowAIModal(false); }}
           >
             <div
-              className="bg-zinc-900/80 backdrop-blur-xl w-full sm:w-[500px] rounded-t-3xl sm:rounded-4xl p-5 space-y-4 animate-slide-up sm:animate-scale-in"
+              className="bg-neutral-950/80 backdrop-blur-xl w-full sm:w-[500px] rounded-t-3xl sm:rounded-4xl p-5 space-y-4 animate-slide-up sm:animate-scale-in"
               onClick={(e) => e.stopPropagation()}
             >
               {aiLoading ? (
@@ -2152,7 +2162,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
             onClick={() => setShowSectionsModal(false)}
           >
             <div
-              className="bg-zinc-900/80 backdrop-blur-xl w-full sm:w-[420px] rounded-t-3xl sm:rounded-4xl p-5 space-y-4 animate-slide-up sm:animate-scale-in max-h-[85vh] flex flex-col"
+              className="bg-neutral-950/80 backdrop-blur-xl w-full sm:w-[420px] rounded-t-3xl sm:rounded-4xl p-5 space-y-4 animate-slide-up sm:animate-scale-in max-h-[85vh] flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
@@ -2245,7 +2255,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
             >
               {/* Modal Content */}
               <div
-                className="bg-zinc-900/80 backdrop-blur-xl w-full sm:w-[500px] rounded-t-3xl sm:rounded-4xl p-5 space-y-4 animate-slide-up sm:animate-scale-in max-h-[90vh] flex flex-col"
+                className="bg-neutral-950/80 backdrop-blur-xl w-full sm:w-[500px] rounded-t-3xl sm:rounded-4xl p-5 space-y-4 animate-slide-up sm:animate-scale-in max-h-[90vh] flex flex-col"
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Modal Header */}
@@ -2585,7 +2595,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
       {/* Details Modal */}
       {showDetailsModal && project && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-zinc-900/80 backdrop-blur-xl w-full sm:w-[500px] rounded-t-3xl sm:rounded-4xl p-5 space-y-4 animate-slide-up sm:animate-scale-in">
+          <div className="bg-neutral-950/80 backdrop-blur-xl w-full sm:w-[500px] rounded-t-3xl sm:rounded-4xl p-5 space-y-4 animate-slide-up sm:animate-scale-in">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <div>
                 <h3 className="text-lg font-bold text-white">Sayfa Bilgileri</h3>
@@ -2673,7 +2683,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
       {/* Visibility Modal */}
       {showVisibilityModal && project && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-zinc-900/80 backdrop-blur-xl w-full sm:w-[500px] rounded-t-3xl sm:rounded-4xl p-5 space-y-4 animate-slide-up sm:animate-scale-in">
+          <div className="bg-neutral-950/80 backdrop-blur-xl w-full sm:w-[500px] rounded-t-3xl sm:rounded-4xl p-5 space-y-4 animate-slide-up sm:animate-scale-in">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <div>
                 <h3 className="text-lg font-bold text-white">Sayfa Görünürlüğü</h3>

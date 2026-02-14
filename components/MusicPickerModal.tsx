@@ -166,7 +166,7 @@ export default function MusicPickerModal({
       onClick={onClose}
     >
       <div
-        className="bg-zinc-900/80 backdrop-blur-xl w-full sm:w-[480px] rounded-t-3xl sm:rounded-3xl animate-slide-up sm:animate-scale-in flex flex-col"
+        className="bg-neutral-950/80 backdrop-blur-xl w-full sm:w-[480px] rounded-t-3xl sm:rounded-3xl animate-slide-up sm:animate-scale-in flex flex-col"
         style={{ height: "89vh", maxHeight: "89vh" }}
         onClick={(e) => e.stopPropagation()}
       >
