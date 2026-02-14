@@ -612,8 +612,8 @@ export default function ProfilePage() {
             </div>
             <p className="text-xs text-gray-500 mb-4">Kayit linklerinden gelen kullanicilar otomatik kupon alir.</p>
 
-            {/* Create Promo Form */}
-            <div className="space-y-3 mb-5">
+            {/* Create Promo Form - sponsors limited to 1 */}
+            {(profile?.role === 'admin' || promos.length === 0) && <div className="space-y-3 mb-5">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Promo Kodu</label>
@@ -678,7 +678,7 @@ export default function ProfilePage() {
                 <Plus className="h-4 w-4" />
                 {promoCreating ? "Olusturuluyor..." : "Promo Linki Olustur"}
               </button>
-            </div>
+            </div>}
 
             {/* Promo Links List */}
             {promos.length > 0 && (
@@ -697,6 +697,7 @@ export default function ProfilePage() {
                         <p className="text-xs text-gray-500 mt-1">
                           {promo.current_signups}/{promo.max_signups || '∞'} kayit
                           {promo.expires_at && ` · ${new Date(promo.expires_at) > new Date() ? `${Math.ceil((new Date(promo.expires_at).getTime() - Date.now()) / (1000 * 60 * 60))}s kaldi` : 'suresi dolmus'}`}
+                          {profile?.role === 'admin' && promo.creator_email && ` · ${promo.creator_email}`}
                         </p>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">

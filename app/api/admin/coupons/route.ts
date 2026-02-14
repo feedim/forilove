@@ -57,9 +57,39 @@ export async function GET(request: NextRequest) {
         }
       }
 
+      // Get creator emails
+      const creatorIds = [...new Set((data || []).map((p: any) => p.created_by).filter(Boolean))];
+      let creatorEmails: Record<string, string> = {};
+
+      if (creatorIds.length > 0) {
+        const { data: profiles } = await admin
+          .from("profiles")
+          .select("user_id, full_name")
+          .in("user_id", creatorIds);
+
+        // Also get emails from auth.users via admin API
+        for (const uid of creatorIds) {
+          try {
+            const { data: authUser } = await admin.auth.admin.getUserById(uid);
+            if (authUser?.user?.email) {
+              creatorEmails[uid] = authUser.user.email;
+            }
+          } catch { /* silent */ }
+        }
+
+        if (profiles) {
+          for (const p of profiles) {
+            if (!creatorEmails[p.user_id] && p.full_name) {
+              creatorEmails[p.user_id] = p.full_name;
+            }
+          }
+        }
+      }
+
       const promos = (data || []).map((p: any) => ({
         ...p,
         signups: signupsByPromo[p.id] || [],
+        creator_email: creatorEmails[p.created_by] || null,
       }));
 
       return NextResponse.json({ promos });

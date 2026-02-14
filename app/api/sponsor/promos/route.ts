@@ -92,7 +92,18 @@ export async function POST(request: NextRequest) {
 
     const admin = createAdminClient();
 
-    // Check duplicate
+    // Sponsors can only create 1 promo code
+    const { data: existingOwn } = await admin
+      .from("promo_links")
+      .select("id")
+      .eq("created_by", user.id)
+      .limit(1);
+
+    if (existingOwn && existingOwn.length > 0) {
+      return NextResponse.json({ error: "Sadece 1 promo kodu olusturabilirsiniz" }, { status: 400 });
+    }
+
+    // Check duplicate code
     const { data: existing } = await admin
       .from("promo_links")
       .select("id")
