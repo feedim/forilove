@@ -111,8 +111,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  // Role-based access control for admin/creator routes
-  if (isAuthenticated && userId && (pathname.startsWith('/admin') || pathname.startsWith('/creator'))) {
+  // Role-based access control for admin/creator routes (includes /dashboard/admin/*)
+  if (isAuthenticated && userId && (pathname.startsWith('/admin') || pathname.startsWith('/creator') || pathname.startsWith('/dashboard/admin'))) {
     // Check cached role cookie first (avoids Supabase REST call on every request)
     let role = request.cookies.get('fl-role')?.value || ''
 
@@ -134,7 +134,7 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    if (pathname.startsWith('/admin') && role !== 'admin') {
+    if ((pathname.startsWith('/admin') || pathname.startsWith('/dashboard/admin')) && role !== 'admin') {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
     if (pathname.startsWith('/creator') && role !== 'creator' && role !== 'admin') {

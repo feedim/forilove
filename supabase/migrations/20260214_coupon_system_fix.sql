@@ -251,6 +251,11 @@ BEGIN
     RETURN json_build_object('success', false, 'error', 'Geçersiz promosyon kodu');
   END IF;
 
+  -- Self-referral prevention: affiliate cannot use own promo
+  IF v_promo.created_by = p_user_id THEN
+    RETURN json_build_object('success', false, 'error', 'Kendi promosyon kodunuzu kullanamazsınız');
+  END IF;
+
   IF v_promo.expires_at IS NOT NULL AND v_promo.expires_at < now() THEN
     RETURN json_build_object('success', false, 'error', 'Promosyon süresi dolmuş');
   END IF;

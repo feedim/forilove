@@ -71,38 +71,68 @@ export async function GET() {
       const last10Ids = allSignupUserIds.slice(0, 10);
       const { data: profiles } = await admin
         .from("profiles")
-        .select("user_id, name, surname, coin_balance, created_at")
+        .select("user_id, name, surname, created_at")
         .in("user_id", last10Ids);
+
+      // Check which users made purchases (boolean only, no balance exposure)
+      const { data: purchasedUsers } = await admin
+        .from("coin_payments")
+        .select("user_id")
+        .in("user_id", last10Ids)
+        .eq("status", "completed");
+
+      const purchasedSet = new Set((purchasedUsers || []).map((p: any) => p.user_id));
 
       if (profiles) {
         const profileMap = new Map(profiles.map((p: any) => [p.user_id, p]));
         recentUsers = last10Ids
-          .map((uid: string) => profileMap.get(uid))
-          .filter(Boolean)
-          .map((p: any) => ({
-            name: maskName(p.name, p.surname),
-            coin_balance: p.coin_balance || 0,
-            created_at: p.created_at,
-          }));
+          .map((uid: string) => {
+            const p = profileMap.get(uid);
+            if (!p) return null;
+            return {
+              name: maskName(p.name, p.surname),
+              hasPurchased: purchasedSet.has(uid),
+              created_at: p.created_at,
+            };
+          })
+          .filter(Boolean);
       }
     }
 
-    // Calculate earnings from affiliate's referred users' payments
-    let allPayments: any[] = [];
+    // Calculate earnings per-promo (correct per-promo commission rates)
+    let allPaymentsByPromo: { promo_id: string; price_paid: number; created_at: string }[] = [];
+    let totalEarnings = 0;
 
-    if (allSignupUserIds.length > 0) {
-      const { data: payments } = await admin
-        .from("coin_payments")
-        .select("price_paid, created_at")
-        .in("user_id", allSignupUserIds)
-        .eq("status", "completed");
+    const promoList = data || [];
+    const commissionRate = promoList.length > 0 ? TOTAL_ALLOCATION - promoList[0].discount_percent : 0;
 
-      if (payments) {
-        allPayments = payments;
+    if (promoList.length > 0 && allSignupUserIds.length > 0) {
+      for (const promo of promoList) {
+        const promoUserIds = (signupsByPromo[promo.id] || [])
+          .map((s: any) => s.user_id)
+          .filter(Boolean);
+
+        if (promoUserIds.length === 0) continue;
+
+        const { data: payments } = await admin
+          .from("coin_payments")
+          .select("price_paid, created_at")
+          .in("user_id", promoUserIds)
+          .eq("status", "completed");
+
+        if (payments) {
+          const rate = TOTAL_ALLOCATION - promo.discount_percent;
+          for (const p of payments) {
+            allPaymentsByPromo.push({ promo_id: promo.id, price_paid: p.price_paid || 0, created_at: p.created_at });
+            totalEarnings += (p.price_paid || 0) * rate / 100;
+          }
+        }
       }
     }
+    totalEarnings = Math.round(totalEarnings * 100) / 100;
 
-    const commissionRate = data && data.length > 0 ? TOTAL_ALLOCATION - data[0].discount_percent : 0;
+    // For period analytics, use per-promo commission rates
+    const allPayments = allPaymentsByPromo;
 
     // Period-based analytics
     const now = new Date();
@@ -112,21 +142,28 @@ export async function GET() {
     const last14d = new Date(now.getTime() - 14 * 86400000);
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
+    // Build promo rate lookup for per-promo period calculation
+    const promoRateMap = new Map(promoList.map((p: any) => [p.id, TOTAL_ALLOCATION - p.discount_percent]));
+
     const calcPeriod = (start: Date, end?: Date) => {
       const filtered = allPayments.filter(p => {
         const d = new Date(p.created_at);
         return d >= start && (!end || d < end);
       });
-      const revenue = filtered.reduce((sum: number, p: any) => sum + (p.price_paid || 0), 0);
+      const revenue = filtered.reduce((sum: number, p) => sum + (p.price_paid || 0), 0);
+      // Per-promo earnings calculation
+      const earnings = filtered.reduce((sum: number, p) => {
+        const rate = promoRateMap.get(p.promo_id) || commissionRate;
+        return sum + (p.price_paid || 0) * rate / 100;
+      }, 0);
       return {
         purchases: filtered.length,
         revenue: Math.round(revenue * 100) / 100,
-        earnings: Math.round((revenue * commissionRate / 100) * 100) / 100,
+        earnings: Math.round(earnings * 100) / 100,
       };
     };
 
-    const totalRevenue = allPayments.reduce((sum: number, p: any) => sum + (p.price_paid || 0), 0);
-    const totalEarnings = Math.round((totalRevenue * commissionRate / 100) * 100) / 100;
+    const totalRevenue = allPayments.reduce((sum: number, p) => sum + (p.price_paid || 0), 0);
 
     // Signup counts per period
     const allSignupDates = Object.values(signupsByPromo).flat();
@@ -182,7 +219,8 @@ export async function GET() {
         totalPaidOut: Math.round(totalPaidOut * 100) / 100,
         totalPending: Math.round(totalPending * 100) / 100,
         available: Math.max(0, availableBalance),
-        canRequestPayout: availableBalance >= 100,
+        canRequestPayout: availableBalance >= 100 && !payoutsList.some((p: any) => p.status === "pending"),
+        hasPendingPayout: payoutsList.some((p: any) => p.status === "pending"),
       },
       recentUsers,
       paymentInfo: paymentInfo ? {
@@ -219,14 +257,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Promo kodu 3-10 karakter olmalı" }, { status: 400 });
     }
 
+    // Validate discount is a finite integer
+    const parsedDiscount = Number(discountPercent);
+    if (!Number.isFinite(parsedDiscount) || !Number.isInteger(parsedDiscount) || parsedDiscount < 1) {
+      return NextResponse.json({ error: "Geçersiz indirim yüzdesi" }, { status: 400 });
+    }
+
     // Affiliates: min 5%, max 20% discount
     const MIN_AFFILIATE_DISCOUNT = 5;
-    const effectiveDiscount = Math.min(discountPercent || MIN_AFFILIATE_DISCOUNT, user.role === "admin" ? 100 : MAX_AFFILIATE_DISCOUNT);
+    const effectiveDiscount = Math.min(parsedDiscount, user.role === "admin" ? 100 : MAX_AFFILIATE_DISCOUNT);
     if (user.role === "affiliate" && effectiveDiscount < MIN_AFFILIATE_DISCOUNT) {
       return NextResponse.json({ error: "İndirim en az %5 olmalı" }, { status: 400 });
-    }
-    if (effectiveDiscount < 1) {
-      return NextResponse.json({ error: "İndirim en az %1 olmalı" }, { status: 400 });
     }
 
     const cleanCode = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -260,8 +301,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Bu promo kodu zaten mevcut" }, { status: 400 });
     }
 
+    // Validate optional fields
+    if (maxSignups !== undefined && maxSignups !== null) {
+      const parsed = Number(maxSignups);
+      if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 1) {
+        return NextResponse.json({ error: "Geçersiz kayıt limiti" }, { status: 400 });
+      }
+    }
+    if (expiryHours !== undefined && expiryHours !== null) {
+      const parsed = Number(expiryHours);
+      if (!Number.isFinite(parsed) || parsed < 1) {
+        return NextResponse.json({ error: "Geçersiz süre" }, { status: 400 });
+      }
+    }
+
     const expiresAt = expiryHours
-      ? new Date(Date.now() + expiryHours * 60 * 60 * 1000).toISOString()
+      ? new Date(Date.now() + Number(expiryHours) * 60 * 60 * 1000).toISOString()
       : null;
 
     const { data, error } = await admin
@@ -297,14 +352,35 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { iban, holderName } = body;
 
-    if (!iban || !holderName) {
+    if (!iban || typeof iban !== "string" || !holderName || typeof holderName !== "string") {
       return NextResponse.json({ error: "IBAN ve ad soyad gerekli" }, { status: 400 });
     }
 
-    // Clean IBAN
+    // Validate holder name length
+    const cleanHolder = holderName.trim();
+    if (cleanHolder.length < 3 || cleanHolder.length > 100) {
+      return NextResponse.json({ error: "Ad soyad 3-100 karakter olmalı" }, { status: 400 });
+    }
+
+    // Clean and validate IBAN format
     const cleanIban = iban.replace(/\s/g, '').toUpperCase();
-    if (cleanIban.length < 15 || cleanIban.length > 34) {
-      return NextResponse.json({ error: "Geçersiz IBAN" }, { status: 400 });
+    // Must be alphanumeric, 15-34 chars
+    if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/.test(cleanIban)) {
+      return NextResponse.json({ error: "Geçersiz IBAN formatı" }, { status: 400 });
+    }
+    // Turkish IBAN: must start with TR, exactly 26 chars
+    if (cleanIban.startsWith('TR') && cleanIban.length !== 26) {
+      return NextResponse.json({ error: "Türk IBAN'ı 26 karakter olmalıdır" }, { status: 400 });
+    }
+    // IBAN mod-97 checksum validation
+    const rearranged = cleanIban.slice(4) + cleanIban.slice(0, 4);
+    const numericStr = rearranged.replace(/[A-Z]/g, (ch) => String(ch.charCodeAt(0) - 55));
+    let remainder = 0;
+    for (let i = 0; i < numericStr.length; i++) {
+      remainder = (remainder * 10 + parseInt(numericStr[i])) % 97;
+    }
+    if (remainder !== 1) {
+      return NextResponse.json({ error: "Geçersiz IBAN kontrol hanesi" }, { status: 400 });
     }
 
     const admin = createAdminClient();
@@ -312,7 +388,7 @@ export async function PUT(request: NextRequest) {
       .from("profiles")
       .update({
         affiliate_iban: cleanIban,
-        affiliate_holder_name: holderName.trim(),
+        affiliate_holder_name: cleanHolder,
       })
       .eq("user_id", user.id);
 
@@ -350,6 +426,30 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Bu promo size ait değil" }, { status: 403 });
     }
 
+    // Guard: cannot delete promo if it has signups with completed payments (audit trail)
+    const { data: promoSignups } = await admin
+      .from("promo_signups")
+      .select("user_id")
+      .eq("promo_link_id", promoId);
+
+    if (promoSignups && promoSignups.length > 0) {
+      const signupUserIds = promoSignups.map(s => s.user_id).filter(Boolean);
+      if (signupUserIds.length > 0) {
+        const { count } = await admin
+          .from("coin_payments")
+          .select("id", { count: "exact", head: true })
+          .in("user_id", signupUserIds)
+          .eq("status", "completed");
+
+        if (count && count > 0) {
+          return NextResponse.json({
+            error: "Bu promo ile ilişkili ödemeler var, silinemez. Devre dışı bırakabilirsiniz.",
+          }, { status: 400 });
+        }
+      }
+    }
+
+    // Safe to delete — no revenue associated
     await admin.from("promo_signups").delete().eq("promo_link_id", promoId);
     await admin.from("coupons").delete().eq("promo_link_id", promoId);
     const { error } = await admin.from("promo_links").delete().eq("id", promoId);

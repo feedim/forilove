@@ -20,7 +20,7 @@ async function verifyAffiliate(supabase: Awaited<ReturnType<typeof createClient>
   return { ...user, role: profile?.role };
 }
 
-// Calculate affiliate earnings
+// Calculate affiliate earnings per-promo (correct calculation)
 async function calculateEarnings(admin: ReturnType<typeof createAdminClient>, userId: string) {
   const { data: promos } = await admin
     .from("promo_links")
@@ -35,70 +35,38 @@ async function calculateEarnings(admin: ReturnType<typeof createAdminClient>, us
 
   const { data: signups } = await admin
     .from("promo_signups")
-    .select("user_id")
+    .select("user_id, promo_link_id")
     .in("promo_link_id", promoIds);
 
   if (!signups || signups.length === 0) {
     return { totalEarnings: 0, commissionRate: TOTAL_ALLOCATION - promos[0].discount_percent };
   }
 
-  const userIds = signups.map(s => s.user_id).filter(Boolean);
+  // Calculate per-promo earnings for correct commission rates
+  let totalEarnings = 0;
+  for (const promo of promos) {
+    const promoUserIds = signups
+      .filter(s => s.promo_link_id === promo.id)
+      .map(s => s.user_id)
+      .filter(Boolean);
 
-  const { data: payments } = await admin
-    .from("coin_payments")
-    .select("price_paid")
-    .in("user_id", userIds)
-    .eq("status", "completed");
+    if (promoUserIds.length === 0) continue;
 
-  const totalRevenue = payments?.reduce((sum, p) => sum + (p.price_paid || 0), 0) || 0;
+    const { data: payments } = await admin
+      .from("coin_payments")
+      .select("price_paid")
+      .in("user_id", promoUserIds)
+      .eq("status", "completed");
+
+    const revenue = payments?.reduce((sum, p) => sum + (p.price_paid || 0), 0) || 0;
+    const rate = TOTAL_ALLOCATION - promo.discount_percent;
+    totalEarnings += revenue * rate / 100;
+  }
+
+  totalEarnings = Math.round(totalEarnings * 100) / 100;
   const commissionRate = TOTAL_ALLOCATION - promos[0].discount_percent;
-  const totalEarnings = Math.round((totalRevenue * commissionRate / 100) * 100) / 100;
 
   return { totalEarnings, commissionRate };
-}
-
-// Try auto-payout: if 7+ days since last payout request and balance >= MIN_PAYOUT
-async function tryAutoPayout(admin: ReturnType<typeof createAdminClient>, userId: string, available: number, allPayouts: any[]) {
-  if (available < MIN_PAYOUT) return null;
-
-  // Check no pending payout exists
-  const hasPending = allPayouts.some(p => p.status === "pending");
-  if (hasPending) return null;
-
-  // Check IBAN exists
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("affiliate_iban, affiliate_holder_name")
-    .eq("user_id", userId)
-    .single();
-
-  if (!profile?.affiliate_iban || !profile?.affiliate_holder_name) return null;
-
-  // Check 7+ days since last payout request (any status)
-  const lastPayout = allPayouts[0]; // already sorted desc by requested_at
-  if (lastPayout) {
-    const daysSince = (Date.now() - new Date(lastPayout.requested_at).getTime()) / (1000 * 60 * 60 * 24);
-    if (daysSince < AUTO_PAYOUT_INTERVAL_DAYS) return null;
-  }
-
-  // Auto-create payout request
-  const { data: payout, error } = await admin
-    .from("affiliate_payouts")
-    .insert({
-      affiliate_user_id: userId,
-      amount: available,
-      status: "pending",
-      admin_note: "Otomatik talep (7 gün)",
-    })
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Auto-payout error:", error);
-    return null;
-  }
-
-  return payout;
 }
 
 export async function GET() {
@@ -113,14 +81,14 @@ export async function GET() {
 
     const { totalEarnings, commissionRate } = await calculateEarnings(admin, user.id);
 
-    // Get all payouts
+    // Get all payouts (read-only, no side effects)
     const { data: payouts } = await admin
       .from("affiliate_payouts")
       .select("*")
       .eq("affiliate_user_id", user.id)
       .order("requested_at", { ascending: false });
 
-    let allPayouts = payouts || [];
+    const allPayouts = payouts || [];
     const totalPaidOut = allPayouts
       .filter(p => p.status === "approved")
       .reduce((sum, p) => sum + Number(p.amount), 0);
@@ -128,32 +96,46 @@ export async function GET() {
       .filter(p => p.status === "pending")
       .reduce((sum, p) => sum + Number(p.amount), 0);
 
-    let availableBalance = Math.round((totalEarnings - totalPaidOut - totalPending) * 100) / 100;
+    const availableBalance = Math.round((totalEarnings - totalPaidOut - totalPending) * 100) / 100;
+    const hasPending = allPayouts.some(p => p.status === "pending");
 
-    // Try auto-payout if conditions are met
-    const autoPayout = await tryAutoPayout(admin, user.id, availableBalance, allPayouts);
-    if (autoPayout) {
-      allPayouts = [autoPayout, ...allPayouts];
-      availableBalance = Math.max(0, Math.round((availableBalance - Number(autoPayout.amount)) * 100) / 100);
-    }
-
-    // Calculate next auto-payout date
+    // Calculate next auto-payout date (info only, no write)
     const lastRequest = allPayouts[0];
     const nextAutoDate = lastRequest
       ? new Date(new Date(lastRequest.requested_at).getTime() + AUTO_PAYOUT_INTERVAL_DAYS * 86400000).toISOString()
       : null;
 
+    // Check if auto-payout should be triggered (client will call POST)
+    let autoPayoutReady = false;
+    if (availableBalance >= MIN_PAYOUT && !hasPending) {
+      const { data: profile } = await admin
+        .from("profiles")
+        .select("affiliate_iban, affiliate_holder_name")
+        .eq("user_id", user.id)
+        .single();
+
+      if (profile?.affiliate_iban && profile?.affiliate_holder_name) {
+        if (!lastRequest) {
+          autoPayoutReady = true;
+        } else {
+          const daysSince = (Date.now() - new Date(lastRequest.requested_at).getTime()) / (1000 * 60 * 60 * 24);
+          autoPayoutReady = daysSince >= AUTO_PAYOUT_INTERVAL_DAYS;
+        }
+      }
+    }
+
     return NextResponse.json({
       balance: {
         totalEarnings,
         totalPaidOut: Math.round(totalPaidOut * 100) / 100,
-        totalPending: Math.round((totalPending + (autoPayout ? Number(autoPayout.amount) : 0)) * 100) / 100,
+        totalPending: Math.round(totalPending * 100) / 100,
         available: Math.max(0, availableBalance),
         commissionRate,
-        canRequestPayout: availableBalance >= MIN_PAYOUT && !allPayouts.some(p => p.status === "pending"),
+        canRequestPayout: availableBalance >= MIN_PAYOUT && !hasPending,
         minPayout: MIN_PAYOUT,
         nextAutoDate,
         autoPayoutDays: AUTO_PAYOUT_INTERVAL_DAYS,
+        autoPayoutReady,
       },
       payouts: allPayouts,
     });
@@ -172,6 +154,8 @@ export async function POST(request: NextRequest) {
     }
 
     const admin = createAdminClient();
+    const body = await request.json().catch(() => ({}));
+    const isAuto = body?.auto === true;
 
     // Check for existing pending payout
     const { data: existingPending } = await admin
@@ -217,18 +201,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Önce ödeme bilgilerinizi (IBAN) kaydedin" }, { status: 400 });
     }
 
-    // Create payout request
+    // Create payout request (unique index prevents duplicates at DB level)
     const { data: payout, error } = await admin
       .from("affiliate_payouts")
       .insert({
         affiliate_user_id: user.id,
         amount: available,
         status: "pending",
+        admin_note: isAuto ? "Otomatik talep (7 gün)" : null,
       })
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // Unique index violation = already has pending payout
+      if (error.code === "23505") {
+        return NextResponse.json({ error: "Zaten bekleyen bir ödeme talebiniz var" }, { status: 400 });
+      }
+      throw error;
+    }
 
     return NextResponse.json({ payout });
   } catch (error) {

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+const TOTAL_ALLOCATION = 35;
+
 async function verifyAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -107,7 +109,69 @@ export async function PUT(request: NextRequest) {
 
     const newStatus = action === "approve" ? "approved" : "rejected";
 
-    const { error } = await admin
+    // Re-verify balance before approval to prevent over-payment
+    if (action === "approve") {
+      const affiliateId = payout.affiliate_user_id;
+
+      // Calculate total earnings per-promo
+      const { data: promos } = await admin
+        .from("promo_links")
+        .select("id, discount_percent")
+        .eq("created_by", affiliateId);
+
+      let totalEarnings = 0;
+      if (promos && promos.length > 0) {
+        const promoIds = promos.map(p => p.id);
+        const { data: signups } = await admin
+          .from("promo_signups")
+          .select("user_id, promo_link_id")
+          .in("promo_link_id", promoIds);
+
+        if (signups && signups.length > 0) {
+          for (const promo of promos) {
+            const promoUserIds = signups
+              .filter(s => s.promo_link_id === promo.id)
+              .map(s => s.user_id)
+              .filter(Boolean);
+
+            if (promoUserIds.length === 0) continue;
+
+            const { data: payments } = await admin
+              .from("coin_payments")
+              .select("price_paid")
+              .in("user_id", promoUserIds)
+              .eq("status", "completed");
+
+            const revenue = payments?.reduce((sum, p) => sum + (p.price_paid || 0), 0) || 0;
+            const rate = TOTAL_ALLOCATION - promo.discount_percent;
+            totalEarnings += revenue * rate / 100;
+          }
+        }
+      }
+      totalEarnings = Math.round(totalEarnings * 100) / 100;
+
+      // Get all approved/pending payouts EXCEPT this one
+      const { data: otherPayouts } = await admin
+        .from("affiliate_payouts")
+        .select("amount, status")
+        .eq("affiliate_user_id", affiliateId)
+        .neq("id", payoutId);
+
+      const totalPaidOut = (otherPayouts || [])
+        .filter(p => p.status === "approved")
+        .reduce((sum, p) => sum + Number(p.amount), 0);
+
+      const availableBalance = Math.round((totalEarnings - totalPaidOut) * 100) / 100;
+
+      if (Number(payout.amount) > availableBalance) {
+        return NextResponse.json({
+          error: `Yetersiz bakiye. Talep: ${payout.amount} TRY, Mevcut: ${availableBalance.toFixed(2)} TRY`,
+        }, { status: 400 });
+      }
+    }
+
+    // Idempotent update: only update if status is still "pending"
+    const { data: updated, error } = await admin
       .from("affiliate_payouts")
       .update({
         status: newStatus,
@@ -115,9 +179,14 @@ export async function PUT(request: NextRequest) {
         processed_by: user.id,
         admin_note: adminNote || null,
       })
-      .eq("id", payoutId);
+      .eq("id", payoutId)
+      .eq("status", "pending")
+      .select()
+      .single();
 
-    if (error) throw error;
+    if (error || !updated) {
+      return NextResponse.json({ error: "Ödeme talebi zaten işlenmiş" }, { status: 409 });
+    }
 
     return NextResponse.json({ success: true, status: newStatus });
   } catch (error) {

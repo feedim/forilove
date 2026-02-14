@@ -538,7 +538,9 @@ export default function ProfilePage() {
                       <p className="text-xs text-gray-500">{new Date(u.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
                     </div>
                   </div>
-                  <span className="text-sm font-bold text-yellow-500 shrink-0">{u.coin_balance || 0} FL</span>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${u.hasPurchased || u.coin_balance ? 'bg-pink-500/20 text-pink-400' : 'bg-white/10 text-gray-400'}`}>
+                    {u.hasPurchased || u.coin_balance ? 'Satın Aldı' : 'Kayıt'}
+                  </span>
                 </div>
               ))}
             </div>
@@ -768,7 +770,9 @@ export default function ProfilePage() {
                         <p className="text-xs text-gray-500">{new Date(u.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}</p>
                       </div>
                     </div>
-                    <span className="text-sm font-bold text-yellow-500 shrink-0">{u.coin_balance} FL</span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${u.hasPurchased ? 'bg-pink-500/20 text-pink-400' : 'bg-white/10 text-gray-400'}`}>
+                      {u.hasPurchased ? 'Satın Aldı' : 'Kayıt'}
+                    </span>
                   </div>
                 ))}
               </div>
