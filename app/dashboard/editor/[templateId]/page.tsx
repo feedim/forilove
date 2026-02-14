@@ -1755,7 +1755,20 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
             <ArrowLeft className="h-5 w-5" />
             <span className="font-medium">Geri</span>
           </button>
-          <h1 className="text-lg sm:text-xl font-bold truncate md:border-l md:border-white/10 md:pl-4 md:ml-4 shrink-0 max-w-[140px] sm:max-w-[200px] md:max-w-[300px]">{template?.name}</h1>
+          <div className="flex items-center gap-2 md:border-l md:border-white/10 md:pl-4 md:ml-4 shrink-0 min-w-0">
+            <h1 className="text-lg sm:text-xl font-bold truncate max-w-[120px] sm:max-w-[180px] md:max-w-[280px]">{template?.name}</h1>
+            <button
+              onClick={() => setShowShareModal(true)}
+              className="shrink-0 p-1.5 rounded-lg hover:bg-white/10 transition-all active:scale-95"
+              aria-label="Paylaş"
+            >
+              <svg className="h-4 w-4 text-zinc-400 hover:text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                <polyline points="16 6 12 2 8 6" />
+                <line x1="12" y1="2" x2="12" y2="15" />
+              </svg>
+            </button>
+          </div>
           {/* Mobile: Paylaş button in header */}
           {!loading && (
             <div className="md:hidden">
@@ -2755,14 +2768,16 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
       )}
 
       {/* Share Modal */}
-      {project && (
-        <ShareSheet
-          url={`${typeof window !== "undefined" ? window.location.origin : ""}/p/${project.slug}`}
-          title={project.title}
-          isOpen={showShareModal}
-          onClose={() => setShowShareModal(false)}
-        />
-      )}
+      <ShareSheet
+        url={
+          project?.is_published && project?.slug
+            ? `${typeof window !== "undefined" ? window.location.origin : ""}/p/${project.slug}`
+            : `${typeof window !== "undefined" ? window.location.origin : ""}/editor/${resolvedParams.templateId}`
+        }
+        title={project?.title || template?.name || "Şablon"}
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+      />
       {/* YouTube player managed by useEffect — no inline iframe needed */}
       </div>
     </div>

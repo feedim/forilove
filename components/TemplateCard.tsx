@@ -1,6 +1,6 @@
 import Link from "next/link";
 import DOMPurify from "isomorphic-dompurify";
-import { Heart, Coins, Bookmark, Eye, Users, Share2 } from "lucide-react";
+import { Heart, Coins, Bookmark, Eye, Users } from "lucide-react";
 import { useRef, useState } from "react";
 import { isDiscountActive } from "@/lib/discount";
 import { ShareSheet } from "@/components/ShareIconButton";
@@ -98,7 +98,11 @@ export default function TemplateCard({
             className="p-3 rounded-xl bg-black/50 hover:bg-black/70 backdrop-blur-sm transition-all flex items-center justify-center active:scale-95"
             aria-label="Paylaş"
           >
-            <Share2 className="h-5 w-5 text-white" aria-hidden="true" />
+            <svg className="h-6 w-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+              <polyline points="16 6 12 2 8 6" />
+              <line x1="12" y1="2" x2="12" y2="15" />
+            </svg>
           </button>
           {/* Save Button */}
           {showSaveButton && (
