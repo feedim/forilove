@@ -104,25 +104,25 @@ export default function AdminProjectsPage() {
       </header>
 
       <main className="w-full px-3 sm:px-6 lg:px-10 py-4 pb-24 md:pb-8 max-w-3xl mx-auto">
-        {/* Search */}
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Sayfa, kullanıcı veya slug ara..."
-            className="w-full bg-white/5 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-zinc-400"
-          />
-        </div>
-
         {loading ? (
           <div className="space-y-3">
             {[1,2,3,4,5].map(i => (
               <div key={i} className="animate-pulse bg-white/5 rounded-xl h-16" />
             ))}
           </div>
-        ) : filtered.length === 0 ? (
+        ) : (<>
+          {/* Search */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Sayfa, kullanıcı veya slug ara..."
+              className="w-full bg-white/5 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-zinc-400"
+            />
+          </div>
+          {filtered.length === 0 ? (
           <p className="text-sm text-zinc-500 text-center py-12">
             {searchQuery ? "Sonuç bulunamadı." : "Henüz yayınlanan sayfa yok."}
           </p>
@@ -203,6 +203,7 @@ export default function AdminProjectsPage() {
             )}
           </>
         )}
+        </>)}
       </main>
 
       <MobileBottomNav />

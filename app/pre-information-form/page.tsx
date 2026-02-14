@@ -13,7 +13,7 @@ export default function PreInformationFormPage() {
     <LegalPageLayout title="Ön Bilgilendirme Formu" maxWidth="4xl" lastUpdated="Şubat 2026">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "WebPage", name: "Ön Bilgilendirme Formu - Forilove", description: "Mesafeli Sözleşmeler Yönetmeliği uyarınca ön bilgilendirme formu.", url: "https://forilove.com/pre-information-form", isPartOf: { "@id": "https://forilove.com/#website" } }) }} />
 
-        <div className="bg-pink-500/10 border border-pink-500/30 rounded-xl p-6 mb-8">
+        <div className="bg-white/5 border border-white/10 rounded-xl p-6 mb-8">
           <p className="text-zinc-300 text-sm">
             <strong>Mesafeli Sözleşmeler Yönetmeliği</strong> (RG: 27.11.2014/29188) Madde 5 uyarınca
             düzenlenmiştir. Bu form, ödeme işleminden <strong>önce</strong> mutlaka okunmalı ve
@@ -110,7 +110,7 @@ export default function PreInformationFormPage() {
           <section className="bg-zinc-900 rounded-xl p-6">
             <h2 className="text-2xl font-bold mb-4 text-pink-500">4. CAYMA HAKKI</h2>
             <div className="text-zinc-300 space-y-3">
-              <div className="bg-pink-500/10 border border-pink-500/30 rounded-xl p-6">
+              <div className="bg-white/5 border border-white/10 rounded-xl p-6">
                 <p className="text-zinc-300">
                   <strong>ÖNEMLİ:</strong> FL Coins dijital içerik niteliğinde olduğundan, hesabınıza
                   tanımlandıktan sonra cayma hakkınız sona erer (6502 sayılı

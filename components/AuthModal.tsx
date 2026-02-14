@@ -374,11 +374,11 @@ function AuthModalSheet({ onClose, onSuccess, returnPath }: SheetProps) {
                 className="mt-0.5 cursor-pointer"
               />
               <span className="text-xs text-zinc-400 leading-snug">
-                <Link href="/terms" target="_blank" className="text-pink-500 hover:text-pink-400 underline">
+                <Link href="/terms" target="_blank" className="text-pink-500 hover:text-pink-400 underline font-semibold">
                   Kullanım Koşulları
                 </Link>
                 &apos;nı ve{" "}
-                <Link href="/privacy" target="_blank" className="text-pink-500 hover:text-pink-400 underline">
+                <Link href="/privacy" target="_blank" className="text-pink-500 hover:text-pink-400 underline font-semibold">
                   Gizlilik Politikası
                 </Link>
                 &apos;nı kabul ediyorum.

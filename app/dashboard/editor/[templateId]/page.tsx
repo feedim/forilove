@@ -981,8 +981,8 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
               if (editable) {
                 var eKey = editable.getAttribute('data-editable');
                 if (LOCKED_SET.has(eKey)) {
-                  editable.style.outline = '2px solid rgba(255,255,255,0.6)';
-                  editable.style.boxShadow = '0 0 0 4px rgba(0,0,0,0.15)';
+                  editable.style.outline = '2px solid #ec4899';
+                  editable.style.boxShadow = '0 0 0 4px rgba(236, 72, 153, 0.1)';
                 } else {
                   editable.style.outline = '2px solid #ec4899';
                   editable.style.boxShadow = '0 0 0 4px rgba(236, 72, 153, 0.1)';
@@ -1004,8 +1004,8 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
               el.style.opacity = '0.45';
               el.style.padding = el.style.padding || '11px';
               var overlay = document.createElement('div');
-              overlay.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.15);pointer-events:none;z-index:2;border-radius:inherit;';
-              overlay.innerHTML = '<span style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>';
+              overlay.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(227,0,118,0.07);pointer-events:none;z-index:2;border-radius:inherit;';
+              overlay.innerHTML = '<span style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(227,0,118,0.7);backdrop-filter:blur(4px)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>';
               el.appendChild(overlay);
             }
 
@@ -1724,7 +1724,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
             <span className="font-medium">Geri</span>
           </button>
           <h1 className="text-lg sm:text-xl font-bold max-w-[200px] sm:max-w-[300px] truncate md:absolute md:left-[120px] md:border-l md:border-white/10 md:pl-4">{template?.name}</h1>
-          {/* Mobile: Paylaş/Yayına Al button in header */}
+          {/* Mobile: Paylaş button in header */}
           {(guestMode || (isPurchased && project)) && (
             <div className="md:hidden">
               <button
@@ -1732,17 +1732,15 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                 disabled={saving || purchasing}
                 className="btn-primary shrink-0 px-4 py-2 text-sm whitespace-nowrap"
               >
-                {guestMode
-                  ? (purchasing ? "Yükleniyor..." : "Yayına Al")
-                  : saving
-                    ? (project!.is_published ? "Güncelleniyor..." : "Paylaşılıyor...")
-                    : (project!.is_published ? "Güncelle" : "Paylaş")
+                {saving || purchasing
+                  ? (project?.is_published ? "Güncelleniyor..." : "Paylaşılıyor...")
+                  : (project?.is_published ? "Güncelle" : "Paylaş")
                 }
               </button>
             </div>
           )}
           {/* Desktop buttons - hidden on mobile, max-width prevents overlap with absolute title */}
-          <div className="hidden md:flex items-center gap-2 max-w-[calc(100vw-480px)]">
+          <div className="hidden md:flex items-center gap-2 flex-1 min-w-0 justify-end ml-4">
             {loading ? (
               <div className="text-sm text-zinc-400">Yükleniyor...</div>
             ) : !isPurchased && !guestMode ? (
@@ -1765,7 +1763,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                           const el = document.getElementById('editor-toolbar-scroll');
                           if (el) el.scrollBy({ left: -200, behavior: 'smooth' });
                         }}
-                        className="btn-secondary shrink-0 flex items-center justify-center transition active:scale-95" style={{ width: 49, height: 49 }}
+                        className="btn-secondary shrink-0 flex items-center justify-center transition active:scale-95 !p-0" style={{ width: 49, height: 49 }}
                         aria-label="Sola kaydır"
                       >
                         <ArrowLeft className="h-5 w-5 text-white/70" />
@@ -1886,7 +1884,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                           const el = document.getElementById('editor-toolbar-scroll');
                           if (el) el.scrollBy({ left: 200, behavior: 'smooth' });
                         }}
-                        className="btn-secondary shrink-0 flex items-center justify-center transition active:scale-95" style={{ width: 49, height: 49 }}
+                        className="btn-secondary shrink-0 flex items-center justify-center transition active:scale-95 !p-0" style={{ width: 49, height: 49 }}
                         aria-label="Sağa kaydır"
                       >
                         <ArrowLeft className="h-5 w-5 text-white/70 rotate-180" />
@@ -1898,11 +1896,9 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                       disabled={saving || purchasing}
                       className="btn-primary shrink-0 px-4 py-2 text-sm ml-2 whitespace-nowrap"
                     >
-                      {guestMode
-                        ? (purchasing ? "Yükleniyor..." : "Yayına Al")
-                        : saving
-                          ? (project!.is_published ? "Güncelleniyor..." : "Paylaşılıyor...")
-                          : (project!.is_published ? "Güncelle" : "Paylaş")
+                      {saving || purchasing
+                        ? (project?.is_published ? "Güncelleniyor..." : "Paylaşılıyor...")
+                        : (project?.is_published ? "Güncelle" : "Paylaş")
                       }
                     </button>
                   </>

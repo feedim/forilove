@@ -188,7 +188,7 @@ export default function DistanceSalesContractPage() {
           </section>
 
           {/* UYARI */}
-          <div className="bg-pink-500/10 border border-pink-500/30 rounded-xl p-6">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
             <p className="text-zinc-300 text-sm">
               <strong>ÖNEMLİ:</strong> Bu sözleşme, 6502 sayılı Tüketicinin Korunması Hakkında Kanun ve Mesafeli Sözleşmeler
               Yönetmeliği (27.11.2014/29188) uyarınca düzenlenmiştir. Sözleşme, taraflar arasında

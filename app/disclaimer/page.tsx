@@ -11,8 +11,8 @@ export default function DisclaimerPage() {
   return (
     <LegalPageLayout title="Sorumluluk Reddi">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "WebPage", name: "Sorumluluk Reddi - Forilove", description: "Forilove sorumluluk reddi beyanı.", url: "https://forilove.com/disclaimer", isPartOf: { "@id": "https://forilove.com/#website" } }) }} />
-          <section className="bg-pink-500/10 border border-pink-500/30 rounded-2xl p-6">
-            <h2 className="text-2xl font-bold text-pink-400 mb-4">Önemli Uyarı</h2>
+          <section className="bg-white/5 border border-white/10 rounded-2xl p-6">
+            <h3 className="text-xl font-bold text-pink-400 mb-3">Önemli Uyarı</h3>
             <p className="text-white leading-relaxed">
               Forilove platformu, kullanıcıların kişisel içerik oluşturmasına olanak tanıyan bir araçtır.
               Platform üzerinde oluşturulan tüm içerikler tamamen kullanıcıların sorumluluğundadır.
@@ -22,7 +22,7 @@ export default function DisclaimerPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">Kullanıcı İçerik Sorumluluğu</h2>
+            <h3 className="text-xl font-bold text-white mb-3">Kullanıcı İçerik Sorumluluğu</h3>
             <p className="mb-4">
               Platform kullanıcıları tarafından yüklenen, paylaşılan veya oluşturulan her türlü içerik
               (metin, görsel, video, ses, link vb.) tamamen o kullanıcının sorumluluğundadır. Forilove:
@@ -37,7 +37,7 @@ export default function DisclaimerPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">Yasaklanmış İçerik Türleri</h2>
+            <h3 className="text-xl font-bold text-white mb-3">Yasaklanmış İçerik Türleri</h3>
             <p className="mb-4">
               Kullanıcılar aşağıdaki türde içerikleri platformda yayınlayamaz:
             </p>
@@ -54,7 +54,7 @@ export default function DisclaimerPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">Platform Hakları</h2>
+            <h3 className="text-xl font-bold text-white mb-3">Platform Hakları</h3>
             <p className="mb-4">
               Forilove aşağıdaki haklara sahiptir:
             </p>
@@ -68,7 +68,7 @@ export default function DisclaimerPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">Gizlilik ve Veri Güvenliği Uyarısı</h2>
+            <h3 className="text-xl font-bold text-white mb-3">Gizlilik ve Veri Güvenliği Uyarısı</h3>
             <p className="mb-4">
               Kullanıcılar, oluşturdukları sayfalarda aşağıdaki bilgileri paylaşmamalıdır:
             </p>
@@ -86,7 +86,7 @@ export default function DisclaimerPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">Üçüncü Taraf Bağlantıları</h2>
+            <h3 className="text-xl font-bold text-white mb-3">Üçüncü Taraf Bağlantıları</h3>
             <p>
               Platform üzerinde kullanıcılar tarafından paylaşılan dış bağlantılar (linkler)
               Forilove'in kontrolü dışındadır. Bu bağlantıların içeriği, güvenliği veya
@@ -96,7 +96,7 @@ export default function DisclaimerPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">Hizmet Kesintileri ve Garanti Reddi</h2>
+            <h3 className="text-xl font-bold text-white mb-3">Hizmet Kesintileri ve Garanti Reddi</h3>
             <p className="mb-4">
               Forilove hizmeti "olduğu gibi" sunulmaktadır:
             </p>
@@ -109,7 +109,7 @@ export default function DisclaimerPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">Yasal Sorumluluk</h2>
+            <h3 className="text-xl font-bold text-white mb-3">Yasal Sorumluluk</h3>
             <p className="mb-4 leading-relaxed">
               Kullanıcılar, platform üzerinde yaptıkları her türlü eylemden dolayı yasal olarak
               sorumludur. Yasalara aykırı içerik paylaşılması halinde:
@@ -123,7 +123,7 @@ export default function DisclaimerPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">İçerik Raporlama</h2>
+            <h3 className="text-xl font-bold text-white mb-3">İçerik Raporlama</h3>
             <p className="mb-4">
               Uygunsuz, yasadışı veya zararlı içerik tespit ederseniz, lütfen bizi derhal bilgilendirin:
             </p>
@@ -139,7 +139,7 @@ export default function DisclaimerPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">Değişiklik Hakkı</h2>
+            <h3 className="text-xl font-bold text-white mb-3">Değişiklik Hakkı</h3>
             <p>
               Forilove bu sorumluluk reddi beyanını herhangi bir zamanda değiştirme hakkını saklı tutar.
               Değişiklikler bu sayfada yayınlandığı anda yürürlüğe girer. Platformu kullanmaya devam
@@ -148,7 +148,7 @@ export default function DisclaimerPage() {
           </section>
 
           <section className="bg-white/5 rounded-2xl p-6 border border-white/10">
-            <h2 className="text-2xl font-bold text-white mb-4">İletişim</h2>
+            <h3 className="text-xl font-bold text-white mb-3">İletişim</h3>
             <p className="mb-4">
               Sorumluluk reddi ile ilgili sorularınız için:
             </p>

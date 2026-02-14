@@ -139,7 +139,7 @@ export default function Home() {
 
             {/* Description */}
             <p className="text-base sm:text-lg md:text-xl text-zinc-400 mb-10 max-w-2xl mx-auto px-2">
-              Özel tasarlanmış şablonlar ile sevdikleriniz için unutulmaz anı sayfaları oluşturun
+              Özel tasarlanmış şablonlar ile sevdikleriniz için unutulmaz anı sayfaları oluşturun.
             </p>
 
             {/* CTA Buttons */}
@@ -182,7 +182,7 @@ export default function Home() {
         <div className="w-full px-4 sm:px-6 lg:px-10">
           <div className="max-w-6xl mx-auto">
             <div ref={templateReveal.ref} className={`text-center mb-12 ${templateReveal.isVisible ? 'animate-fade-up' : 'opacity-0'}`}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">En Popüler Şablonlar</h2>
+              <h2 className="text-2xl md:text-3xl font-bold mb-4">En Popüler Şablonlar</h2>
               <p className="text-zinc-400 text-lg">Binlerce kişi tarafından tercih edilen şablonlar</p>
             </div>
 
@@ -221,7 +221,7 @@ export default function Home() {
       </section>
 
       {/* Trust Badges */}
-      <section className="py-12">
+      <section className="py-8">
         <div ref={trustReveal.ref} className={`w-full px-4 sm:px-6 lg:px-10 ${trustReveal.isVisible ? 'animate-fade-up' : 'opacity-0'}`}>
           <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-center gap-6 sm:gap-10">
             {trustBadges.map((badge) => (
@@ -240,7 +240,7 @@ export default function Home() {
           <div className="max-w-4xl mx-auto">
             {/* Section Header */}
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Nasıl Çalışır?</h2>
+              <h2 className="text-2xl md:text-3xl font-bold mb-4">Nasıl Çalışır?</h2>
               <p className="text-zinc-400 text-lg">3 basit adımda anı sayfanızı oluşturun</p>
             </div>
 
@@ -319,7 +319,7 @@ export default function Home() {
         <div className="w-full px-4 sm:px-6 lg:px-10">
           <div className="max-w-5xl mx-auto">
             <div ref={testimonialReveal.ref} className={`text-center mb-12 ${testimonialReveal.isVisible ? 'animate-fade-up' : 'opacity-0'}`}>
-              <h2 className="text-2xl md:text-3xl font-bold mb-4">Kullanıcılarımız Ne Diyor?</h2>
+              <h2 className="text-xl md:text-2xl font-bold mb-4">Kullanıcılarımız Ne Diyor?</h2>
               <p className="text-zinc-400 text-lg">Gerçek kullanıcılardan gerçek hikayeler</p>
             </div>
 
