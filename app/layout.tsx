@@ -4,6 +4,8 @@ import Script from "next/script";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import { PurchaseConfirmProvider } from "@/components/PurchaseConfirmModal";
+import PromoBanner from "@/components/PromoBanner";
+import { Suspense } from "react";
 
 const inter = Inter({
   variable: "--font-geist-sans",
@@ -107,6 +109,7 @@ export default function RootLayout({
             gtag('config', 'G-3D5YZ6PJBS');
           `}
         </Script>
+        <Suspense><PromoBanner /></Suspense>
         <PurchaseConfirmProvider>
         {children}
         <Toaster

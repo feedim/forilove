@@ -1,12 +1,111 @@
 "use client";
 
+import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
-import { Heart } from "lucide-react";
+import { Heart, Shield, CreditCard, Headphones, RefreshCcw, Smartphone, Star, ArrowRight } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 import CTASection from "@/components/CTASection";
+import TemplateCard from "@/components/TemplateCard";
+import { TemplateGridSkeleton } from "@/components/Skeletons";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
+
+// --- Counter Animation ---
+function useCountUp(target: number, duration = 1500, isVisible: boolean, decimals = 0) {
+  const [value, setValue] = useState(0);
+  const rafRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    const start = performance.now();
+    const animate = (now: number) => {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(parseFloat((eased * target).toFixed(decimals)));
+      if (progress < 1) {
+        rafRef.current = requestAnimationFrame(animate);
+      }
+    };
+    rafRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [isVisible, target, duration, decimals]);
+
+  return value;
+}
+
+// --- Trust Badges Data ---
+const trustBadges = [
+  { icon: Shield, label: "SSL Güvenli" },
+  { icon: CreditCard, label: "Güvenli Ödeme" },
+  { icon: Headphones, label: "7/24 Destek" },
+  { icon: RefreshCcw, label: "İade Garantisi" },
+  { icon: Smartphone, label: "Mobil Uyumlu" },
+];
+
+// --- Testimonials Data ---
+const testimonials = [
+  {
+    name: "Elif Y.",
+    context: "1. yıldönümü sayfası hazırladı",
+    text: "Sevgilime sürpriz olsun diye gece 2'de hazırladım, sabah linki açınca ağladı resmen. Fotoğrafları koydum, şarkımızı ekledim, 10 dakikada bitti.",
+  },
+  {
+    name: "Burak K.",
+    context: "Doğum günü sayfası hazırladı",
+    text: "Hediye olarak ne alsam beğenmiyor, bu seferki farklıydı. WhatsApp'tan linki attım, 5 dakika sonra arayıp teşekkür etti. Keşke daha önce keşfetseydim.",
+  },
+  {
+    name: "Zeynep A.",
+    context: "Evlilik teklifi sayfası hazırladı",
+    text: "Teklif için restoranda tabletten açtım sayfayı. Müziğimiz çalmaya başlayınca anladı ve gözleri doldu. Hayatımın en güzel anıydı.",
+  },
+];
 
 export default function Home() {
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
+  const supabase = createClient();
+
+  // Scroll reveal refs
+  const statsReveal = useScrollReveal();
+  const templateReveal = useScrollReveal();
+  const trustReveal = useScrollReveal();
+  const testimonialReveal = useScrollReveal();
+
+  // Counter values
+  const usersCount = useCountUp(1000, 1500, statsReveal.isVisible);
+  const sharesCount = useCountUp(50000, 1800, statsReveal.isVisible);
+  const ratingCount = useCountUp(4.9, 1200, statsReveal.isVisible, 1);
+
+  // Fetch templates
+  useEffect(() => {
+    const loadTemplates = async () => {
+      try {
+        const { data } = await supabase
+          .from("templates")
+          .select("*")
+          .eq("is_active", true)
+          .eq("is_public", true)
+          .order("purchase_count", { ascending: false, nullsFirst: false })
+          .limit(6);
+        setTemplates(data || []);
+      } catch (error) {
+        console.error("Error loading templates:", error);
+      } finally {
+        setLoadingTemplates(false);
+      }
+    };
+    loadTemplates();
+  }, []);
+
+  const formatCount = (n: number, suffix: string) => {
+    if (n >= 1000) return `${Math.floor(n / 1000)}K+`;
+    return `${n}${suffix}`;
+  };
+
   return (
     <div className="min-h-screen bg-black text-white">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "WebPage", name: "Forilove - Sevginizi Ölümsüzleştirin", description: "Kod bilgisi olmadan sevgilinize özel romantik web sayfaları oluşturun.", url: "https://forilove.com", isPartOf: { "@id": "https://forilove.com/#website" } }) }} />
@@ -43,21 +142,84 @@ export default function Home() {
               </Link>
             </div>
 
-            {/* Stats */}
-            <div className="mt-16 sm:mt-20 grid grid-cols-3 gap-6 sm:gap-8 max-w-xl mx-auto sm:pt-8 sm:border-t border-white/10">
+            {/* Stats with Counter Animation */}
+            <div ref={statsReveal.ref} className="mt-16 sm:mt-20 grid grid-cols-3 gap-6 sm:gap-8 max-w-xl mx-auto sm:pt-8 sm:border-t border-white/10">
               <div>
-                <div className="text-2xl md:text-3xl font-bold text-white">1K+</div>
+                <div className="text-2xl md:text-3xl font-bold text-white">
+                  {statsReveal.isVisible ? formatCount(usersCount, "") : "0"}
+                </div>
                 <div className="text-sm text-gray-500 mt-1">Kullanıcı</div>
               </div>
               <div>
-                <div className="text-2xl md:text-3xl font-bold text-white">50K+</div>
+                <div className="text-2xl md:text-3xl font-bold text-white">
+                  {statsReveal.isVisible ? formatCount(sharesCount, "") : "0"}
+                </div>
                 <div className="text-sm text-gray-500 mt-1">Paylaşım</div>
               </div>
               <div>
-                <div className="text-2xl md:text-3xl font-bold text-white">4.9★</div>
+                <div className="text-2xl md:text-3xl font-bold text-white">
+                  {statsReveal.isVisible ? `${ratingCount}★` : "0★"}
+                </div>
                 <div className="text-sm text-gray-500 mt-1">Puan</div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Template Showcase */}
+      <section className="border-t border-white/10 py-24">
+        <div className="w-full px-4 sm:px-6 lg:px-10">
+          <div className="max-w-6xl mx-auto">
+            <div ref={templateReveal.ref} className={`text-center mb-12 ${templateReveal.isVisible ? 'animate-fade-up' : 'opacity-0'}`}>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">En Popüler Şablonlar</h2>
+              <p className="text-gray-400 text-lg">Binlerce kişi tarafından tercih edilen şablonlar</p>
+            </div>
+
+            {loadingTemplates ? (
+              <TemplateGridSkeleton count={6} />
+            ) : templates.length > 0 ? (
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-5">
+                {templates.map((template, index) => (
+                  <div
+                    key={template.id}
+                    className={templateReveal.isVisible ? 'animate-fade-up-scale' : 'opacity-0'}
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    <TemplateCard
+                      template={template}
+                      isPurchased={false}
+                      isSaved={false}
+                      showSaveButton={false}
+                      showPrice={true}
+                      onClick={() => { window.location.href = '/register'; }}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {!loadingTemplates && templates.length > 0 && (
+              <div className={`text-center mt-10 ${templateReveal.isVisible ? 'animate-fade-up' : 'opacity-0'}`} style={{ animationDelay: '600ms' }}>
+                <Link href="/templates" className="btn-secondary px-8 py-3">
+                  Tüm Şablonları Gör
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Trust Badges */}
+      <section className="py-12">
+        <div ref={trustReveal.ref} className={`w-full px-4 sm:px-6 lg:px-10 ${trustReveal.isVisible ? 'animate-fade-up' : 'opacity-0'}`}>
+          <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-center gap-6 sm:gap-10">
+            {trustBadges.map((badge) => (
+              <div key={badge.label} className="flex items-center gap-2">
+                <badge.icon className="h-5 w-5 text-pink-500" />
+                <span className="text-sm text-gray-400">{badge.label}</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -138,6 +300,37 @@ export default function Home() {
               </div>
             </div>
 
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="border-t border-white/10 py-24">
+        <div className="w-full px-4 sm:px-6 lg:px-10">
+          <div className="max-w-5xl mx-auto">
+            <div ref={testimonialReveal.ref} className={`text-center mb-12 ${testimonialReveal.isVisible ? 'animate-fade-up' : 'opacity-0'}`}>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Kullanıcılarımız Ne Diyor?</h2>
+              <p className="text-gray-400 text-lg">Gerçek kullanıcılardan gerçek hikayeler</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {testimonials.map((t, index) => (
+                <div
+                  key={t.name}
+                  className={`bg-zinc-900 border border-white/10 rounded-2xl p-6 ${testimonialReveal.isVisible ? 'animate-fade-up-scale' : 'opacity-0'}`}
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
+                  <div className="flex gap-0.5 mb-4">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                    ))}
+                  </div>
+                  <p className="text-gray-300 mb-4 leading-relaxed">&ldquo;{t.text}&rdquo;</p>
+                  <p className="text-sm font-semibold text-white">{t.name}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{t.context}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
