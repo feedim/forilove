@@ -9,14 +9,11 @@ import { ChevronRight } from "lucide-react";
 /* ------------------------------------------------------------------ */
 
 interface TourStep {
-  /** data-tour attr on parent page (null = iframe-based) */
   target: string | null;
   targetMobile: string | null;
-  /** CSS selector inside iframe */
   iframeSelector?: string;
   title: string;
   description: string;
-  /** Skip this step if the target element doesn't exist */
   optional?: boolean;
 }
 
@@ -83,6 +80,19 @@ const STEPS: TourStep[] = [
 ];
 
 /* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+/** Clamp a DOMRect so it stays within the visible viewport */
+function clampRect(r: DOMRect, vw: number, vh: number): DOMRect {
+  const left = Math.max(0, r.left);
+  const top = Math.max(0, r.top);
+  const right = Math.min(vw, r.right);
+  const bottom = Math.min(vh, r.bottom);
+  return new DOMRect(left, top, Math.max(0, right - left), Math.max(0, bottom - top));
+}
+
+/* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
@@ -93,24 +103,21 @@ interface EditorTourProps {
 export default function EditorTour({ onComplete }: EditorTourProps) {
   const [activeSteps, setActiveSteps] = useState<TourStep[]>([]);
   const [current, setCurrent] = useState(0);
-  const [rect, setRect] = useState<DOMRect | null>(null);
+  const [rawRect, setRawRect] = useState<DOMRect | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
 
-  /* ---- filter optional steps that don't exist ---- */
+  /* ---- filter optional steps ---- */
   useEffect(() => {
-    const available = STEPS.filter((step) => {
-      if (!step.optional) return true;
-      // Check if target exists
-      if (step.iframeSelector) {
+    const available = STEPS.filter((s) => {
+      if (!s.optional) return true;
+      if (s.iframeSelector) {
         const iframe = document.querySelector("iframe") as HTMLIFrameElement | null;
-        try {
-          return !!iframe?.contentDocument?.querySelector(step.iframeSelector);
-        } catch { return false; }
+        try { return !!iframe?.contentDocument?.querySelector(s.iframeSelector); }
+        catch { return false; }
       }
-      const attr = (window.innerWidth < 768 ? step.targetMobile : step.target);
-      if (!attr) return false;
-      return !!document.querySelector(`[data-tour="${attr}"]`);
+      const attr = window.innerWidth < 768 ? s.targetMobile : s.target;
+      return attr ? !!document.querySelector(`[data-tour="${attr}"]`) : false;
     });
     setActiveSteps(available);
   }, []);
@@ -118,18 +125,15 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
   const step = activeSteps[current];
   const totalSteps = activeSteps.length;
 
-  /* ---- helpers ---- */
+  /* ---- measurement ---- */
 
-  /** Find iframe element inside the editor page */
   const getIframe = useCallback(
     () => document.querySelector("iframe") as HTMLIFrameElement | null,
     []
   );
 
-  /** Get viewport-relative rect for the current step */
   const measureStep = useCallback(
     (s: TourStep): DOMRect | null => {
-      // --- iframe-based ---
       if (s.iframeSelector) {
         const iframe = getIframe();
         if (!iframe) return null;
@@ -148,7 +152,6 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
           );
         } catch { return null; }
       }
-      // --- data-tour ---
       const attr = isMobile ? s.targetMobile : s.target;
       if (!attr) return null;
       const el = document.querySelector(`[data-tour="${attr}"]`) as HTMLElement | null;
@@ -159,14 +162,12 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
 
   const measure = useCallback(() => {
     if (!step) return;
-    setRect(measureStep(step));
+    setRawRect(measureStep(step));
   }, [step, measureStep]);
 
-  /** Scroll target into view — works for both toolbar items and iframe content */
   const scrollTargetIntoView = useCallback(
     (s: TourStep) => {
       if (s.iframeSelector) {
-        // Scroll inside iframe
         const iframe = getIframe();
         try {
           const el = iframe?.contentDocument?.querySelector(s.iframeSelector) as HTMLElement | null;
@@ -191,21 +192,19 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // On step change: scroll + measure
   useEffect(() => {
     if (!step) return;
     scrollTargetIntoView(step);
     measure();
     const t1 = setTimeout(measure, 300);
     const t2 = setTimeout(measure, 600);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    const t3 = setTimeout(measure, 900);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [step, scrollTargetIntoView, measure]);
 
-  // Re-measure on resize / scroll
   useEffect(() => {
     window.addEventListener("resize", measure);
     window.addEventListener("scroll", measure, true);
-    // Also listen for iframe scroll
     const iframe = getIframe();
     let iDoc: Document | null = null;
     try { iDoc = iframe?.contentDocument ?? null; } catch {}
@@ -225,18 +224,19 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
   };
   const skip = () => onComplete();
 
-  /* ---- rendering ---- */
+  /* ---- render ---- */
 
   if (!step || totalSteps === 0) return null;
 
   const PAD = 8;
   const vw = typeof window !== "undefined" ? window.innerWidth : 400;
   const vh = typeof window !== "undefined" ? window.innerHeight : 800;
-
-  // Pink accent color
   const ACCENT = "#ec4899";
 
-  // Clip-path: dark overlay with hole
+  // Clamp rect to viewport — prevents spotlight & tooltip from going off-screen
+  const rect = rawRect ? clampRect(rawRect, vw, vh) : null;
+
+  // Clip-path
   const clipPath = rect
     ? (() => {
         const x = Math.max(0, rect.left - PAD);
@@ -247,29 +247,44 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
       })()
     : undefined;
 
-  // Tooltip sizing
+  // ---- Tooltip positioning ----
   const tooltipW = isMobile ? Math.min(vw - 24, 280) : 300;
   const GAP = 12;
-  const EST_H = 140;
+  const EST_H = 148;
+  const EDGE = 12; // minimum distance from viewport edge
 
   const tooltipStyle: React.CSSProperties = { width: tooltipW };
 
-  if (rect) {
-    // Horizontal: center on target, clamp
+  if (rect && rect.width > 0 && rect.height > 0) {
+    // Horizontal: center on the visible portion of the target, clamp to viewport
     let left = rect.left + rect.width / 2 - tooltipW / 2;
-    left = Math.max(12, Math.min(left, vw - tooltipW - 12));
+    left = Math.max(EDGE, Math.min(left, vw - tooltipW - EDGE));
     tooltipStyle.left = left;
 
-    // Vertical: prefer below, go above if needed
-    const spaceBelow = vh - rect.bottom - PAD - GAP;
+    // Vertical: try below → try above → fallback overlay on target center
+    const anchorBottom = rect.bottom + PAD + GAP;
+    const anchorTop = rect.top - PAD - GAP - EST_H;
+    const spaceBelow = vh - anchorBottom;
     const spaceAbove = rect.top - PAD - GAP;
 
-    if (spaceBelow >= EST_H || spaceBelow >= spaceAbove) {
-      tooltipStyle.top = Math.min(rect.bottom + PAD + GAP, vh - EST_H - 12);
+    if (spaceBelow >= EST_H) {
+      // Fits below
+      tooltipStyle.top = anchorBottom;
+    } else if (spaceAbove >= EST_H) {
+      // Fits above
+      tooltipStyle.top = anchorTop;
     } else {
-      tooltipStyle.bottom = Math.max(vh - rect.top + PAD + GAP, 12);
+      // Neither fits — place overlapping the target, vertically centered in viewport
+      const centerY = Math.max(EDGE, Math.min(vh / 2 - EST_H / 2, vh - EST_H - EDGE));
+      tooltipStyle.top = centerY;
+    }
+
+    // Final safety clamp: never exceed viewport
+    if (typeof tooltipStyle.top === "number") {
+      tooltipStyle.top = Math.max(EDGE, Math.min(tooltipStyle.top as number, vh - EST_H - EDGE));
     }
   } else {
+    // No rect — center
     tooltipStyle.top = "50%";
     tooltipStyle.left = "50%";
     tooltipStyle.transform = "translate(-50%, -50%)";
@@ -289,7 +304,7 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
       />
 
       {/* Pink spotlight border */}
-      {rect && (
+      {rect && rect.width > 0 && rect.height > 0 && (
         <div
           className="absolute pointer-events-none"
           style={{
@@ -306,7 +321,7 @@ export default function EditorTour({ onComplete }: EditorTourProps) {
       )}
 
       {/* Clickable area over spotlight */}
-      {rect && (
+      {rect && rect.width > 0 && rect.height > 0 && (
         <div
           className="absolute cursor-pointer"
           style={{
