@@ -21,6 +21,15 @@ interface TemplateCardProps {
   previewUrl?: string;
 }
 
+// CSS override: fl-anim elements start at opacity:0 waiting for IntersectionObserver.
+// In sandboxed preview iframes scripts don't run, so force visibility.
+const PREVIEW_OVERRIDE = '<style>.fl-anim{opacity:1!important}</style>';
+
+function injectPreviewCSS(html: string): string {
+  if (html.includes('</head>')) return html.replace('</head>', PREVIEW_OVERRIDE + '</head>');
+  return PREVIEW_OVERRIDE + html;
+}
+
 export default function TemplateCard({
   template,
   isSaved = false,
@@ -72,7 +81,7 @@ export default function TemplateCard({
         ) : template.html_content ? (
           <iframe
             ref={iframeRef}
-            srcDoc={DOMPurify.sanitize(template.html_content, { WHOLE_DOCUMENT: true, ADD_TAGS: ['style', 'link'], ADD_ATTR: ['data-editable', 'data-type', 'data-label', 'data-locked'] })}
+            srcDoc={injectPreviewCSS(DOMPurify.sanitize(template.html_content, { WHOLE_DOCUMENT: true, ADD_TAGS: ['style', 'link'], ADD_ATTR: ['data-editable', 'data-type', 'data-label', 'data-locked'] }))}
             className="w-full h-full pointer-events-none scale-[0.3] origin-top-left"
             style={{ width: '333%', height: '333%' }}
             sandbox="allow-same-origin"

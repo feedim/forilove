@@ -61,7 +61,16 @@ export async function GET(
       );
     }
 
-    return new NextResponse(template.html_content, {
+    // Inject CSS: force fl-anim visible (scripts don't run in sandboxed preview iframes)
+    const previewCSS = `<style>.fl-anim{opacity:1!important}</style>`;
+    let html = template.html_content;
+    if (html.includes('</head>')) {
+      html = html.replace('</head>', previewCSS + '</head>');
+    } else {
+      html = previewCSS + html;
+    }
+
+    return new NextResponse(html, {
       status: 200,
       headers: {
         "Content-Type": "text/html; charset=utf-8",

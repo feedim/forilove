@@ -143,8 +143,8 @@ export async function GET(
       });
     }
 
-    // Inject overscroll prevention CSS into template HTML
-    const overscrollCSS = `<style>html,body{overscroll-behavior:none!important;overscroll-behavior-y:none!important;}</style>`;
+    // Inject preview CSS: overscroll prevention + force fl-anim visible (scripts don't run in sandboxed iframes)
+    const overscrollCSS = `<style>html,body{overscroll-behavior:none!important;overscroll-behavior-y:none!important}.fl-anim{opacity:1!important}</style>`;
     if (html.includes('</head>')) {
       html = html.replace('</head>', `${overscrollCSS}</head>`);
     } else {
