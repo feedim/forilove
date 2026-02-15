@@ -1380,55 +1380,22 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
       const user = await requireAuth(`/editor/${resolvedParams.templateId}`);
       if (!user) { setPurchasing(false); return; }
 
-      // --- Guest → logged-in transition: template tek kullanımlık ---
-      // Mevcut proje varsa guest editleri ona uygula, yoksa yeni oluştur
-
-      let currentProject = project;
+      // 1) Bu şablonla yayınlanmış projesi var mı?
       const { data: existingProject } = await supabase
         .from("projects")
-        .select("*")
+        .select("id, is_published")
         .eq("user_id", user.id)
         .eq("template_id", resolvedParams.templateId)
         .maybeSingle();
 
-      if (existingProject) {
-        // Mevcut proje var — o projenin editörüne yönlendir
+      if (existingProject?.is_published) {
+        // Yayınlanmış proje var — sayfayı yenile, güncelleme editörüne düşsün
         setPurchasing(false);
-        router.push(`/dashboard/editor/${resolvedParams.templateId}`);
+        window.location.href = `/dashboard/editor/${resolvedParams.templateId}`;
         return;
-      } else {
-        const titleSlug = (template?.name || 'sayfa')
-          .toLowerCase()
-          .replace(/[çÇ]/g, 'c').replace(/[ğĞ]/g, 'g').replace(/[ıİ]/g, 'i')
-          .replace(/[öÖ]/g, 'o').replace(/[şŞ]/g, 's').replace(/[üÜ]/g, 'u')
-          .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-')
-          .substring(0, 40).replace(/-$/, '');
-        const randomId = Math.random().toString(36).substring(2, 8);
-        const slug = `${titleSlug}-${randomId}`;
-
-        const { data: newProject, error: insertError } = await supabase
-          .from("projects")
-          .insert({
-            user_id: user.id,
-            template_id: resolvedParams.templateId,
-            title: template?.name,
-            slug,
-            hook_values: valuesRef.current,
-            is_published: false,
-          })
-          .select()
-          .single();
-
-        if (insertError) {
-          toast.error("Proje oluşturulamadı");
-          setPurchasing(false);
-          return;
-        }
-        currentProject = newProject;
-        setProject(newProject);
       }
 
-      // Check if already purchased
+      // 2) Satın alma kontrolü
       const { data: existingPurchase } = await supabase
         .from("purchases")
         .select("id")
@@ -1510,16 +1477,56 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
         }
       }
 
-      // Load coin balance
+      // 3) Proje oluştur veya mevcut (yayınlanmamış) projeyi güncelle
+      let currentProject;
+      if (existingProject) {
+        // Yayınlanmamış mevcut proje — guest editleri uygula
+        await supabase.from("projects").update({ hook_values: valuesRef.current }).eq("id", existingProject.id);
+        const { data: updated } = await supabase.from("projects").select("*").eq("id", existingProject.id).single();
+        currentProject = updated;
+        setProject(updated);
+      } else {
+        const titleSlug = (template?.name || 'sayfa')
+          .toLowerCase()
+          .replace(/[çÇ]/g, 'c').replace(/[ğĞ]/g, 'g').replace(/[ıİ]/g, 'i')
+          .replace(/[öÖ]/g, 'o').replace(/[şŞ]/g, 's').replace(/[üÜ]/g, 'u')
+          .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-')
+          .substring(0, 40).replace(/-$/, '');
+        const randomId = Math.random().toString(36).substring(2, 8);
+        const slug = `${titleSlug}-${randomId}`;
+
+        const { data: newProject, error: insertError } = await supabase
+          .from("projects")
+          .insert({
+            user_id: user.id,
+            template_id: resolvedParams.templateId,
+            title: template?.name,
+            slug,
+            hook_values: valuesRef.current,
+            is_published: false,
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          toast.error("Proje oluşturulamadı");
+          setPurchasing(false);
+          return;
+        }
+        currentProject = newProject;
+        setProject(newProject);
+      }
+
+      // Coin balance yükle
       const { data: profile } = await supabase.from("profiles").select("coin_balance").eq("user_id", user.id).single();
       setCoinBalance(profile?.coin_balance ?? 0);
 
-      // Switch from guest mode to logged-in mode — no page change
+      // Guest → logged-in, sayfa değişmeden
       setGuestMode(false);
       setIsPurchased(true);
       setPurchasing(false);
 
-      // Open publish details modal directly
+      // Paylaş modalını aç
       setDraftTitle(currentProject?.title || template?.name || "");
       setDraftSlug(currentProject?.slug?.replace(/-[a-z0-9]{6,}$/, "") || "");
       setDraftDescription(currentProject?.description || template?.description || "");
