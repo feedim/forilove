@@ -1403,11 +1403,58 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
       if (coinPrice > 0) toast.success("Satın alındı!");
       try { (window as any).ttq?.track('PlaceAnOrder', { content_type: 'product', content_id: template.id, content_name: template.name }); } catch {}
       setIsPurchased(true);
+
+      // Proje oluştur (yoksa)
+      let currentProject = project;
+      if (!currentProject && user) {
+        const { data: existingProject } = await supabase
+          .from("projects")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("template_id", resolvedParams.templateId)
+          .maybeSingle();
+
+        if (existingProject) {
+          currentProject = existingProject;
+          setProject(existingProject);
+        } else {
+          const titleSlug = (template?.name || 'sayfa')
+            .toLowerCase()
+            .replace(/[çÇ]/g, 'c').replace(/[ğĞ]/g, 'g').replace(/[ıİ]/g, 'i')
+            .replace(/[öÖ]/g, 'o').replace(/[şŞ]/g, 's').replace(/[üÜ]/g, 'u')
+            .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-')
+            .substring(0, 40).replace(/-$/, '');
+          const randomId = Math.random().toString(36).substring(2, 8);
+          const slug = `${titleSlug}-${randomId}`;
+
+          const { data: newProject, error: insertError } = await supabase
+            .from("projects")
+            .insert({
+              user_id: user.id,
+              template_id: resolvedParams.templateId,
+              title: template?.name,
+              slug,
+              hook_values: valuesRef.current,
+              is_published: false,
+            })
+            .select()
+            .single();
+
+          if (insertError) {
+            toast.error("Proje oluşturulamadı");
+            setPurchasing(false);
+            return;
+          }
+          currentProject = newProject;
+          setProject(newProject);
+        }
+      }
+
       setPurchasing(false);
-      // Open publish details modal directly without page reload
-      setDraftTitle(project?.title || template?.name || "");
-      setDraftSlug(project?.slug?.replace(/-[a-z0-9]{6,}$/, "") || "");
-      setDraftDescription(project?.description || template?.description || "");
+      // Modal'ı aç
+      setDraftTitle(currentProject?.title || template?.name || "");
+      setDraftSlug(currentProject?.slug?.replace(/-[a-z0-9]{6,}$/, "") || "");
+      setDraftDescription(currentProject?.description || template?.description || "");
       setShowDetailsModal(true);
     } catch (err: any) {
       toast.error(err.message || "Bir hata oluştu");
