@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Heart } from "lucide-react";
 import { escapeHtml, sanitizeUrl } from "@/lib/security/sanitize";
+import { isScriptSafe } from "@/lib/security/script-allowlist";
 import DOMPurify from 'isomorphic-dompurify';
 import MusicPlayer from "@/components/MusicPlayer";
 import ShareIconButton from "@/components/ShareIconButton";
@@ -357,7 +358,7 @@ export function HTMLTemplateRender({ project, musicUrl }: { project: any; musicU
     const rafId = requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         if (cancelled) return;
-        scripts.forEach((code) => {
+        scripts.filter(isScriptSafe).forEach((code) => {
           try { new Function(code)(); } catch (e) {
             if (process.env.NODE_ENV === 'development') console.warn('Template script error:', e);
           }

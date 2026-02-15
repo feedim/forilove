@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     const calculatedBuffer = Buffer.from(calculatedHash, 'utf8');
     if (hashBuffer.length !== calculatedBuffer.length || !crypto.timingSafeEqual(hashBuffer, calculatedBuffer)) {
       console.error('[PayTR Callback] Hash mismatch for', merchant_oid);
-      return new NextResponse('OK', { status: 200 });
+      return new NextResponse('FAIL', { status: 400 });
     }
 
     // Ödeme kaydını bul

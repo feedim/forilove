@@ -198,19 +198,6 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
     try {
       const result = await options.onConfirm(appliedCoupon || undefined);
       if (result.success && result.newBalance !== undefined) {
-        // Record coupon usage after successful purchase
-        if (appliedCoupon) {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            const { data: usageResult } = await supabase.rpc('record_coupon_usage', {
-              p_coupon_id: appliedCoupon.couponId,
-              p_user_id: user.id,
-            });
-            if (usageResult && !usageResult.success) {
-              console.warn('Kupon kullanımı kaydedilemedi:', usageResult.error);
-            }
-          }
-        }
         onResult({ success: true, newBalance: result.newBalance });
       } else {
         setError(result.error || "İşlem başarısız oldu");

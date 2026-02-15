@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Heart } from "lucide-react";
 import DOMPurify from "isomorphic-dompurify";
+import { isScriptSafe } from "@/lib/security/script-allowlist";
 import MusicPlayer from "@/components/MusicPlayer";
 
 // Extract <script> contents from HTML before DOMPurify strips them
@@ -121,7 +122,7 @@ export default function PreviewPage() {
     const rafId = requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         if (cancelled) return;
-        templateScripts.forEach((code) => {
+        templateScripts.filter(isScriptSafe).forEach((code) => {
           try { new Function(code)(); } catch (e) {
             if (process.env.NODE_ENV === 'development') console.warn('Template script error:', e);
           }

@@ -9,7 +9,8 @@ import toast from "react-hot-toast";
 import { compressImage, validateImageFile, getOptimizedFileName } from '@/lib/utils/imageCompression';
 import { ShareSheet } from '@/components/ShareIconButton';
 import { usePurchaseConfirm } from '@/components/PurchaseConfirmModal';
-import { getActivePrice, isDiscountActive } from '@/lib/discount';
+import { isDiscountActive } from '@/lib/discount';
+import { AI_COST, TEMPLATE_UNLOCK_COST } from '@/lib/constants';
 import type { CouponInfo } from '@/components/PurchaseConfirmModal';
 import MusicPickerModal from '@/components/MusicPickerModal';
 import { useAuthModal } from '@/components/AuthModal';
@@ -88,7 +89,6 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
   const [aiPrompt, setAIPrompt] = useState('');
   const [aiLoading, setAILoading] = useState(false);
   const [showTour, setShowTour] = useState(false);
-  const TEMPLATE_UNLOCK_COST = 29;
   const [unlockedFields, setUnlockedFields] = useState<Set<string>>(new Set());
   const [selectedVisibility, setSelectedVisibility] = useState<boolean | null>(null);
   const router = useRouter();
@@ -1370,16 +1370,14 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
 
     let purchased = !!existingPurchase;
 
-    // 3) Free template auto-purchase
-    if (!purchased && getActivePrice(template) === 0) {
-      const { error } = await supabase.from("purchases").insert({
-        user_id: user.id,
-        template_id: resolvedParams.templateId,
-        coins_spent: 0,
-        payment_method: "coins",
-        payment_status: "completed",
+    // 3) Free template auto-purchase (server-side)
+    if (!purchased && template.coin_price === 0) {
+      const res = await fetch("/api/purchase/free", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ templateId: resolvedParams.templateId }),
       });
-      if (!error) purchased = true;
+      if (res.ok) purchased = true;
     }
 
     setIsPurchased(purchased);
@@ -1427,18 +1425,16 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push("/login"); return; }
 
-      const coinPrice = getActivePrice(template);
+      const coinPrice = isDiscountActive(template) ? template.discount_price! : template.coin_price;
 
       if (coinPrice === 0) {
-        // Free template — auto-purchase
-        const { error: purchaseError } = await supabase.from("purchases").insert({
-          user_id: user.id,
-          template_id: resolvedParams.templateId,
-          coins_spent: 0,
-          payment_method: "coins",
-          payment_status: "completed",
+        // Free template — auto-purchase (server-side)
+        const res = await fetch("/api/purchase/free", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ templateId: resolvedParams.templateId }),
         });
-        if (purchaseError) {
+        if (!res.ok) {
           toast.error("Satın alma hatası");
           setPurchasing(false);
           return;
@@ -1462,35 +1458,19 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
           icon: "template",
           allowCoupon: true,
           onConfirm: async (couponInfo?: CouponInfo) => {
-            let verifiedPrice = coinPrice;
-            if (couponInfo) {
-              const { data: couponCheck } = await supabase.rpc("validate_coupon", { p_code: couponInfo.code, p_user_id: user.id });
-              if (couponCheck?.valid) {
-                verifiedPrice = Math.max(0, Math.round(verifiedPrice * (1 - couponCheck.discount_percent / 100)));
-              } else {
-                return { success: false, error: couponCheck?.error || "Kupon doğrulanamadı" };
-              }
-            }
-            let newBalance = 0;
-            if (verifiedPrice > 0) {
-              const { data: spendResult, error: spendError } = await supabase.rpc("spend_coins", {
-                p_user_id: user.id, p_amount: verifiedPrice,
-                p_description: `Şablon satın alındı: ${template.name}`,
-                p_reference_id: template.id, p_reference_type: "template",
-              });
-              if (spendError) throw spendError;
-              if (!spendResult[0]?.success) return { success: false, error: spendResult[0]?.message || "Coin harcama başarısız" };
-              newBalance = spendResult[0].new_balance;
-            } else {
-              const { data: balanceData } = await supabase.from("profiles").select("coin_balance").eq("user_id", user.id).single();
-              newBalance = balanceData?.coin_balance ?? 0;
-            }
-            const { error: pErr } = await supabase.from("purchases").insert({
-              user_id: user.id, template_id: template.id, coins_spent: verifiedPrice,
-              payment_method: "coins", payment_status: "completed",
+            const res = await fetch("/api/purchase/template", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                templateId: template.id,
+                couponCode: couponInfo?.code,
+              }),
             });
-            if (pErr) throw pErr;
-            return { success: true, newBalance };
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+              return { success: false, error: data.error || "Satın alma başarısız" };
+            }
+            return { success: true, newBalance: data.newBalance };
           },
         });
         if (!purchaseResult?.success) { setPurchasing(false); return; }
@@ -1548,17 +1528,16 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
         .maybeSingle();
 
       if (!existingPurchase) {
-        const coinPrice = getActivePrice(template);
+        const coinPrice = isDiscountActive(template) ? template.discount_price! : template.coin_price;
 
         if (coinPrice === 0) {
-          const { error: purchaseError } = await supabase.from("purchases").insert({
-            user_id: user.id,
-            template_id: resolvedParams.templateId,
-            coins_spent: 0,
-            payment_method: "coins",
-            payment_status: "completed",
+          // Free template — server-side purchase
+          const res = await fetch("/api/purchase/free", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ templateId: resolvedParams.templateId }),
           });
-          if (purchaseError) {
+          if (!res.ok) {
             toast.error("Satın alma hatası");
             setPurchasing(false);
             return;
@@ -1584,35 +1563,19 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
             icon: "template",
             allowCoupon: true,
             onConfirm: async (couponInfo?: CouponInfo) => {
-              let verifiedPrice = coinPrice;
-              if (couponInfo) {
-                const { data: couponCheck } = await supabase.rpc("validate_coupon", { p_code: couponInfo.code, p_user_id: user.id });
-                if (couponCheck?.valid) {
-                  verifiedPrice = Math.max(0, Math.round(verifiedPrice * (1 - couponCheck.discount_percent / 100)));
-                } else {
-                  return { success: false, error: couponCheck?.error || "Kupon doğrulanamadı" };
-                }
-              }
-              let newBalance = 0;
-              if (verifiedPrice > 0) {
-                const { data: spendResult, error: spendError } = await supabase.rpc("spend_coins", {
-                  p_user_id: user.id, p_amount: verifiedPrice,
-                  p_description: `Şablon satın alındı: ${template.name}`,
-                  p_reference_id: template.id, p_reference_type: "template",
-                });
-                if (spendError) throw spendError;
-                if (!spendResult[0]?.success) return { success: false, error: spendResult[0]?.message || "Coin harcama başarısız" };
-                newBalance = spendResult[0].new_balance;
-              } else {
-                const { data: balanceData } = await supabase.from("profiles").select("coin_balance").eq("user_id", user.id).single();
-                newBalance = balanceData?.coin_balance ?? 0;
-              }
-              const { error: pErr } = await supabase.from("purchases").insert({
-                user_id: user.id, template_id: template.id, coins_spent: verifiedPrice,
-                payment_method: "coins", payment_status: "completed",
+              const res = await fetch("/api/purchase/template", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  templateId: template.id,
+                  couponCode: couponInfo?.code,
+                }),
               });
-              if (pErr) throw pErr;
-              return { success: true, newBalance };
+              const data = await res.json();
+              if (!res.ok || !data.success) {
+                return { success: false, error: data.error || "Satın alma başarısız" };
+              }
+              return { success: true, newBalance: data.newBalance };
             },
           });
           if (!purchaseResult?.success) { setPurchasing(false); return; }
@@ -1882,8 +1845,6 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
     setIsChangingImage(false);
   };
 
-  const AI_COST = 15;
-
   const handleAIGenerate = async () => {
     if (!aiPrompt.trim() || aiLoading) return;
 
@@ -1904,24 +1865,20 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
       currentBalance: currentCoinBalance,
       icon: 'ai',
       allowCoupon: true,
-      onConfirm: async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Oturum bulunamadı');
-
-        const { data: spendResult, error: spendError } = await supabase.rpc('spend_coins', {
-          p_user_id: user.id,
-          p_amount: AI_COST,
-          p_description: 'AI ile Doldur kullanımı',
-          p_reference_id: (project?.id && project.id !== 'temp') ? project.id : null,
-          p_reference_type: 'ai_generate',
+      onConfirm: async (couponInfo?: CouponInfo) => {
+        const res = await fetch("/api/purchase/ai", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            projectId: (project?.id && project.id !== 'temp') ? project.id : null,
+            couponCode: couponInfo?.code,
+          }),
         });
-
-        if (spendError) throw spendError;
-        if (!spendResult[0]?.success) {
-          return { success: false, error: spendResult[0]?.message || 'Coin harcama başarısız' };
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          return { success: false, error: data.error || "Coin harcama başarısız" };
         }
-
-        return { success: true, newBalance: spendResult[0].new_balance };
+        return { success: true, newBalance: data.newBalance };
       },
     });
 
@@ -1986,28 +1943,14 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
       currentCoinBalance = initResult.balance;
     }
 
-    // Ücretsiz şablon satın alınmamışsa önce satın al (logged-in user who hasn't purchased)
-    if (!isPurchased && getActivePrice(template) === 0) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: existingPurchase } = await supabase
-          .from("purchases")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("template_id", resolvedParams.templateId)
-          .eq("payment_status", "completed")
-          .maybeSingle();
-        if (!existingPurchase) {
-          await supabase.from("purchases").insert({
-            user_id: user.id,
-            template_id: resolvedParams.templateId,
-            coins_spent: 0,
-            payment_method: "coins",
-            payment_status: "completed",
-          });
-        }
-        setIsPurchased(true);
-      }
+    // Ücretsiz şablon satın alınmamışsa önce satın al (server-side)
+    if (!isPurchased && template.coin_price === 0) {
+      const res = await fetch("/api/purchase/free", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ templateId: resolvedParams.templateId }),
+      });
+      if (res.ok) setIsPurchased(true);
     }
 
     const result = await confirm({
@@ -2017,34 +1960,21 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
       currentBalance: currentCoinBalance,
       icon: 'template',
       allowCoupon: true,
-      onConfirm: async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Oturum bulunamadı');
-
-        // Spend coins
-        const { data: spendResult, error: spendError } = await supabase.rpc('spend_coins', {
-          p_user_id: user.id,
-          p_amount: TEMPLATE_UNLOCK_COST,
-          p_description: 'Ücretsiz şablon kilitleri açıldı',
-          p_reference_id: (project?.id && project.id !== 'temp') ? project.id : null,
-          p_reference_type: 'template_unlock',
+      onConfirm: async (couponInfo?: CouponInfo) => {
+        const res = await fetch("/api/purchase/unlock", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            projectId: (project?.id && project.id !== 'temp') ? project.id : null,
+            unlockedKeys: allLockedKeys,
+            couponCode: couponInfo?.code,
+          }),
         });
-
-        if (spendError) throw spendError;
-        if (!spendResult[0]?.success) {
-          return { success: false, error: spendResult[0]?.message || 'Coin harcama başarısız' };
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          return { success: false, error: data.error || "Coin harcama başarısız" };
         }
-
-        // Update project unlocked_fields with all locked keys
-        if (project?.id && project.id !== 'temp') {
-          const { error: updateError } = await supabase
-            .from('projects')
-            .update({ unlocked_fields: allLockedKeys, updated_at: new Date().toISOString() })
-            .eq('id', project.id);
-          if (updateError) throw updateError;
-        }
-
-        return { success: true, newBalance: spendResult[0].new_balance };
+        return { success: true, newBalance: data.newBalance };
       },
     });
 

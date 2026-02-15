@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { processCoinCommission } from '@/lib/process-coin-commission';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,72 +60,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 5. Pending → fallback coin ekleme
-    const totalCoins = payment.coins_purchased;
-    const packageName = payment.metadata?.package_name || 'Paket';
-
-    // 5a. ATOMIC CLAIM: pending → completed (sadece bir işlem alabilir)
-    const { data: claimed, error: claimError } = await adminClient
-      .from('coin_payments')
-      .update({
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-        metadata: { ...payment.metadata, completed_via: 'verify_fallback' },
-      })
-      .eq('id', payment.id)
-      .eq('status', 'pending')
-      .select('id');
-
-    if (claimError || !claimed || claimed.length === 0) {
-      // Başka bir işlem tamamladı — taze bakiyeyi döndür
-      const { data: profile } = await adminClient
-        .from('profiles')
-        .select('coin_balance')
-        .eq('user_id', user.id)
-        .single();
-
-      return NextResponse.json({
-        status: 'completed',
-        coin_balance: profile?.coin_balance ?? 0,
-        coins_added: payment.coins_purchased,
-      });
-    }
-
-    // 5b. Bakiyeyi atomic olarak güncelle
-    const { data: newBalance, error: updateError } = await adminClient.rpc('increment_coin_balance', {
-      p_user_id: user.id,
-      p_amount: totalCoins,
-    });
-
-    if (updateError || newBalance === null) {
-      await adminClient.from('coin_payments').update({ status: 'pending', completed_at: null }).eq('id', payment.id);
-      return NextResponse.json({ status: 'error' }, { status: 500 });
-    }
-
-    // 5c. Transaction kaydı
-    const { error: txnError } = await adminClient
-      .from('coin_transactions')
-      .insert({
-        user_id: user.id,
-        amount: totalCoins,
-        transaction_type: 'purchase',
-        description: `${packageName} satın alındı`,
-        reference_id: String(payment.id),
-        reference_type: 'payment',
-      });
-
-    if (txnError) {
-      if (process.env.NODE_ENV === "development") console.error('[Verify] Transaction insert failed:', txnError.message);
-    }
-
-    // 5d. Referans komisyonu (kritik değil — direkt DB sorguları ile)
-    await processCoinCommission(adminClient, user.id, payment.id, totalCoins);
-
-    return NextResponse.json({
-      status: 'completed',
-      coin_balance: newBalance,
-      coins_added: totalCoins,
-    });
+    // 5. Pending → callback henüz gelmedi, coin ekleme yapma
+    return NextResponse.json({ status: 'pending' });
 
   } catch {
     return NextResponse.json({ status: 'error' }, { status: 500 });
