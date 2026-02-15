@@ -274,6 +274,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
         // Use valuesRef to avoid stale closure
         setIsChangingImage(false);
         setDraftValue(valuesRef.current[event.data.key] || '');
+        setDraftColor(valuesRef.current[`__color_${event.data.key}`] || '');
         oldImageUrlRef.current = valuesRef.current[event.data.key] || '';
         setEditingHook(event.data.key);
       }
@@ -1061,6 +1062,15 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
           element.textContent = value;
         }
 
+        // Apply text color override for text/textarea hooks
+        if (type === 'text' || type === 'textarea') {
+          const colorVal = values[`__color_${key}`];
+          if (colorVal && isValidCssColor(colorVal)) {
+            const currentStyle = element.getAttribute('style') || '';
+            element.setAttribute('style', `${currentStyle}; color: ${safeCssValue(colorVal)};`);
+          }
+        }
+
         // Add click handler for editing
         element.setAttribute('data-clickable', 'true');
         const currentStyle = element.getAttribute('style') || '';
@@ -1577,6 +1587,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
 
   const [editingHook, setEditingHook] = useState<string | null>(null);
   const [draftValue, setDraftValue] = useState<string>("");
+  const [draftColor, setDraftColor] = useState<string>("");
   const [draftListItems, setDraftListItems] = useState<string[]>([]);
 
   // Populate draftListItems when a list-type hook is opened (covers iframe postMessage path)
@@ -1619,6 +1630,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
   const openEditModal = (hookKey: string) => {
     const val = values[hookKey] || '';
     setDraftValue(val);
+    setDraftColor(values[`__color_${hookKey}`] || '');
     setIsChangingImage(false);
     oldImageUrlRef.current = val;
     const hook = hooks.find(h => h.key === hookKey);
@@ -1679,7 +1691,13 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
     }
 
     pushUndo({ ...valuesRef.current });
-    setValues(prev => ({ ...prev, [editingHook]: finalValue }));
+    const newValues: Record<string, string> = { [editingHook]: finalValue };
+    // Save text color for text/textarea hooks
+    const editHook = hooks.find(h => h.key === editingHook);
+    if (editHook?.type === 'text' || editHook?.type === 'textarea') {
+      newValues[`__color_${editingHook}`] = draftColor;
+    }
+    setValues(prev => ({ ...prev, ...newValues }));
     setEditingHook(null);
     setIsChangingImage(false);
   };
@@ -2684,30 +2702,28 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                           placeholder="#FF6B9D"
                         />
                       </div>
-                      {/* Instagram-style fixed palette — horizontally scrollable */}
-                      <div className="overflow-x-auto scrollbar-hide -mx-2 px-2">
-                        <div className="flex gap-2 w-max pb-1">
-                          {[
-                            '#FFFFFF', '#000000', '#F5F5F5', '#1A1A1A',
-                            '#FF3B30', '#FF6B6B', '#FF9500', '#FFCC00',
-                            '#34C759', '#30D158', '#5AC8FA', '#007AFF',
-                            '#5856D6', '#AF52DE', '#FF2D55', '#FF6B9D',
-                            '#E30076', '#FF375F', '#BF5AF2', '#AC8E68',
-                            '#8E8E93', '#636366', '#C7B299', '#FFD700',
-                          ].map((color) => (
-                            <button
-                              key={color}
-                              onClick={() => setDraftValue(color)}
-                              className="w-9 h-9 shrink-0 rounded-full border-2 transition-all active:scale-90"
-                              style={{
-                                backgroundColor: color,
-                                borderColor: draftValue === color ? '#FF2D55' : 'rgba(255,255,255,0.1)',
-                                boxShadow: draftValue === color ? '0 0 0 2px #FF2D55' : 'none',
-                              }}
-                              aria-label={color}
-                            />
-                          ))}
-                        </div>
+                      {/* Color palette grid */}
+                      <div className="grid grid-cols-8 gap-2">
+                        {[
+                          '#FFFFFF', '#000000', '#F5F5F5', '#1A1A1A',
+                          '#FF3B30', '#FF6B6B', '#FF9500', '#FFCC00',
+                          '#34C759', '#30D158', '#5AC8FA', '#007AFF',
+                          '#5856D6', '#AF52DE', '#FF2D55', '#FF6B9D',
+                          '#E30076', '#FF375F', '#BF5AF2', '#AC8E68',
+                          '#8E8E93', '#636366', '#C7B299', '#FFD700',
+                        ].map((color) => (
+                          <button
+                            key={color}
+                            onClick={() => setDraftValue(color)}
+                            className="w-full aspect-square rounded-lg border-2 transition-all active:scale-90 hover:scale-105"
+                            style={{
+                              backgroundColor: color,
+                              borderColor: draftValue === color ? '#FF2D55' : 'rgba(255,255,255,0.08)',
+                              boxShadow: draftValue === color ? '0 0 0 2px #FF2D55' : 'none',
+                            }}
+                            aria-label={color}
+                          />
+                        ))}
                       </div>
                     </div>
                   ) : currentHook.type === 'date' ? (
@@ -2828,6 +2844,48 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                     </div>
                   )}
                 </div>
+
+                {/* Metin Rengi — text ve textarea tipleri için */}
+                {(currentHook.type === 'text' || currentHook.type === 'textarea') && (
+                  <div className="space-y-3 pt-3 border-t border-white/10">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-zinc-400 font-medium">Metin Rengi</span>
+                      {draftColor && (
+                        <button onClick={() => setDraftColor('')} className="text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors">
+                          Sıfırla
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl border-2 border-white/20 shrink-0 transition-all"
+                        style={{ backgroundColor: draftColor || 'transparent' }}
+                      />
+                      <input type="text" value={draftColor}
+                        onChange={(e) => setDraftColor(e.target.value)}
+                        className="input-modern flex-1 text-sm font-mono"
+                        placeholder="Varsayılan renk"
+                      />
+                    </div>
+                    <div className="grid grid-cols-8 gap-2">
+                      {[
+                        '#FFFFFF', '#000000', '#1A1A1A', '#F5F5F5',
+                        '#FF3B30', '#FF6B6B', '#FF9500', '#FFCC00',
+                        '#34C759', '#30D158', '#5AC8FA', '#007AFF',
+                        '#5856D6', '#AF52DE', '#FF2D55', '#AC8E68',
+                      ].map((color) => (
+                        <button key={color} onClick={() => setDraftColor(color)}
+                          className="w-full aspect-square rounded-lg border-2 transition-all active:scale-90 hover:scale-105"
+                          style={{
+                            backgroundColor: color,
+                            borderColor: draftColor === color ? '#FF2D55' : 'rgba(255,255,255,0.08)',
+                            boxShadow: draftColor === color ? '0 0 0 2px #FF2D55' : 'none',
+                          }}
+                          aria-label={color}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Action Buttons */}
                 <div className="flex gap-3 pt-2 shrink-0">

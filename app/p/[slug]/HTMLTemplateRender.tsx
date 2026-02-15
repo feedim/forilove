@@ -152,6 +152,19 @@ export function HTMLTemplateRender({ project, musicUrl }: { project: any; musicU
       }
       // For text content - escape HTML to prevent XSS
       const sanitizedText = escapeHtml(stringValue);
+      // Check for text color override (__color_ prefix)
+      const colorKey = `__color_${key}`;
+      const colorValue = htmlData[colorKey];
+      if (colorValue) {
+        const safeColor = escapeHtml(String(colorValue));
+        if (openTag.includes('style="')) {
+          const coloredTag = openTag.replace(/style="([^"]*)"/, (_, s: string) => `style="${s}; color: ${safeColor};"`);
+          return coloredTag + sanitizedText + closeTag;
+        } else {
+          const coloredTag = openTag.replace(/>$/, ` style="color: ${safeColor};">`);
+          return coloredTag + sanitizedText + closeTag;
+        }
+      }
       return openTag + sanitizedText + closeTag;
     });
 
