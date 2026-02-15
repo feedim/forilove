@@ -1392,12 +1392,10 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
         .maybeSingle();
 
       if (existingProject) {
-        // Sadece hook_values güncelle — slug, title, is_published vs. koru
-        const mergedValues = { ...existingProject.hook_values, ...valuesRef.current };
-        await supabase.from("projects").update({ hook_values: mergedValues }).eq("id", existingProject.id);
-        currentProject = { ...existingProject, hook_values: mergedValues };
-        setProject(currentProject);
-        setValues(mergedValues);
+        // Mevcut proje var — o projenin editörüne yönlendir
+        setPurchasing(false);
+        router.push(`/dashboard/editor/${resolvedParams.templateId}`);
+        return;
       } else {
         const titleSlug = (template?.name || 'sayfa')
           .toLowerCase()
