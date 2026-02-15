@@ -68,6 +68,15 @@ const STEPS: TourStep[] = [
     order: [4, 6],
   },
   {
+    target: "palette",
+    targetMobile: "palette-mobile",
+    title: "Palet",
+    description:
+      "Hazır renk paletlerinden seç ve açık/koyu tema arasında geçiş yap.",
+    optional: true,
+    order: [4.5, 6.5],
+  },
+  {
     target: "music",
     targetMobile: "music-mobile",
     title: "Müzik Ekle",

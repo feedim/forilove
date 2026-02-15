@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Eye, ChevronDown, ChevronUp, PanelLeftClose, PanelLeft, X, Heart, Coins, Upload, Music, Play, Pause, Globe, Lock, LayoutGrid, Undo2, Redo2, Sparkles, Trash2 } from "lucide-react";
+import { ArrowLeft, Eye, ChevronDown, ChevronUp, PanelLeftClose, PanelLeft, X, Heart, Coins, Upload, Music, Play, Pause, Globe, Lock, LayoutGrid, Undo2, Redo2, Sparkles, Trash2, Palette } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { compressImage, validateImageFile, getOptimizedFileName } from '@/lib/utils/imageCompression';
@@ -28,6 +28,21 @@ interface TemplateHook {
   label: string;
   defaultValue: string;
   locked?: boolean;
+}
+
+interface PaletteColors {
+  text: string; muted: string; light: string; border: string;
+  accent: string; 'accent-light': string; 'body-bg': string;
+}
+
+interface PaletteDefinition {
+  id: string; name: string;
+  light: PaletteColors; dark: PaletteColors;
+}
+
+interface PaletteData {
+  default: string;
+  palettes: PaletteDefinition[];
 }
 
 export default function NewEditorPage({ params, guestMode = false }: { params: Promise<{ templateId: string }>; guestMode?: boolean }) {
@@ -64,6 +79,10 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
   const [areas, setAreas] = useState<{ key: string; label: string }[]>([]);
   const [showSectionsModal, setShowSectionsModal] = useState(false);
   const [draftHiddenAreas, setDraftHiddenAreas] = useState<Set<string>>(new Set());
+  const [palettes, setPalettes] = useState<PaletteData | null>(null);
+  const [showPaletteModal, setShowPaletteModal] = useState(false);
+  const [draftPaletteId, setDraftPaletteId] = useState('');
+  const [draftThemeMode, setDraftThemeMode] = useState<'light' | 'dark'>('light');
   const [showAIModal, setShowAIModal] = useState(false);
   const [aiPrompt, setAIPrompt] = useState('');
   const [aiLoading, setAILoading] = useState(false);
@@ -272,6 +291,7 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
         setShowDetailsModal(false);
         setShowVisibilityModal(false);
         setShowSectionsModal(false);
+        setShowPaletteModal(false);
         setShowShareModal(false);
         setShowAIModal(false);
         setEditingHook(null);
@@ -574,6 +594,12 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
           });
           setAreas(parsedAreas);
 
+          // Parse palette data
+          const paletteScript = areaDoc.querySelector('script[data-palettes]');
+          if (paletteScript) {
+            try { const pd = JSON.parse(paletteScript.textContent || ''); if (pd?.palettes?.length) setPalettes(pd); } catch {}
+          }
+
           // Restore guest edits from localStorage (OAuth return)
           try {
             const sp = new URLSearchParams(window.location.search);
@@ -654,6 +680,12 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
           parsedAreas.push({ key, label });
         });
         setAreas(parsedAreas);
+
+        // Parse palette data
+        const paletteScript = areaDoc.querySelector('script[data-palettes]');
+        if (paletteScript) {
+          try { const pd = JSON.parse(paletteScript.textContent || ''); if (pd?.palettes?.length) setPalettes(pd); } catch {}
+        }
 
         // If purchased, load/create project
         if (purchaseData) {
@@ -899,6 +931,18 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
            /^[a-zA-Z]+$/.test(color);
   };
 
+  const buildPaletteOverrideStyle = (vals: Record<string, string>, pd: PaletteData | null): string => {
+    if (!pd || !pd.palettes.length) return '';
+    const selectedId = vals.__palette || pd.default;
+    const mode = (vals.__theme_mode || 'light') as 'light' | 'dark';
+    const pal = pd.palettes.find(p => p.id === selectedId);
+    if (!pal) return '';
+    // Default palette + light mode → no override needed
+    if (selectedId === pd.default && mode === 'light') return '';
+    const colors = pal[mode];
+    return `<style data-palette-override>:root{--text:${colors.text};--muted:${colors.muted};--light:${colors.light};--border:${colors.border};--accent:${colors.accent};--accent-light:${colors['accent-light']}}body{background:${colors['body-bg']}!important}</style>`;
+  };
+
   const updatePreview = () => {
     const htmlContent = template?.html_content;
     if (!htmlContent) return;
@@ -914,9 +958,10 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
         html = html.replace(regex, value || '');
       });
 
-      // Process data-area hidden sections
+      // Process data-area hidden sections + palette override
       const hiddenAreaKeys = Object.keys(values).filter(k => k.startsWith('__area_') && values[k] === 'hidden');
-      if (hiddenAreaKeys.length > 0) {
+      const hookPaletteStyle = buildPaletteOverrideStyle(values, palettes);
+      if (hiddenAreaKeys.length > 0 || hookPaletteStyle) {
         const hookParser = new DOMParser();
         const hookDoc = hookParser.parseFromString(html, 'text/html');
         hiddenAreaKeys.forEach(k => {
@@ -924,6 +969,13 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
           const el = hookDoc.querySelector(`[data-area="${areaName}"]`);
           if (el) el.setAttribute('style', (el.getAttribute('style') || '') + ';display:none !important;');
         });
+        if (hookPaletteStyle) {
+          const palEl = hookDoc.createElement('style');
+          palEl.setAttribute('data-palette-override', '');
+          const cssMatch = hookPaletteStyle.match(/<style[^>]*>([\s\S]*?)<\/style>/);
+          if (cssMatch) palEl.textContent = cssMatch[1];
+          hookDoc.head.appendChild(palEl);
+        }
         writeToPreview(hookDoc.documentElement.outerHTML);
       } else {
         writeToPreview(html);
@@ -1145,6 +1197,17 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
 
       // Strip template metadata attributes to prevent easy extraction
       doc.querySelectorAll('[data-hook]').forEach(function(el) { el.removeAttribute('data-hook'); });
+
+      // Inject palette override CSS
+      const paletteStyle = buildPaletteOverrideStyle(values, palettes);
+      if (paletteStyle) {
+        const palEl = doc.createElement('style');
+        palEl.setAttribute('data-palette-override', '');
+        // Extract inner CSS from the style tag string
+        const cssMatch = paletteStyle.match(/<style[^>]*>([\s\S]*?)<\/style>/);
+        if (cssMatch) palEl.textContent = cssMatch[1];
+        doc.head.appendChild(palEl);
+      }
 
       writeToPreview(doc.documentElement.outerHTML);
     }
@@ -1909,6 +1972,20 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                           Bölümler
                         </button>
                       )}
+                      {palettes && palettes.palettes.length > 0 && (
+                        <button
+                          onClick={() => {
+                            setDraftPaletteId(values.__palette || palettes.default);
+                            setDraftThemeMode((values.__theme_mode as 'light' | 'dark') || 'light');
+                            setShowPaletteModal(true);
+                          }}
+                          className="btn-secondary shrink-0 flex items-center gap-2 px-4 py-2 text-sm whitespace-nowrap"
+                          data-tour="palette"
+                        >
+                          <Palette className="h-4 w-4" />
+                          Palet
+                        </button>
+                      )}
                       {musicUrl ? (
                         <div className="btn-secondary shrink-0 flex items-center rounded-full overflow-hidden" style={{ padding: '0 1rem' }} data-tour="music">
                           {/* Play/Pause — direct handler for mobile gesture context */}
@@ -2114,6 +2191,20 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                     Bölümler
                   </button>
                 )}
+                {palettes && palettes.palettes.length > 0 && (
+                  <button
+                    onClick={() => {
+                      setDraftPaletteId(values.__palette || palettes.default);
+                      setDraftThemeMode((values.__theme_mode as 'light' | 'dark') || 'light');
+                      setShowPaletteModal(true);
+                    }}
+                    className="btn-secondary shrink-0 flex items-center gap-2 px-4 py-2.5 text-sm whitespace-nowrap"
+                    data-tour="palette-mobile"
+                  >
+                    <Palette className="h-4 w-4" />
+                    Palet
+                  </button>
+                )}
                 <button
                   onClick={handlePreview}
                   className="btn-secondary shrink-0 flex items-center gap-2 px-4 py-2.5 text-sm whitespace-nowrap"
@@ -2286,6 +2377,96 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                     return next;
                   });
                   setShowSectionsModal(false);
+                }}
+                className="btn-primary w-full py-3 shrink-0"
+              >
+                Tamam
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Palette Modal */}
+        {showPaletteModal && palettes && (
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+            onClick={() => setShowPaletteModal(false)}
+          >
+            <div
+              className="bg-[#161616]/85 backdrop-blur-2xl w-full sm:w-[420px] rounded-t-3xl sm:rounded-4xl p-5 space-y-4 animate-slide-up sm:animate-scale-in max-h-[85vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
+                <div>
+                  <h3 className="text-lg font-bold text-white">Palet</h3>
+                  <p className="text-xs text-zinc-400">Sayfanızın renk temasını seçin</p>
+                </div>
+                <button
+                  onClick={() => setShowPaletteModal(false)}
+                  aria-label="Kapat"
+                  className="rounded-full p-2 bg-white/10 text-zinc-400 hover:text-white hover:bg-white/15 transition-all"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 overflow-y-auto flex-1 min-h-0">
+                {palettes.palettes.map((pal) => {
+                  const isSelected = draftPaletteId === pal.id;
+                  const colors = pal[draftThemeMode];
+                  return (
+                    <button
+                      key={pal.id}
+                      onClick={() => setDraftPaletteId(pal.id)}
+                      className={`flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all ${
+                        isSelected
+                          ? 'border-pink-500 bg-pink-500/10'
+                          : 'border-white/10 bg-white/[0.02] hover:bg-white/5'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1">
+                        <div className="w-5 h-5 rounded-full border border-white/20" style={{ background: colors.accent }} />
+                        <div className="w-5 h-5 rounded-full border border-white/20" style={{ background: colors.text }} />
+                        <div className="w-5 h-5 rounded-full border border-white/20" style={{ background: colors['body-bg'] }} />
+                      </div>
+                      <span className={`text-xs font-medium ${isSelected ? 'text-white' : 'text-zinc-400'}`}>{pal.name}</span>
+                      {isSelected && (
+                        <div className="w-2 h-2 rounded-full" style={{ background: 'lab(49.5493% 79.8381 2.31768)' }} />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Theme Mode Toggle */}
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => setDraftThemeMode('light')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    draftThemeMode === 'light'
+                      ? 'bg-white/15 text-white'
+                      : 'bg-white/[0.03] text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  <span>☀️</span> Açık
+                </button>
+                <button
+                  onClick={() => setDraftThemeMode('dark')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    draftThemeMode === 'dark'
+                      ? 'bg-white/15 text-white'
+                      : 'bg-white/[0.03] text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  <span>🌙</span> Koyu
+                </button>
+              </div>
+
+              <button
+                onClick={() => {
+                  pushUndo({ ...valuesRef.current });
+                  setValues(prev => ({ ...prev, __palette: draftPaletteId, __theme_mode: draftThemeMode }));
+                  setShowPaletteModal(false);
                 }}
                 className="btn-primary w-full py-3 shrink-0"
               >

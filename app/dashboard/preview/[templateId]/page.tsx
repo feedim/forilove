@@ -8,7 +8,9 @@ import MusicPlayer from "@/components/MusicPlayer";
 // Extract <script> contents from HTML before DOMPurify strips them
 function extractScripts(html: string): { cleanHtml: string; scripts: string[] } {
   const scripts: string[] = [];
-  const cleanHtml = html.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, (_, content) => {
+  const cleanHtml = html.replace(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi, (match, attrs, content) => {
+    // Skip application/json scripts (palette data etc.) — don't execute them
+    if (/type\s*=\s*["']application\/json["']/i.test(attrs)) return '';
     const trimmed = content.trim();
     if (trimmed) scripts.push(trimmed);
     return '';

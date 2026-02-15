@@ -10,7 +10,9 @@ import ShareIconButton from "@/components/ShareIconButton";
 // Extract <script> contents from HTML before DOMPurify strips them
 function extractScripts(html: string): { cleanHtml: string; scripts: string[] } {
   const scripts: string[] = [];
-  const cleanHtml = html.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, (_, content) => {
+  const cleanHtml = html.replace(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi, (match, attrs, content) => {
+    // Skip application/json scripts (palette data etc.) — don't execute them
+    if (/type\s*=\s*["']application\/json["']/i.test(attrs)) return '';
     const trimmed = content.trim();
     if (trimmed) scripts.push(trimmed);
     return '';
@@ -194,6 +196,24 @@ export function HTMLTemplateRender({ project, musicUrl }: { project: any; musicU
       if (el) el.remove();
     });
     html = areaDoc.documentElement.outerHTML;
+  }
+
+  // Apply palette override CSS on public page
+  const paletteMatch = html.match(/<script[^>]*data-palettes[^>]*>([\s\S]*?)<\/script>/i);
+  if (paletteMatch) {
+    try {
+      const pd = JSON.parse(paletteMatch[1]);
+      if (pd?.palettes?.length) {
+        const selectedId = (htmlData.__palette as string) || pd.default;
+        const mode = ((htmlData.__theme_mode as string) || 'light') as 'light' | 'dark';
+        const pal = pd.palettes.find((p: any) => p.id === selectedId);
+        if (pal && !(selectedId === pd.default && mode === 'light')) {
+          const colors = pal[mode];
+          const overrideCss = `<style data-palette-override>:root{--text:${colors.text};--muted:${colors.muted};--light:${colors.light};--border:${colors.border};--accent:${colors.accent};--accent-light:${colors['accent-light']}}body{background:${colors['body-bg']}!important}</style>`;
+          html = html.replace('</head>', overrideCss + '</head>');
+        }
+      }
+    } catch {}
   }
 
   // Extract scripts before DOMPurify strips them
