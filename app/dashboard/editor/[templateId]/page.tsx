@@ -226,9 +226,15 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
   const updateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (template?.html_content) {
-      if (updateTimerRef.current) clearTimeout(updateTimerRef.current);
-      updateTimerRef.current = setTimeout(() => updatePreview(), 200);
-      return () => { if (updateTimerRef.current) clearTimeout(updateTimerRef.current); };
+      if (!previewInitRef.current) {
+        // First render — no debounce, render immediately
+        updatePreview();
+      } else {
+        // Subsequent updates — debounce to coalesce rapid changes
+        if (updateTimerRef.current) clearTimeout(updateTimerRef.current);
+        updateTimerRef.current = setTimeout(() => updatePreview(), 200);
+        return () => { if (updateTimerRef.current) clearTimeout(updateTimerRef.current); };
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values, template, unlockedFields]);
@@ -623,16 +629,6 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
           } catch {}
 
           setValues(initialValues);
-
-          // Show demo HTML
-          let demoHtml = htmlContent;
-          if (demoHtml.includes('HOOK_')) {
-            Object.entries(initialValues).forEach(([key, value]) => {
-              const regex = new RegExp(`HOOK_${key}`, 'g');
-              demoHtml = demoHtml.replace(regex, value || '');
-            });
-          }
-          setPreviewHtml(demoHtml);
         }
 
         setLoading(false);
@@ -800,16 +796,6 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
         } else {
           // Not purchased — allow editing locally (like guest mode)
           setValues(defaultValues);
-
-          // Show demo HTML with default values
-          let demoHtml = htmlContent;
-          if (demoHtml.includes('HOOK_')) {
-            Object.entries(defaultValues).forEach(([key, value]) => {
-              const regex = new RegExp(`HOOK_${key}`, 'g');
-              demoHtml = demoHtml.replace(regex, value || '');
-            });
-          }
-          setPreviewHtml(demoHtml);
         }
       }
     } catch (error: any) {
