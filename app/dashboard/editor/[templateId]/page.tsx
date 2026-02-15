@@ -2866,23 +2866,25 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
                         placeholder="Varsayılan renk"
                       />
                     </div>
-                    <div className="grid grid-cols-8 gap-2">
-                      {[
-                        '#FFFFFF', '#000000', '#1A1A1A', '#F5F5F5',
-                        '#FF3B30', '#FF6B6B', '#FF9500', '#FFCC00',
-                        '#34C759', '#30D158', '#5AC8FA', '#007AFF',
-                        '#5856D6', '#AF52DE', '#FF2D55', '#AC8E68',
-                      ].map((color) => (
-                        <button key={color} onClick={() => setDraftColor(color)}
-                          className="w-full aspect-square rounded-lg border-2 transition-all active:scale-90 hover:scale-105"
-                          style={{
-                            backgroundColor: color,
-                            borderColor: draftColor === color ? '#FF2D55' : 'rgba(255,255,255,0.08)',
-                            boxShadow: draftColor === color ? '0 0 0 2px #FF2D55' : 'none',
-                          }}
-                          aria-label={color}
-                        />
-                      ))}
+                    <div className="overflow-x-auto scrollbar-hide -mx-2 px-2">
+                      <div className="flex gap-2 w-max pb-1">
+                        {[
+                          '#FFFFFF', '#000000', '#1A1A1A', '#F5F5F5',
+                          '#FF3B30', '#FF6B6B', '#FF9500', '#FFCC00',
+                          '#34C759', '#30D158', '#5AC8FA', '#007AFF',
+                          '#5856D6', '#AF52DE', '#FF2D55', '#AC8E68',
+                        ].map((color) => (
+                          <button key={color} onClick={() => setDraftColor(color)}
+                            className="w-9 h-9 shrink-0 rounded-full border-2 transition-all active:scale-90"
+                            style={{
+                              backgroundColor: color,
+                              borderColor: draftColor === color ? '#FF2D55' : 'rgba(255,255,255,0.1)',
+                              boxShadow: draftColor === color ? '0 0 0 2px #FF2D55' : 'none',
+                            }}
+                            aria-label={color}
+                          />
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
