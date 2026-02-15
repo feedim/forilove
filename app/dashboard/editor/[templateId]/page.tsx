@@ -1359,16 +1359,16 @@ export default function NewEditorPage({ params, guestMode = false }: { params: P
         setCoinBalance(purchaseResult.newBalance);
       }
 
-      toast.success("Satın alındı!");
+      if (coinPrice > 0) toast.success("Satın alındı!");
       setIsPurchased(true);
+      setPurchasing(false);
       // Open publish details modal directly without page reload
-      setDraftTitle(template?.name || "");
-      setDraftSlug("");
-      setDraftDescription(template?.description || "");
+      setDraftTitle(project?.title || template?.name || "");
+      setDraftSlug(project?.slug?.replace(/-[a-z0-9]{6,}$/, "") || "");
+      setDraftDescription(project?.description || template?.description || "");
       setShowDetailsModal(true);
     } catch (err: any) {
       toast.error(err.message || "Bir hata oluştu");
-    } finally {
       setPurchasing(false);
     }
   };
