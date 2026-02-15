@@ -14,27 +14,29 @@ export async function POST(request: NextRequest) {
     }
 
     const { projectId, unlockedKeys, couponCode } = await request.json();
-    if (!projectId || !Array.isArray(unlockedKeys)) {
+    if (!Array.isArray(unlockedKeys)) {
       return NextResponse.json(
-        { error: "projectId ve unlockedKeys gerekli" },
+        { error: "unlockedKeys gerekli" },
         { status: 400 }
       );
     }
 
     const admin = createAdminClient();
 
-    // 1. Proje sahipliği doğrula
-    const { data: proj, error: projErr } = await admin
-      .from("projects")
-      .select("id, user_id")
-      .eq("id", projectId)
-      .single();
+    // 1. Proje sahipliği doğrula (proje varsa)
+    if (projectId) {
+      const { data: proj, error: projErr } = await admin
+        .from("projects")
+        .select("id, user_id")
+        .eq("id", projectId)
+        .single();
 
-    if (projErr || !proj || proj.user_id !== user.id) {
-      return NextResponse.json(
-        { error: "Proje bulunamadı veya yetkiniz yok" },
-        { status: 403 }
-      );
+      if (projErr || !proj || proj.user_id !== user.id) {
+        return NextResponse.json(
+          { error: "Proje bulunamadı veya yetkiniz yok" },
+          { status: 403 }
+        );
+      }
     }
 
     let cost = TEMPLATE_UNLOCK_COST;
@@ -88,20 +90,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Proje unlocked_fields güncelle
-    const { error: updateError } = await admin
-      .from("projects")
-      .update({
-        unlocked_fields: unlockedKeys,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", projectId);
+    // 4. Proje unlocked_fields güncelle (proje varsa)
+    if (projectId) {
+      const { error: updateError } = await admin
+        .from("projects")
+        .update({
+          unlocked_fields: unlockedKeys,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", projectId);
 
-    if (updateError) {
-      return NextResponse.json(
-        { success: false, error: "Proje güncellenemedi" },
-        { status: 500 }
-      );
+      if (updateError) {
+        return NextResponse.json(
+          { success: false, error: "Proje güncellenemedi" },
+          { status: 500 }
+        );
+      }
     }
 
     // 5. Kupon kullanımı kaydet
