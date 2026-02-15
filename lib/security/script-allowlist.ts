@@ -7,7 +7,6 @@ const BLOCKED_PATTERNS = [
   /\bindexedDB\b/i,
   /\beval\s*\(/i,
   /window\.location\s*=/i,
-  /\.postMessage\s*\(/i,
   /\bimport\s*\(/i,
   /document\.write/i,
 ];

@@ -102,7 +102,7 @@ export default function PromoBanner() {
   return (
     <div className="sticky top-0 z-50 flex items-center justify-center" style={{ height: 30, background: 'lab(49.5493% 79.8381 2.31768)' }}>
       <span className="text-white" style={{ fontSize: 11, fontWeight: 600 }}>
-        %{promoInfo.discount} indirim uygulandı — Kod: {promoInfo.code}
+        %{promoInfo.discount} indirim uygulandı
       </span>
       <button
         onClick={handleDismiss}

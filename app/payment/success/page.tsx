@@ -58,6 +58,12 @@ export default function PaymentSuccessPage() {
             return;
           }
 
+          // pending = callback henüz gelmedi, beklemeye devam
+          // no_payment / error = erken çık
+          if (body?.status !== 'pending' && body?.status !== 'rate_limited') {
+            break;
+          }
+
           await new Promise(r => setTimeout(r, 3000));
         }
         setVerifying(false);
