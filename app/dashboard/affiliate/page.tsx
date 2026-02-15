@@ -158,7 +158,7 @@ export default function AffiliateDashboardPage() {
 
                 {/* Dönem Verileri */}
                 {sponsorAnalytics.periods && (
-                  <div className="grid grid-cols-3 gap-2 mb-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
                     <div className="bg-white/5 rounded-xl p-3">
                       <p className="text-[10px] text-zinc-500 mb-0.5">Kayıt</p>
                       <p className="text-xl font-bold">{sponsorAnalytics.periods[sponsorPeriod]?.signups || 0}</p>
@@ -170,6 +170,10 @@ export default function AffiliateDashboardPage() {
                     <div className="bg-white/5 rounded-xl p-3">
                       <p className="text-[10px] text-zinc-500 mb-0.5">Kazanç</p>
                       <p className="text-xl font-bold text-pink-500">{(sponsorAnalytics.periods[sponsorPeriod]?.earnings || 0).toLocaleString('tr-TR')} <span className="text-[10px] text-zinc-500">TRY</span></p>
+                    </div>
+                    <div className="bg-white/5 rounded-xl p-3">
+                      <p className="text-[10px] text-zinc-500 mb-0.5">Referans Kazancı</p>
+                      <p className="text-xl font-bold text-purple-400">{(sponsorAnalytics.periods[sponsorPeriod]?.referralEarnings || 0).toLocaleString('tr-TR')} <span className="text-[10px] text-zinc-500">TRY</span></p>
                     </div>
                   </div>
                 )}
@@ -351,20 +355,6 @@ export default function AffiliateDashboardPage() {
                 </div>
               )}
             </div>
-
-            {/* İşlem Geçmişi Link */}
-            <Link href="/dashboard/affiliate/transactions" className="block bg-zinc-900 rounded-2xl p-5 mb-6 hover:bg-zinc-800 transition group">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <History className="h-5 w-5 text-pink-500" />
-                  <div>
-                    <h3 className="font-semibold">İşlem Geçmişi</h3>
-                    <p className="text-xs text-zinc-500">Satış komisyonları, referans kazançları ve ödeme çekimleriniz</p>
-                  </div>
-                </div>
-                <span className="text-xs text-pink-500 font-medium shrink-0">Tümünü Gör →</span>
-              </div>
-            </Link>
 
             {/* Promo Kullanım Notu */}
             <div className="rounded-2xl p-5 mb-6">
