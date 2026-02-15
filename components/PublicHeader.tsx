@@ -26,7 +26,7 @@ export default function PublicHeader({ variant = "back", backLabel = "Geri" }: P
             </Link>
           </div>
         ) : (
-          <button onClick={() => router.back()} className="flex items-center gap-2 text-zinc-400 hover:text-white transition">
+          <button onClick={() => { if (window.history.length > 2) { router.back(); } else { router.push('/'); } }} className="flex items-center gap-2 text-zinc-400 hover:text-white transition">
             <ArrowLeft className="h-5 w-5" />
             <span>{backLabel}</span>
           </button>

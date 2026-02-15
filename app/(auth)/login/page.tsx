@@ -16,6 +16,13 @@ export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
 
+  // Zaten giriş yapmışsa dashboard'a yönlendir
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) router.replace("/dashboard");
+    });
+  }, [supabase, router]);
+
   useEffect(() => {
     const saved = localStorage.getItem("forilove_remember_email");
     if (saved) {
@@ -94,8 +101,7 @@ export default function LoginPage() {
 
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      router.push("/dashboard");
-      router.refresh();
+      router.replace("/dashboard");
     } catch (error: any) {
       if (process.env.NODE_ENV === 'development') {
         console.log('Login exception:', error);

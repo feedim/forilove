@@ -28,6 +28,13 @@ function RegisterForm() {
   const searchParams = useSearchParams();
   const supabase = createClient();
 
+  // Zaten giriş yapmışsa dashboard'a yönlendir
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) router.replace("/dashboard");
+    });
+  }, [supabase, router]);
+
   useEffect(() => {
     // Get referral code from URL (alphanumeric only, max 20 chars)
     const refCode = searchParams.get('ref');
@@ -143,8 +150,7 @@ function RegisterForm() {
         // Wait a bit for session to be fully set
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        router.push("/dashboard/my-pages");
-        router.refresh();
+        router.replace("/dashboard/my-pages");
       } else {
         // No session but user exists - redirect to login
     
