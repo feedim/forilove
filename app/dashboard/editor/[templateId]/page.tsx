@@ -1306,7 +1306,97 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
     }
   };
 
-  const handlePublish = () => {
+  // Shared helper: ensure a project exists for the given user, return it
+  const ensureProject = async (userId: string): Promise<any | null> => {
+    if (project && project.id !== 'temp') return project;
+
+    const { data: existingProject } = await supabase
+      .from("projects")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("template_id", resolvedParams.templateId)
+      .maybeSingle();
+
+    if (existingProject) {
+      setProject(existingProject);
+      return existingProject;
+    }
+
+    const titleSlug = (template?.name || 'sayfa')
+      .toLowerCase()
+      .replace(/[çÇ]/g, 'c').replace(/[ğĞ]/g, 'g').replace(/[ıİ]/g, 'i')
+      .replace(/[öÖ]/g, 'o').replace(/[şŞ]/g, 's').replace(/[üÜ]/g, 'u')
+      .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-')
+      .substring(0, 40).replace(/-$/, '');
+    const randomId = Math.random().toString(36).substring(2, 8);
+    const slug = `${titleSlug}-${randomId}`;
+
+    const { data: newProject, error: insertError } = await supabase
+      .from("projects")
+      .insert({
+        user_id: userId,
+        template_id: resolvedParams.templateId,
+        title: template?.name,
+        slug,
+        hook_values: valuesRef.current,
+        is_published: false,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      toast.error("Proje oluşturulamadı");
+      return null;
+    }
+    setProject(newProject);
+    return newProject;
+  };
+
+  // Shared helper: full guest → logged-in state transition
+  const initAfterGuestLogin = async (user: { id: string }): Promise<{ purchased: boolean; currentProject: any; balance: number }> => {
+    // 1) Coin balance
+    const { data: profile } = await supabase.from("profiles").select("coin_balance").eq("user_id", user.id).single();
+    const balance = profile?.coin_balance ?? 0;
+    setCoinBalance(balance);
+
+    // 2) Purchase check
+    const { data: existingPurchase } = await supabase
+      .from("purchases")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("template_id", resolvedParams.templateId)
+      .eq("payment_status", "completed")
+      .maybeSingle();
+
+    let purchased = !!existingPurchase;
+
+    // 3) Free template auto-purchase
+    if (!purchased && getActivePrice(template) === 0) {
+      const { error } = await supabase.from("purchases").insert({
+        user_id: user.id,
+        template_id: resolvedParams.templateId,
+        coins_spent: 0,
+        payment_method: "coins",
+        payment_status: "completed",
+      });
+      if (!error) purchased = true;
+    }
+
+    setIsPurchased(purchased);
+
+    // 4) Ensure project exists (if purchased)
+    let currentProject = project;
+    if (purchased) {
+      currentProject = await ensureProject(user.id);
+    }
+
+    // 5) Exit guest mode
+    setGuestMode(false);
+
+    return { purchased, currentProject, balance };
+  };
+
+  const handlePublish = async () => {
     if (guestMode) {
       handleGuestPublish();
       return;
@@ -1316,11 +1406,18 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
       handleUnpurchasedPublish();
       return;
     }
-    if (!project) return;
+    // Ensure project exists (may be null if user logged in via field unlock / AI)
+    let currentProject = project;
+    if (!currentProject) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      currentProject = await ensureProject(user.id);
+      if (!currentProject) return;
+    }
     // Pre-fill draft fields with current values
-    setDraftTitle(project.title || "");
-    setDraftSlug(project.slug?.replace(/-[a-z0-9]{6,}$/, "") || "");
-    setDraftDescription(project.description || "");
+    setDraftTitle(currentProject.title || "");
+    setDraftSlug(currentProject.slug?.replace(/-[a-z0-9]{6,}$/, "") || "");
+    setDraftDescription(currentProject.description || "");
     setShowDetailsModal(true);
   };
 
@@ -1405,50 +1502,8 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
       setIsPurchased(true);
 
       // Proje oluştur (yoksa)
-      let currentProject = project;
-      if (!currentProject && user) {
-        const { data: existingProject } = await supabase
-          .from("projects")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("template_id", resolvedParams.templateId)
-          .maybeSingle();
-
-        if (existingProject) {
-          currentProject = existingProject;
-          setProject(existingProject);
-        } else {
-          const titleSlug = (template?.name || 'sayfa')
-            .toLowerCase()
-            .replace(/[çÇ]/g, 'c').replace(/[ğĞ]/g, 'g').replace(/[ıİ]/g, 'i')
-            .replace(/[öÖ]/g, 'o').replace(/[şŞ]/g, 's').replace(/[üÜ]/g, 'u')
-            .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-')
-            .substring(0, 40).replace(/-$/, '');
-          const randomId = Math.random().toString(36).substring(2, 8);
-          const slug = `${titleSlug}-${randomId}`;
-
-          const { data: newProject, error: insertError } = await supabase
-            .from("projects")
-            .insert({
-              user_id: user.id,
-              template_id: resolvedParams.templateId,
-              title: template?.name,
-              slug,
-              hook_values: valuesRef.current,
-              is_published: false,
-            })
-            .select()
-            .single();
-
-          if (insertError) {
-            toast.error("Proje oluşturulamadı");
-            setPurchasing(false);
-            return;
-          }
-          currentProject = newProject;
-          setProject(newProject);
-        }
-      }
+      const currentProject = await ensureProject(user.id);
+      if (!currentProject) { setPurchasing(false); return; }
 
       setPurchasing(false);
       // Modal'ı aç
@@ -1566,43 +1621,12 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
       }
 
       // 3) Proje oluştur veya mevcut (yayınlanmamış) projeyi güncelle
-      let currentProject;
+      const currentProject = await ensureProject(user.id);
+      if (!currentProject) { setPurchasing(false); return; }
+
+      // Mevcut yayınlanmamış projeye guest editleri uygula
       if (existingProject) {
-        // Yayınlanmamış mevcut proje — guest editleri uygula
-        await supabase.from("projects").update({ hook_values: valuesRef.current }).eq("id", existingProject.id);
-        const { data: updated } = await supabase.from("projects").select("*").eq("id", existingProject.id).single();
-        currentProject = updated;
-        setProject(updated);
-      } else {
-        const titleSlug = (template?.name || 'sayfa')
-          .toLowerCase()
-          .replace(/[çÇ]/g, 'c').replace(/[ğĞ]/g, 'g').replace(/[ıİ]/g, 'i')
-          .replace(/[öÖ]/g, 'o').replace(/[şŞ]/g, 's').replace(/[üÜ]/g, 'u')
-          .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-')
-          .substring(0, 40).replace(/-$/, '');
-        const randomId = Math.random().toString(36).substring(2, 8);
-        const slug = `${titleSlug}-${randomId}`;
-
-        const { data: newProject, error: insertError } = await supabase
-          .from("projects")
-          .insert({
-            user_id: user.id,
-            template_id: resolvedParams.templateId,
-            title: template?.name,
-            slug,
-            hook_values: valuesRef.current,
-            is_published: false,
-          })
-          .select()
-          .single();
-
-        if (insertError) {
-          toast.error("Proje oluşturulamadı");
-          setPurchasing(false);
-          return;
-        }
-        currentProject = newProject;
-        setProject(newProject);
+        await supabase.from("projects").update({ hook_values: valuesRef.current }).eq("id", currentProject.id);
       }
 
       // Coin balance yükle
@@ -1868,10 +1892,8 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
     if (guestMode) {
       const authUser = await requireAuth(`/editor/${resolvedParams.templateId}`);
       if (!authUser) return;
-      setGuestMode(false);
-      const { data: profile } = await supabase.from("profiles").select("coin_balance").eq("user_id", authUser.id).single();
-      currentCoinBalance = profile?.coin_balance ?? 0;
-      setCoinBalance(currentCoinBalance);
+      const initResult = await initAfterGuestLogin(authUser);
+      currentCoinBalance = initResult.balance;
     }
 
     // Show purchase confirmation modal
@@ -1960,13 +1982,11 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
     if (guestMode) {
       const authUser = await requireAuth(`/editor/${resolvedParams.templateId}`);
       if (!authUser) return;
-      setGuestMode(false);
-      const { data: profile } = await supabase.from("profiles").select("coin_balance").eq("user_id", authUser.id).single();
-      currentCoinBalance = profile?.coin_balance ?? 0;
-      setCoinBalance(currentCoinBalance);
+      const initResult = await initAfterGuestLogin(authUser);
+      currentCoinBalance = initResult.balance;
     }
 
-    // Ücretsiz şablon satın alınmamışsa önce satın al
+    // Ücretsiz şablon satın alınmamışsa önce satın al (logged-in user who hasn't purchased)
     if (!isPurchased && getActivePrice(template) === 0) {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
