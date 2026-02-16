@@ -282,8 +282,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { code, discountPercent, maxSignups, expiryHours } = body;
 
-    if (!code || typeof code !== "string" || code.trim().length < 3 || code.trim().length > 10) {
-      return NextResponse.json({ error: "Promo kodu 3-10 karakter olmalı" }, { status: 400 });
+    if (!code || typeof code !== "string" || code.trim().length < 3 || code.trim().length > 8) {
+      return NextResponse.json({ error: "Promo kodu 3-8 karakter olmalı" }, { status: 400 });
     }
 
     // Validate discount is a finite integer
@@ -474,8 +474,8 @@ export async function PATCH(request: NextRequest) {
     }
 
     const cleanNewCode = newCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (cleanNewCode.length < 3 || cleanNewCode.length > 10) {
-      return NextResponse.json({ error: "Promo kodu 3-10 karakter olmalı" }, { status: 400 });
+    if (cleanNewCode.length < 3 || cleanNewCode.length > 8) {
+      return NextResponse.json({ error: "Promo kodu 3-8 karakter olmalı" }, { status: 400 });
     }
 
     const admin = createAdminClient();

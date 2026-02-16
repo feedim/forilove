@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, BarChart3, User, Wallet, Send, Globe, HelpCircle, Shield, Check, Info, UserPlus, Users, History, Copy } from "lucide-react";
+import { ArrowLeft, BarChart3, User, Wallet, Send, Globe, HelpCircle, Shield, Check, Info, UserPlus, Users, History, Copy, Link2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import MobileBottomNav from "@/components/MobileBottomNav";
 
@@ -14,6 +14,10 @@ export default function AffiliateDashboardPage() {
   const [sponsorUsers, setSponsorUsers] = useState<any[]>([]);
   const [sponsorPeriod, setSponsorPeriod] = useState<"today" | "yesterday" | "last7d" | "last14d" | "thisMonth" | "last3m">("last7d");
   const [promoCode, setPromoCode] = useState<string>("");
+  const [allPromoCodes, setAllPromoCodes] = useState<string[]>([]);
+  const [urlInput, setUrlInput] = useState("");
+  const [generatedUrl, setGeneratedUrl] = useState("");
+  const [urlCopied, setUrlCopied] = useState(false);
   const [referralData, setReferralData] = useState<any>(null);
   const [refLinkCopied, setRefLinkCopied] = useState(false);
   const router = useRouter();
@@ -51,6 +55,7 @@ export default function AffiliateDashboardPage() {
         setSponsorUsers(data.recentUsers || []);
         if (data.promos && data.promos.length > 0) {
           setPromoCode(data.promos[0].code || "");
+          setAllPromoCodes(data.promos.map((p: any) => p.code).filter(Boolean));
         }
       }
 
@@ -210,6 +215,93 @@ export default function AffiliateDashboardPage() {
                 </div>
               ) : (
                 <p className="text-sm text-zinc-500">Henüz linkinizden kayıt olan kullanıcı yok.</p>
+              )}
+            </div>
+
+            {/* URL Generator */}
+            <div className="bg-zinc-900 rounded-2xl p-6 mb-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Link2 className="h-5 w-5 text-pink-500" />
+                <h3 className="font-semibold">İndirimli Link Oluştur</h3>
+              </div>
+              {promoCode ? (
+                <>
+                  <p className="text-xs text-zinc-500 mb-3">Herhangi bir Forilove URL&apos;sini yapıştırın, promo kodunuz otomatik eklenir.</p>
+                  {allPromoCodes.length > 1 && (
+                    <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1">
+                      {allPromoCodes.map((code) => (
+                        <button
+                          key={code}
+                          onClick={() => { setPromoCode(code); setGeneratedUrl(""); setUrlCopied(false); }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium font-mono transition shrink-0 ${
+                            promoCode === code ? "bg-pink-500 text-white" : "bg-white/5 text-zinc-400 hover:text-white"
+                          }`}
+                        >
+                          {code}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-2 mb-3">
+                    <input
+                      type="text"
+                      value={urlInput}
+                      onChange={(e) => { setUrlInput(e.target.value); setGeneratedUrl(""); setUrlCopied(false); }}
+                      placeholder="https://forilove.com/editor/..."
+                      className="flex-1 bg-transparent border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-pink-500/50 transition"
+                    />
+                    <button
+                      onClick={() => {
+                        const trimmed = urlInput.trim();
+                        if (!trimmed) return;
+                        try {
+                          let url: URL;
+                          if (trimmed.startsWith('http')) {
+                            url = new URL(trimmed);
+                          } else if (trimmed.startsWith('forilove.com') || trimmed.startsWith('www.forilove.com')) {
+                            url = new URL('https://' + trimmed);
+                          } else {
+                            url = new URL('https://forilove.com' + (trimmed.startsWith('/') ? '' : '/') + trimmed);
+                          }
+                          if (!url.hostname.includes('forilove.com') && !url.hostname.includes('localhost')) {
+                            setGeneratedUrl(""); return;
+                          }
+                          url.searchParams.set('promo', promoCode);
+                          setGeneratedUrl(url.toString());
+                          setUrlCopied(false);
+                        } catch {
+                          setGeneratedUrl("");
+                        }
+                      }}
+                      className="btn-primary px-4 py-2.5 text-xs font-bold shrink-0"
+                    >
+                      Üret
+                    </button>
+                  </div>
+                  {generatedUrl && (
+                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg p-3">
+                      <p className="text-sm text-pink-500 flex-1 break-all font-mono">{generatedUrl}</p>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(generatedUrl);
+                          setUrlCopied(true);
+                          setTimeout(() => setUrlCopied(false), 2000);
+                        }}
+                        className="shrink-0 p-2 rounded-lg hover:bg-white/10 transition"
+                      >
+                        {urlCopied ? <Check className="h-4 w-4 text-pink-500" /> : <Copy className="h-4 w-4 text-zinc-400" />}
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="bg-white/5 rounded-xl p-4">
+                  <p className="text-sm text-zinc-400 mb-3">Henüz bir promo kodunuz yok. Link oluşturmak için önce bir promo kodu oluşturun.</p>
+                  <Link href="/dashboard/admin/promos" className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-xs font-bold">
+                    <Globe className="h-3.5 w-3.5" />
+                    Promo Kodu Oluştur
+                  </Link>
+                </div>
               )}
             </div>
 

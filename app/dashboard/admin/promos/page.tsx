@@ -143,8 +143,8 @@ export default function AdminPromosPage() {
 
   const handleRename = async (promoId: string) => {
     const trimmed = renameValue.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (trimmed.length < 3) {
-      toast.error("Promo kodu en az 3 karakter olmalı");
+    if (trimmed.length < 3 || trimmed.length > 8) {
+      toast.error("Promo kodu 3-8 karakter olmalı");
       return;
     }
     setRenaming(true);
@@ -238,13 +238,13 @@ export default function AdminPromosPage() {
               <div className="space-y-3 mb-5">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-zinc-400 mb-1">Promo Kodu</label>
+                    <label className="block text-xs text-zinc-400 mb-1">Promo Kodu (3-8 karakter)</label>
                     <input
                       type="text"
                       value={promoForm.code}
-                      onChange={(e) => setPromoForm({ ...promoForm, code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })}
+                      onChange={(e) => setPromoForm({ ...promoForm, code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) })}
                       placeholder="ENES20"
-                      maxLength={10}
+                      maxLength={8}
                       className="input-modern w-full text-sm font-mono tracking-wider"
                     />
                   </div>
@@ -321,9 +321,9 @@ export default function AdminPromosPage() {
                         <input
                           type="text"
                           value={renameValue}
-                          onChange={(e) => setRenameValue(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                          onChange={(e) => setRenameValue(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8))}
                           placeholder="Yeni kod"
-                          maxLength={10}
+                          maxLength={8}
                           className="flex-1 bg-transparent border border-pink-500/50 rounded-lg px-3 py-2 text-sm text-white font-mono tracking-wider focus:outline-none"
                           autoFocus
                           onKeyDown={(e) => { if (e.key === 'Enter') handleRename(promo.id); if (e.key === 'Escape') { setRenamingId(null); setRenameValue(""); } }}
