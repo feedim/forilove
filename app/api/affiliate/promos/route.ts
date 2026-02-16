@@ -330,15 +330,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Bu promo kodu zaten mevcut" }, { status: 400 });
     }
 
-    // Also check code history to prevent reusing renamed codes
-    const { data: historyMatch } = await admin
+    // Also check code history (both old_code and new_code) to prevent reusing renamed codes
+    const { data: historyMatchOld } = await admin
       .from("promo_code_history")
       .select("id")
       .ilike("old_code", cleanCode)
       .limit(1)
       .maybeSingle();
 
-    if (historyMatch) {
+    if (historyMatchOld) {
+      return NextResponse.json({ error: "Bu kod daha önce kullanılmış (isim değişikliği geçmişi)" }, { status: 400 });
+    }
+
+    const { data: historyMatchNew } = await admin
+      .from("promo_code_history")
+      .select("id")
+      .ilike("new_code", cleanCode)
+      .limit(1)
+      .maybeSingle();
+
+    if (historyMatchNew) {
       return NextResponse.json({ error: "Bu kod daha önce kullanılmış (isim değişikliği geçmişi)" }, { status: 400 });
     }
 
@@ -495,15 +506,26 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Bu promo kodu zaten mevcut" }, { status: 400 });
     }
 
-    // Check code history
-    const { data: historyMatch } = await admin
+    // Check code history (both old_code and new_code)
+    const { data: historyMatchOld } = await admin
       .from("promo_code_history")
       .select("id")
       .ilike("old_code", cleanNewCode)
       .limit(1)
       .maybeSingle();
 
-    if (historyMatch) {
+    if (historyMatchOld) {
+      return NextResponse.json({ error: "Bu kod daha önce kullanılmış" }, { status: 400 });
+    }
+
+    const { data: historyMatchNew } = await admin
+      .from("promo_code_history")
+      .select("id")
+      .ilike("new_code", cleanNewCode)
+      .limit(1)
+      .maybeSingle();
+
+    if (historyMatchNew) {
       return NextResponse.json({ error: "Bu kod daha önce kullanılmış" }, { status: 400 });
     }
 

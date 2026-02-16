@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Globe, Plus, X, Shield, Pencil, Check } from "lucide-react";
+import { ArrowLeft, Globe, Plus, X, Shield, Pencil, Check, Link2, Copy } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -23,6 +23,10 @@ export default function AdminPromosPage() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [renaming, setRenaming] = useState(false);
+  const [urlInput, setUrlInput] = useState("");
+  const [generatedUrl, setGeneratedUrl] = useState("");
+  const [urlCopied, setUrlCopied] = useState(false);
+  const [selectedPromoCode, setSelectedPromoCode] = useState("");
   const router = useRouter();
   const supabase = createClient();
 
@@ -70,6 +74,9 @@ export default function AdminPromosPage() {
         if (res.ok) {
           const data = await res.json();
           setPromos(data.promos || []);
+          if (data.promos && data.promos.length > 0) {
+            setSelectedPromoCode(data.promos[0].code || "");
+          }
         }
       }
     } catch {
@@ -186,7 +193,7 @@ export default function AdminPromosPage() {
             <ArrowLeft className="h-5 w-5" />
             <span className="font-medium">Geri</span>
           </button>
-          <h1 className="text-lg font-semibold">{isAffiliate ? 'Affiliate Linkler' : 'İndirim Linkleri'}</h1>
+          <h1 className="text-lg font-semibold">{isAffiliate ? 'Promosyon Kodları' : 'İndirim Linkleri'}</h1>
           <div className="w-16" />
         </nav>
       </header>
@@ -197,10 +204,11 @@ export default function AdminPromosPage() {
             <div className="bg-zinc-900 rounded-2xl p-6 animate-pulse h-60" />
           </div>
         ) : (
+          <>
           <div className="bg-zinc-900 rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-1">
               <Globe className="h-5 w-5 text-pink-500" />
-              <h3 className="font-semibold">{isAffiliate ? 'Affiliate Linkler' : 'İndirim Linkleri'}</h3>
+              <h3 className="font-semibold">{isAffiliate ? 'Promosyon Kodları' : 'İndirim Linkleri'}</h3>
             </div>
             <p className="text-xs text-zinc-500 mb-4">
               {isAffiliate
@@ -305,7 +313,7 @@ export default function AdminPromosPage() {
             {/* Promo Links List */}
             {promos.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Aktif Promolar</p>
+                <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Aktif Promosyon Kodları</p>
                 {promos.slice(0, visiblePromos).map((promo) => (
                   <div key={promo.id} className="p-3 rounded-xl bg-white/5">
                     {renamingId === promo.id ? (
@@ -393,6 +401,84 @@ export default function AdminPromosPage() {
               </div>
             )}
           </div>
+
+          {/* URL Generator — only for affiliates with promo codes */}
+          {isAffiliate && promos.length > 0 && (
+            <div className="bg-zinc-900 rounded-2xl p-6 mt-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Link2 className="h-5 w-5 text-pink-500" />
+                <h3 className="font-semibold">İndirimli Link Oluştur</h3>
+              </div>
+              <p className="text-xs text-zinc-500 mb-3">Herhangi bir Forilove URL&apos;sini yapıştırın, promo kodunuz otomatik eklenir.</p>
+              {promos.length > 1 && (
+                <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1">
+                  {promos.map((p) => (
+                    <button
+                      key={p.code}
+                      onClick={() => { setSelectedPromoCode(p.code); setGeneratedUrl(""); setUrlCopied(false); }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium font-mono transition shrink-0 ${
+                        selectedPromoCode === p.code ? "bg-pink-500 text-white" : "bg-white/5 text-zinc-400 hover:text-white"
+                      }`}
+                    >
+                      {p.code}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2 mb-3">
+                <input
+                  type="text"
+                  value={urlInput}
+                  onChange={(e) => { setUrlInput(e.target.value); setGeneratedUrl(""); setUrlCopied(false); }}
+                  placeholder="https://forilove.com/editor/..."
+                  className="flex-1 bg-transparent border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-pink-500/50 transition"
+                />
+                <button
+                  onClick={() => {
+                    const trimmed = urlInput.trim();
+                    if (!trimmed || !selectedPromoCode) return;
+                    try {
+                      let url: URL;
+                      if (trimmed.startsWith('http')) {
+                        url = new URL(trimmed);
+                      } else if (trimmed.startsWith('forilove.com') || trimmed.startsWith('www.forilove.com')) {
+                        url = new URL('https://' + trimmed);
+                      } else {
+                        url = new URL('https://forilove.com' + (trimmed.startsWith('/') ? '' : '/') + trimmed);
+                      }
+                      if (!url.hostname.includes('forilove.com') && !url.hostname.includes('localhost')) {
+                        setGeneratedUrl(""); return;
+                      }
+                      url.searchParams.set('promo', selectedPromoCode);
+                      setGeneratedUrl(url.toString());
+                      setUrlCopied(false);
+                    } catch {
+                      setGeneratedUrl("");
+                    }
+                  }}
+                  className="btn-primary px-4 py-2.5 text-xs font-bold shrink-0"
+                >
+                  Üret
+                </button>
+              </div>
+              {generatedUrl && (
+                <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg p-3">
+                  <p className="text-sm text-pink-500 flex-1 break-all font-mono">{generatedUrl}</p>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(generatedUrl);
+                      setUrlCopied(true);
+                      setTimeout(() => setUrlCopied(false), 2000);
+                    }}
+                    className="shrink-0 p-2 rounded-lg hover:bg-white/10 transition"
+                  >
+                    {urlCopied ? <Check className="h-4 w-4 text-pink-500" /> : <Copy className="h-4 w-4 text-zinc-400" />}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          </>
         )}
       </main>
 

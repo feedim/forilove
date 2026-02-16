@@ -125,11 +125,35 @@ export async function PUT(request: NextRequest) {
       // Create affiliate referral relationship if referral_code exists
       if (application.referral_code) {
         try {
-          const { data: referrerPromo } = await admin
+          // First check active promo codes
+          let { data: referrerPromo } = await admin
             .from("promo_links")
             .select("created_by")
             .ilike("code", application.referral_code)
             .maybeSingle();
+
+          // If not found, check promo_code_history (code may have been renamed)
+          if (!referrerPromo) {
+            const { data: historyMatch } = await admin
+              .from("promo_code_history")
+              .select("promo_link_id")
+              .ilike("old_code", application.referral_code)
+              .order("changed_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (historyMatch) {
+              const { data: linkedPromo } = await admin
+                .from("promo_links")
+                .select("created_by")
+                .eq("id", historyMatch.promo_link_id)
+                .maybeSingle();
+
+              if (linkedPromo) {
+                referrerPromo = linkedPromo;
+              }
+            }
+          }
 
           if (referrerPromo && referrerPromo.created_by !== application.user_id) {
             // Verify referrer is an affiliate

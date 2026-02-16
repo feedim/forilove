@@ -27,11 +27,12 @@ export async function GET() {
 
     const admin = createAdminClient();
 
-    // Get affiliate's promo code (used as referral code)
+    // Get affiliate's first (oldest) promo code — deterministic referral code
     const { data: promo } = await admin
       .from("promo_links")
       .select("code")
       .eq("created_by", user.id)
+      .order("created_at", { ascending: true })
       .limit(1)
       .maybeSingle();
 

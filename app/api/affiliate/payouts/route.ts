@@ -64,7 +64,10 @@ async function calculateEarnings(admin: ReturnType<typeof createAdminClient>, us
   }
 
   totalEarnings = Math.round(totalEarnings * 100) / 100;
-  const commissionRate = TOTAL_ALLOCATION - promos[0].discount_percent;
+  // Average commission rate across all promos
+  const commissionRate = Math.round(
+    promos.reduce((sum, p) => sum + (TOTAL_ALLOCATION - p.discount_percent), 0) / promos.length
+  );
 
   // Add referral earnings (5% of invited affiliates' payouts)
   const { data: referralEarnings } = await admin
