@@ -349,11 +349,13 @@ export default function AdminPromosPage() {
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-zinc-500 mt-1">
-                            {promo.signups?.length || promo.current_signups || 0}/{promo.max_signups || '∞'} kayit
-                            {promo.expires_at && ` · ${new Date(promo.expires_at) > new Date() ? `${Math.ceil((new Date(promo.expires_at).getTime() - Date.now()) / (1000 * 60 * 60))}s kaldi` : 'suresi dolmus'}`}
-                            {!isAffiliate && promo.creator_email && ` · ${promo.creator_email}`}
-                          </p>
+                          {!isAffiliate && (
+                            <p className="text-xs text-zinc-500 mt-1">
+                              {promo.current_signups || 0}/{promo.max_signups || '∞'} kayit
+                              {promo.expires_at && ` · ${new Date(promo.expires_at) > new Date() ? `${Math.ceil((new Date(promo.expires_at).getTime() - Date.now()) / (1000 * 60 * 60))}s kaldi` : 'suresi dolmus'}`}
+                              {promo.creator_email && ` · ${promo.creator_email}`}
+                            </p>
+                          )}
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
                           <button
