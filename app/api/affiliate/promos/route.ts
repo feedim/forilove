@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isBlockedPromoCode } from "@/lib/promo-blocklist";
 
 const MAX_AFFILIATE_DISCOUNT = 20;
 // Commission formula: affiliate earns (35 - discount)% of each sale
@@ -307,6 +308,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Promo kodu en az 3 harf/rakam olmalı" }, { status: 400 });
     }
 
+    // Block generic/misleading promo codes for affiliates
+    if (user.role === "affiliate" && isBlockedPromoCode(cleanCode)) {
+      return NextResponse.json({ error: "Bu kod adı kullanılamaz. Lütfen kendi markanıza özel bir kod oluşturun." }, { status: 400 });
+    }
+
     const admin = createAdminClient();
 
     // Affiliates can create up to 4 promo codes, one per discount rate
@@ -483,6 +489,11 @@ export async function PATCH(request: NextRequest) {
     const cleanNewCode = newCode.trim().toLocaleUpperCase('tr-TR').replace(/[^A-ZİŞĞÜÖÇ0-9]/g, '');
     if (cleanNewCode.length < 3 || cleanNewCode.length > 8) {
       return NextResponse.json({ error: "Promo kodu 3-8 karakter olmalı" }, { status: 400 });
+    }
+
+    // Block generic/misleading promo codes for affiliates
+    if (user.role === "affiliate" && isBlockedPromoCode(cleanNewCode)) {
+      return NextResponse.json({ error: "Bu kod adı kullanılamaz. Lütfen kendi markanıza özel bir kod oluşturun." }, { status: 400 });
     }
 
     const admin = createAdminClient();

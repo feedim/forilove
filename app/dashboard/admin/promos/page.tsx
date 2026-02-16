@@ -7,6 +7,7 @@ import { ArrowLeft, Globe, Plus, X, Shield, Pencil, Check, Link2, Copy } from "l
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import { isBlockedPromoCode } from "@/lib/promo-blocklist";
 
 const ITEMS_PER_PAGE = 10;
 const MAX_AFFILIATE_PROMOS = 4;
@@ -148,6 +149,10 @@ export default function AdminPromosPage() {
       toast.error("Promo kodu 3-8 karakter olmalı");
       return;
     }
+    if (role === "affiliate" && isBlockedPromoCode(trimmed)) {
+      toast.error("Bu kod adı kullanılamaz");
+      return;
+    }
     setRenaming(true);
     try {
       const res = await fetch('/api/affiliate/promos', {
@@ -259,6 +264,9 @@ export default function AdminPromosPage() {
                       maxLength={8}
                       className="input-modern w-full text-sm font-mono tracking-wider"
                     />
+                    {isAffiliate && promoForm.code.trim().length >= 3 && isBlockedPromoCode(promoForm.code.trim()) && (
+                      <p className="text-[11px] text-red-400 mt-1">Bu kod adı kullanılamaz. Kendi markanıza özel bir kod oluşturun.</p>
+                    )}
                   </div>
                   {isAffiliate ? (
                     <div>
@@ -339,7 +347,7 @@ export default function AdminPromosPage() {
                   )}
                   <button
                     onClick={handleCreatePromo}
-                    disabled={promoCreating || promoForm.code.trim().length < 3}
+                    disabled={promoCreating || promoForm.code.trim().length < 3 || (isAffiliate && isBlockedPromoCode(promoForm.code.trim()))}
                     className="btn-primary w-full py-2.5 text-sm flex items-center justify-center gap-2"
                   >
                     <Plus className="h-4 w-4" />
