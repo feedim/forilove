@@ -8,12 +8,23 @@ import { UserPlus, TrendingUp, Users, Gift } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Satış Ortağı Çember Sistemi | Forilove",
-  description: "Forilove Satış Ortağı Çember Sistemi ile arkadaşlarınızı davet edin, onların kazançlarından %5 ek gelir elde edin.",
-  keywords: ["satış ortağı", "çember sistemi", "affiliate referral", "davet programı", "ek kazanç", "forilove"],
+  description: "Forilove Satış Ortağı Çember Sistemi ile arkadaşlarınızı davet edin, onların kazançlarından %5 ek gelir elde edin. Platform tarafından karşılanan ek kazanç fırsatı.",
+  keywords: ["satış ortağı", "çember sistemi", "affiliate referral", "davet programı", "ek kazanç", "forilove", "içerik üretici", "komisyon"],
   openGraph: {
     title: "Satış Ortağı Çember Sistemi | Forilove",
-    description: "Arkadaşlarınızı davet edin, onların kazançlarından %5 ek gelir elde edin.",
+    description: "Arkadaşlarınızı davet edin, onların kazançlarından %5 ek gelir elde edin. Platform tarafından karşılanan ek kazanç fırsatı.",
     type: "website",
+    url: "https://www.forilove.com/affiliate/circle",
+    siteName: "Forilove",
+    locale: "tr_TR",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Satış Ortağı Çember Sistemi | Forilove",
+    description: "Arkadaşlarınızı davet edin, onların kazançlarından %5 ek gelir elde edin.",
+  },
+  alternates: {
+    canonical: "https://www.forilove.com/affiliate/circle",
   },
   robots: {
     index: true,

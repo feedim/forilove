@@ -20,6 +20,7 @@ Allow: /help
 Allow: /blog
 Allow: /blog/
 Allow: /affiliate
+Allow: /affiliate/circle
 
 # Disallow authentication pages
 Disallow: /login
