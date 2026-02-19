@@ -6,7 +6,6 @@ import Link from "next/link";
 import { ArrowLeft, Globe, Plus, X, Shield, Pencil, Check, Link2, Copy } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import { isBlockedPromoCode } from "@/lib/promo-blocklist";
 
 const ITEMS_PER_PAGE = 10;
@@ -529,7 +528,6 @@ export default function AdminPromosPage() {
         )}
       </main>
 
-      <MobileBottomNav />
     </div>
   );
 }

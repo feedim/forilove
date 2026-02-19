@@ -6,7 +6,6 @@ import Link from "next/link";
 import { ArrowLeft, Globe, Lock, Eye, ExternalLink, ChevronLeft, ChevronRight, Trash2, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
-import MobileBottomNav from "@/components/MobileBottomNav";
 
 export default function AdminProjectsPage() {
   const [projects, setProjects] = useState<any[]>([]);
@@ -207,7 +206,6 @@ export default function AdminProjectsPage() {
         </>)}
       </main>
 
-      <MobileBottomNav />
     </div>
   );
 }

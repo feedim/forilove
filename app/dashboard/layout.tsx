@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import MobileBottomNav from "@/components/MobileBottomNav";
 
 export const metadata: Metadata = {
   robots: {
@@ -15,6 +16,7 @@ export default function DashboardLayout({
   return (
     <div className="max-w-[1400px] mx-auto w-full">
       {children}
+      <MobileBottomNav />
     </div>
   );
 }

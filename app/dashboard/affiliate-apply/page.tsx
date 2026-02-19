@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, TrendingUp, CheckCircle, Clock, XCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
-import MobileBottomNav from "@/components/MobileBottomNav";
 
 const ALLOWED_DOMAINS = [
   "instagram.com", "www.instagram.com",
@@ -158,7 +157,6 @@ export default function AffiliateApplyPage() {
             <div className="h-10 bg-zinc-800 rounded-xl" />
           </div>
         </main>
-        <MobileBottomNav />
       </div>
     );
   }
@@ -347,7 +345,6 @@ export default function AffiliateApplyPage() {
         )}
       </main>
 
-      <MobileBottomNav />
     </div>
   );
 }

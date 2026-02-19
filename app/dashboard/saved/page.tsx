@@ -7,7 +7,6 @@ import { Heart, ArrowLeft, Bookmark } from "lucide-react";
 import { TemplateGridSkeleton } from "@/components/Skeletons";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import TemplateCard from "@/components/TemplateCard";
 import { usePurchaseConfirm } from "@/components/PurchaseConfirmModal";
 import { getActivePrice, isDiscountActive } from "@/lib/discount";
@@ -230,7 +229,6 @@ export default function SavedTemplatesPage() {
         <main className="container mx-auto px-3 sm:px-6 py-8 pb-24 md:pb-16">
           <TemplateGridSkeleton count={3} />
         </main>
-        <MobileBottomNav />
       </div>
     );
   }
@@ -294,7 +292,6 @@ export default function SavedTemplatesPage() {
         )}
       </main>
 
-      <MobileBottomNav />
     </div>
   );
 }

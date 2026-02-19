@@ -7,7 +7,6 @@ import { Heart, ArrowLeft, ShoppingBag } from "lucide-react";
 import { TemplateGridSkeleton } from "@/components/Skeletons";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import TemplateCard from "@/components/TemplateCard";
 
 const ITEMS_PER_PAGE = 12;
@@ -159,7 +158,6 @@ export default function PurchasedTemplatesPage() {
         <main className="container mx-auto px-3 sm:px-6 py-8 pb-24 md:pb-16">
           <TemplateGridSkeleton count={3} />
         </main>
-        <MobileBottomNav />
       </div>
     );
   }
@@ -223,7 +221,6 @@ export default function PurchasedTemplatesPage() {
         )}
       </main>
 
-      <MobileBottomNav />
     </div>
   );
 }

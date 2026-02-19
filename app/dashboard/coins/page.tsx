@@ -7,7 +7,6 @@ import { ArrowLeft, Coins, Heart } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import TransactionCard from "@/components/TransactionCard";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import { CoinPageSkeleton } from "@/components/Skeletons";
 
 interface CoinPackage {
@@ -127,7 +126,6 @@ export default function CoinsPage() {
         <main className="container mx-auto px-3 sm:px-6 pt-16 pb-24 md:pb-16 max-w-[600px]">
           <CoinPageSkeleton />
         </main>
-        <MobileBottomNav />
       </div>
     );
   }
@@ -260,7 +258,6 @@ export default function CoinsPage() {
         })()}
       </main>
 
-      <MobileBottomNav />
     </div>
   );
 }

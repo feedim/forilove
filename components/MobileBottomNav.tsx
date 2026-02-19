@@ -7,6 +7,15 @@ import { Home, Heart, User, Bookmark, Compass } from "lucide-react";
 export default function MobileBottomNav() {
   const pathname = usePathname();
 
+  // Editor, preview ve payment sayfalarında gösterme
+  if (
+    pathname.startsWith("/dashboard/editor") ||
+    pathname.startsWith("/dashboard/preview") ||
+    pathname.startsWith("/dashboard/payment")
+  ) {
+    return null;
+  }
+
   const navItems = [
     {
       href: "/dashboard",

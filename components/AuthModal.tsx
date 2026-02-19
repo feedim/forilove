@@ -77,7 +77,7 @@ interface SheetProps {
 }
 
 function AuthModalSheet({ onClose, onSuccess, returnPath }: SheetProps) {
-  const [tab, setTab] = useState<"login" | "register">("login");
+  const [tab, setTab] = useState<"login" | "register">("register");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");

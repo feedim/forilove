@@ -7,7 +7,6 @@ import { createClient } from "@/lib/supabase/client";
 import { Heart, ArrowLeft } from "lucide-react";
 import { ProjectListSkeleton } from "@/components/Skeletons";
 import EmptyState from "@/components/EmptyState";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import ProjectCard from "@/components/ProjectCard";
 import toast from "react-hot-toast";
 
@@ -181,7 +180,6 @@ export default function MyPagesPage() {
         <main className="container mx-auto px-3 sm:px-6 py-4 pb-24 md:pb-16 max-w-2xl">
           <ProjectListSkeleton count={4} />
         </main>
-        <MobileBottomNav />
       </div>
     );
   }
@@ -240,7 +238,6 @@ export default function MyPagesPage() {
         )}
       </main>
 
-      <MobileBottomNav />
     </div>
   );
 }

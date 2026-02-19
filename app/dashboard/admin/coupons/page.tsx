@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Ticket, Plus, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
-import MobileBottomNav from "@/components/MobileBottomNav";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -234,7 +233,6 @@ export default function AdminCouponsPage() {
         )}
       </main>
 
-      <MobileBottomNav />
     </div>
   );
 }

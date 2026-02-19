@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Send, UserPlus, Wallet } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import MobileBottomNav from "@/components/MobileBottomNav";
 
 type Transaction = {
   id: string;
@@ -194,7 +193,6 @@ export default function AffiliateTransactionsPage() {
         )}
       </main>
 
-      <MobileBottomNav />
     </div>
   );
 }

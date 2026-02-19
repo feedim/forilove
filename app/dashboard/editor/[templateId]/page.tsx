@@ -279,14 +279,26 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
     if (!template || loading) return;
     const timer = setTimeout(async () => {
       try {
+        // localStorage her durumda kontrol et (guest iken tamamlanmış olabilir)
+        if (localStorage.getItem('forilove_editor_tour_done')) {
+          // Giriş yapmış kullanıcıda DB'yi de senkronize et
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            supabase.from('profiles')
+              .update({ has_seen_editor_tour: true })
+              .eq('user_id', user.id).then();
+          }
+          return;
+        }
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           const { data: profile } = await supabase
             .from('profiles').select('has_seen_editor_tour')
             .eq('user_id', user.id).single();
-          if (profile?.has_seen_editor_tour) return;
-        } else {
-          if (localStorage.getItem('forilove_editor_tour_done')) return;
+          if (profile?.has_seen_editor_tour) {
+            localStorage.setItem('forilove_editor_tour_done', '1');
+            return;
+          }
         }
         setShowTour(true);
       } catch {

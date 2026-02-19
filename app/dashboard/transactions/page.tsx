@@ -6,7 +6,6 @@ import Link from "next/link";
 import { ArrowLeft, Coins, Heart } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import TransactionCard from "@/components/TransactionCard";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import { TransactionListSkeleton } from "@/components/Skeletons";
 
 interface Transaction {
@@ -134,7 +133,6 @@ export default function TransactionsPage() {
         <main className="container mx-auto px-3 sm:px-6 pt-16 pb-24 md:pb-16 max-w-4xl">
           <TransactionListSkeleton count={6} />
         </main>
-        <MobileBottomNav />
       </div>
     );
   }
@@ -187,7 +185,6 @@ export default function TransactionsPage() {
         )}
       </main>
 
-      <MobileBottomNav />
     </div>
   );
 }

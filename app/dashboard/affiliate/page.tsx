@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, BarChart3, User, Wallet, Send, Globe, HelpCircle, Shield, Check, Info, UserPlus, Users, History, Copy, Link2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import MobileBottomNav from "@/components/MobileBottomNav";
 
 export default function AffiliateDashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -476,7 +475,6 @@ export default function AffiliateDashboardPage() {
         )}
       </main>
 
-      <MobileBottomNav />
     </div>
   );
 }

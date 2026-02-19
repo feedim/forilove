@@ -7,7 +7,6 @@ import { Heart, ChevronDown, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { CoinWallet } from "@/components/CoinWallet";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import { TemplateGridSkeleton } from "@/components/Skeletons";
 import TemplateCard from "@/components/TemplateCard";
 import { EmptyState } from "@/components/ErrorState";
@@ -393,7 +392,6 @@ export default function DashboardPage() {
         <main className="w-full px-3 sm:px-6 lg:px-10 pb-20 md:pb-8">
           <TemplateGridSkeleton />
         </main>
-        <MobileBottomNav />
       </div>
     );
   }
@@ -464,7 +462,6 @@ export default function DashboardPage() {
         )}
       </main>
 
-      <MobileBottomNav />
 
       {/* Welcome Coupon Modal */}
       {welcomeCoupon && (

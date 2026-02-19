@@ -6,7 +6,6 @@ import Link from "next/link";
 import { ArrowLeft, User, Mail, LogOut, Heart, Clock, Calendar, Wallet, Edit2, Bookmark, ShoppingBag, Sparkles, HelpCircle, FileText, Shield, MessageCircle, ScrollText, BarChart3, Globe, Ticket, TrendingUp, Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import { ProfileSkeleton } from "@/components/Skeletons";
 import ReferralSection from "@/components/ReferralSection";
 import { translateError } from "@/lib/utils/translateError";
@@ -137,7 +136,6 @@ export default function ProfilePage() {
         <main className="container mx-auto px-3 sm:px-6 py-8 pb-24 md:pb-16">
           <ProfileSkeleton />
         </main>
-        <MobileBottomNav />
       </div>
     );
   }
@@ -661,7 +659,6 @@ export default function ProfilePage() {
         </div>
       </main>
 
-      <MobileBottomNav />
     </div>
   );
 }

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Shield, Mail, Check, Loader2, Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import PasswordInput from "@/components/PasswordInput";
 
 export default function SecurityPage() {
@@ -648,7 +647,6 @@ export default function SecurityPage() {
         )}
       </main>
 
-      <MobileBottomNav />
     </div>
   );
 }

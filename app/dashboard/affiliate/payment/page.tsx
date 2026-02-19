@@ -6,7 +6,6 @@ import Link from "next/link";
 import { ArrowLeft, Wallet, Check, Clock, CheckCircle, XCircle, Send, Calendar, Shield } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
-import MobileBottomNav from "@/components/MobileBottomNav";
 
 type PeriodKey = "all" | "thisMonth" | "last3m" | "last6m";
 type Currency = "TRY" | "USD";
@@ -532,7 +531,6 @@ export default function AffiliatePaymentPage() {
         )}
       </main>
 
-      <MobileBottomNav />
     </div>
   );
 }

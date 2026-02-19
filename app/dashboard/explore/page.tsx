@@ -7,7 +7,6 @@ import { Heart, Eye, ArrowLeft, Wand2, X, ChevronUp, Search, Share2, Bookmark } 
 import { createClient } from "@/lib/supabase/client";
 import { formatCount } from "@/lib/utils";
 import toast from "react-hot-toast";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import { ShareSheet } from "@/components/ShareIconButton";
 
 interface PublicProject {
@@ -191,7 +190,6 @@ export default function ExplorePage() {
             {[1,2,3,4].map(i => <div key={i} className="animate-pulse bg-white/[0.08] w-12 h-12 rounded-full" />)}
           </div>
         </div>
-        <MobileBottomNav />
       </div>
     );
   }
@@ -203,7 +201,6 @@ export default function ExplorePage() {
         <h2 className="text-lg sm:text-xl font-bold mb-2">Henüz içerik yok</h2>
         <p className="text-zinc-400 text-sm text-center mb-6">Herkese açık paylaşılan sayfalar burada görünecek.</p>
         <Link href="/dashboard" className="btn-primary px-6 py-3">Ana Sayfa</Link>
-        <MobileBottomNav />
       </div>
     );
   }
@@ -365,7 +362,6 @@ export default function ExplorePage() {
         onClose={() => setSharingProject(null)}
       />
 
-      <MobileBottomNav />
     </div>
   );
 }
