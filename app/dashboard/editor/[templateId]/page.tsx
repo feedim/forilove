@@ -2081,10 +2081,10 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
                 data-tour="publish-mobile"
               >
                 {saving || purchasing
-                  ? (project?.is_published ? "Güncelleniyor..." : !isPurchased && template?.coin_price > 0 ? "Satın Alınıyor..." : "Paylaşılıyor...")
+                  ? (project?.is_published ? "Güncelleniyor..." : !isPurchased && (isDiscountActive(template) ? template.discount_price! : template.coin_price) > 0 ? "Satın Alınıyor..." : "Paylaşılıyor...")
                   : project?.is_published ? "Güncelle"
-                  : !isPurchased && template?.coin_price > 0
-                    ? <><Coins className="h-4 w-4 text-yellow-400" />{template.coin_price} FL</>
+                  : !isPurchased && (isDiscountActive(template) ? template.discount_price! : template.coin_price) > 0
+                    ? <><Coins className="h-4 w-4 text-yellow-400" />{isDiscountActive(template) ? template.discount_price! : template.coin_price} FL</>
                     : "Paylaş"
                 }
               </button>
@@ -2251,10 +2251,10 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
                       data-tour="publish"
                     >
                       {saving || purchasing
-                        ? (project?.is_published ? "Güncelleniyor..." : !isPurchased && template?.coin_price > 0 ? "Satın Alınıyor..." : "Paylaşılıyor...")
+                        ? (project?.is_published ? "Güncelleniyor..." : !isPurchased && (isDiscountActive(template) ? template.discount_price! : template.coin_price) > 0 ? "Satın Alınıyor..." : "Paylaşılıyor...")
                         : project?.is_published ? "Güncelle"
-                        : !isPurchased && template?.coin_price > 0
-                          ? <><Coins className="h-4 w-4 text-yellow-400" />{template.coin_price} FL</>
+                        : !isPurchased && (isDiscountActive(template) ? template.discount_price! : template.coin_price) > 0
+                          ? <><Coins className="h-4 w-4 text-yellow-400" />{isDiscountActive(template) ? template.discount_price! : template.coin_price} FL</>
                           : "Paylaş"
                       }
                     </button>

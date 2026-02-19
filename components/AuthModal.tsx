@@ -140,12 +140,17 @@ function AuthModalSheet({ onClose, onSuccess, returnPath }: SheetProps) {
       });
 
       if (authError) {
+        console.error("[AuthModal] signUp error:", authError.message, authError);
         if (authError.message.includes("User already registered")) {
           setError("Bu e-posta adresi zaten kullanılıyor.");
         } else if (authError.message.includes("Password")) {
           setError("Şifre en az 6 karakter olmalıdır.");
+        } else if (authError.message.includes("security purposes") || authError.message.includes("rate limit")) {
+          setError("Çok hızlı deneme yaptınız. Lütfen birkaç saniye bekleyip tekrar deneyin.");
+        } else if (authError.message.includes("email") && authError.message.includes("invalid")) {
+          setError("Geçersiz e-posta adresi.");
         } else {
-          setError("Kayıt oluşturulamadı.");
+          setError("Kayıt oluşturulamadı. Lütfen tekrar deneyin.");
         }
         return;
       }
