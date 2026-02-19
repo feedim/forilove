@@ -1503,6 +1503,9 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
       const user = await requireAuth(`/editor/${resolvedParams.templateId}`);
       if (!user) { setPurchasing(false); return; }
 
+      // Ücretsiz/ücretli akış ayrımı için efektif fiyatı hesapla
+      const effectivePrice = isDiscountActive(template) ? template.discount_price! : template.coin_price;
+
       // 1) Bu şablonla yayınlanmış projesi var mı?
       const { data: existingProject } = await supabase
         .from("projects")
@@ -1592,17 +1595,25 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
         await supabase.from("projects").update({ hook_values: valuesRef.current }).eq("id", currentProject.id);
       }
 
-      // Coin balance yükle
+      // 4) Ücretsiz şablon → kaydet ve profile yönlendir (details modal'ı atla)
+      if (effectivePrice === 0) {
+        localStorage.removeItem(`forilove_editor_draft_${resolvedParams.templateId}`);
+        try { (window as any).ttq?.track('PlaceAnOrder', { content_type: 'product', content_id: template.id, content_name: template.name }); } catch {}
+        setPurchasing(false);
+        toast.success("Projen kaydedildi! Profilinden düzenleyebilirsin.");
+        router.push("/dashboard/profile");
+        return;
+      }
+
+      // 5) Ücretli şablon → mevcut akış: balance yükle, state geçişi, details modal
       const { data: profile } = await supabase.from("profiles").select("coin_balance").eq("user_id", user.id).single();
       setCoinBalance(profile?.coin_balance ?? 0);
 
-      // Guest → logged-in, sayfa değişmeden
       setGuestMode(false);
       setIsPurchased(true);
       setPurchasing(false);
       try { (window as any).ttq?.track('PlaceAnOrder', { content_type: 'product', content_id: template.id, content_name: template.name }); } catch {}
 
-      // Paylaş modalını aç
       setDraftTitle(currentProject?.title || template?.name || "");
       setDraftSlug(currentProject?.slug?.replace(/-[a-z0-9]{6,}$/, "") || "");
       setDraftDescription(currentProject?.description || template?.description || "");
