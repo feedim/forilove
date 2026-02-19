@@ -1709,9 +1709,18 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
           const formData = new FormData();
           formData.append('file', file);
           formData.append('fileName', optimizedName);
-          const res = await fetch('/api/upload/image', { method: 'POST', body: formData });
-          const result = await res.json();
-          if (!res.ok) throw new Error(result.error || `Görsel yüklenemedi: ${key}`);
+          let res: Response | null = null;
+          for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+              res = await fetch('/api/upload/image', { method: 'POST', body: formData });
+              break;
+            } catch (fetchErr) {
+              if (attempt === 2) throw fetchErr;
+              await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+            }
+          }
+          const result = await res!.json();
+          if (!res!.ok) throw new Error(result.error || `Görsel yüklenemedi: ${key}`);
           finalValues[key] = result.url;
         }
         pendingUploadsRef.current = {};
@@ -1729,12 +1738,17 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
         is_public: isPublic,
       };
 
-      const { error } = await supabase
-        .from("projects")
-        .update(updateData)
-        .eq("id", project.id);
-
-      if (error) throw error;
+      let dbError: any = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const { error: err } = await supabase
+          .from("projects")
+          .update(updateData)
+          .eq("id", project.id);
+        if (!err) { dbError = null; break; }
+        dbError = err;
+        if (attempt < 2) await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+      }
+      if (dbError) throw dbError;
 
       // Draft no longer needed — published successfully
       localStorage.removeItem(`forilove_editor_draft_${resolvedParams.templateId}`);
