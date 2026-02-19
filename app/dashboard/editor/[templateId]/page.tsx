@@ -1860,7 +1860,8 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
               reader.onload = () => resolve(reader.result as string);
               reader.readAsDataURL(compressed);
             });
-            pendingUploadsRef.current[editingHook] = compressed;
+            const buf = await compressed.arrayBuffer();
+            pendingUploadsRef.current[editingHook] = new File([buf], compressed.name, { type: compressed.type });
           }
         }
       } catch {
@@ -2034,15 +2035,19 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
       // Compress image locally
       const compressedFile = await compressImage(file);
 
+      // Read into memory immediately so disk file changes don't affect upload
+      const buf = await compressedFile.arrayBuffer();
+      const memoryFile = new File([buf], compressedFile.name, { type: compressedFile.type });
+
       // Store as data URL for local preview (no R2 upload yet)
       const reader = new FileReader();
       reader.onload = () => {
         setDraftValue(reader.result as string);
         setIsChangingImage(false);
-        // Store File for deferred upload at publish time
-        pendingUploadsRef.current[editingHook] = compressedFile;
+        // Store in-memory File for deferred upload at publish time
+        pendingUploadsRef.current[editingHook] = memoryFile;
       };
-      reader.readAsDataURL(compressedFile);
+      reader.readAsDataURL(memoryFile);
 
       toast.success('Görsel eklendi!');
     } catch (error: any) {
