@@ -12,11 +12,11 @@ export default function TransactionCard({ transaction }: TransactionCardProps) {
   const isPositive = transaction.amount > 0;
 
   return (
-    <div className="border-b border-white/10 pb-4">
+    <div className="border-b border-border-primary pt-4 pb-4">
       <div className="flex items-center justify-between">
         <div className="flex-1 min-w-0">
-          <div className="font-semibold mb-1">{transaction.description}</div>
-          <div className="text-sm text-zinc-400">
+          <div className="text-sm font-semibold mb-1">{transaction.description}</div>
+          <div className="text-xs text-text-muted">
             {new Date(transaction.created_at).toLocaleDateString('tr-TR', {
               year: 'numeric',
               month: 'long',
@@ -28,11 +28,11 @@ export default function TransactionCard({ transaction }: TransactionCardProps) {
         </div>
 
         <div className="text-right ml-4">
-          <div className={`text-xl font-bold ${isPositive ? 'text-yellow-500' : 'text-[#e30076]'}`}>
+          <div className={`text-lg font-bold ${isPositive ? 'text-accent-main' : 'text-red-500'}`}>
             {isPositive ? '+' : ''}{transaction.amount?.toLocaleString() || 0}
           </div>
           {transaction.balance_after !== undefined && transaction.balance_after !== null && (
-            <div className="text-sm text-zinc-500">
+            <div className="text-sm text-text-muted">
               Bakiye: {transaction.balance_after.toLocaleString()}
             </div>
           )}

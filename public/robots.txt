@@ -1,74 +1,26 @@
-# Forilove Robots.txt
+# Feedim Robots.txt
 User-agent: *
-
-# Allow public pages
 Allow: /
-Allow: /p/
 Allow: /about
 Allow: /contact
+Allow: /help
 Allow: /terms
 Allow: /privacy
 Allow: /kvkk
 Allow: /disclaimer
-Allow: /refund-policy
-Allow: /distance-sales-contract
-Allow: /pre-information-form
-Allow: /payment-security
-Allow: /fl-coins
-Allow: /templates
-Allow: /help
-Allow: /blog
-Allow: /blog/
-Allow: /affiliate
-Allow: /affiliate/circle
 
-# Disallow authentication pages
+# Auth
 Disallow: /login
 Disallow: /register
-Disallow: /signup
 Disallow: /forgot-password
 Disallow: /reset-password
+Disallow: /verify-mfa
 Disallow: /auth/
 
-# Disallow protected/private pages
-Disallow: /dashboard
-Disallow: /dashboard/*
-Disallow: /creator
-Disallow: /creator/*
-Disallow: /admin
-Disallow: /admin/*
-Disallow: /payment
-
-# Disallow API routes
+# Dashboard & API
+Disallow: /dashboard/
 Disallow: /api/
 
-# Allow AI crawlers
-User-agent: GPTBot
-Allow: /
+Crawl-delay: 1
 
-User-agent: ChatGPT-User
-Allow: /
-
-User-agent: Google-Extended
-Allow: /
-
-User-agent: ClaudeBot
-Allow: /
-
-User-agent: anthropic-ai
-Allow: /
-
-User-agent: Bytespider
-Allow: /
-
-User-agent: CCBot
-Allow: /
-
-User-agent: PerplexityBot
-Allow: /
-
-User-agent: cohere-ai
-Allow: /
-
-# Sitemap
-Sitemap: https://www.forilove.com/sitemap.xml
+Sitemap: https://www.feedim.com/sitemap.xml

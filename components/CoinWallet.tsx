@@ -35,20 +35,20 @@ export function CoinWallet() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 px-4 py-2 bg-zinc-900 rounded-xl animate-pulse" aria-label="Bakiye yükleniyor">
-        <Coins className="h-5 w-5 text-yellow-500" aria-hidden="true" />
-        <span className="font-bold">...</span>
+      <div className="flex items-center gap-2 px-4 py-2 bg-bg-primary rounded-xl" aria-label="Bakiye yükleniyor">
+        <Coins className="h-5 w-5 text-accent-main" aria-hidden="true" />
+        <div className="skeleton h-4 w-12 rounded-lg" />
       </div>
     );
   }
 
   return (
-    <Link href="/dashboard/coins" aria-label={`FL bakiyesi: ${balance.toLocaleString()}`}>
-      <div className="flex items-center gap-2 px-3 py-2 bg-zinc-900 hover:bg-zinc-800 border border-white/10 rounded-xl transition-all cursor-pointer group">
-        <Coins className="h-5 w-5 text-yellow-500" aria-hidden="true" />
+    <Link href="/dashboard/coins" aria-label={`Jeton bakiyesi: ${balance.toLocaleString()}`}>
+      <div className="flex items-center gap-2 px-3 py-2 bg-bg-primary hover:bg-bg-secondary rounded-xl transition-all cursor-pointer group">
+        <Coins className="h-5 w-5 text-accent-main" aria-hidden="true" />
         <div className="flex items-baseline gap-1">
-          <span className="font-bold text-yellow-500">{balance.toLocaleString()}</span>
-          <span className="text-sm text-yellow-500 font-medium">FL</span>
+          <span className="font-bold text-accent-main">{balance.toLocaleString()}</span>
+          <span className="text-sm text-accent-main font-medium">Jeton</span>
         </div>
       </div>
     </Link>

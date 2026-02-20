@@ -1,0 +1,53 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
+
+interface FeedTabsProps {
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+  followedTags?: Array<{ id: number; name: string; slug: string }>;
+  isLoggedIn?: boolean;
+}
+
+const authRequiredTabs = new Set(["followed", "bookmarks"]);
+
+export default function FeedTabs({ activeTab, onTabChange, followedTags = [], isLoggedIn = true }: FeedTabsProps) {
+  const router = useRouter();
+
+  const tabs = [
+    { id: "for-you", label: "Senin İçin" },
+    { id: "followed", label: "Takip" },
+    { id: "bookmarks", label: "Kaydedilenler" },
+    ...followedTags.map(tag => ({ id: `tag-${tag.slug}`, label: `#${tag.name}` })),
+  ];
+
+  const handleClick = (tabId: string) => {
+    if (!isLoggedIn && authRequiredTabs.has(tabId)) {
+      router.push("/login");
+      return;
+    }
+    onTabChange(tabId);
+  };
+
+  return (
+    <div className="sticky top-0 z-20 bg-bg-primary border-b border-border-primary px-1.5 sm:px-4 overflow-x-auto scrollbar-hide">
+      <div className="flex gap-0 min-w-max">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => handleClick(tab.id)}
+            className={cn(
+              "px-4 py-3 text-[0.97rem] font-bold whitespace-nowrap border-b-[2.5px] transition-colors",
+              activeTab === tab.id
+                ? "border-accent-main text-text-primary"
+                : "border-transparent text-text-muted opacity-60 hover:opacity-100 hover:text-text-primary"
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}

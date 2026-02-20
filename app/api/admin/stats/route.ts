@@ -11,7 +11,10 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: profile } = await supabase
+    // Use admin client (service_role) to bypass RLS
+    const admin = createAdminClient();
+
+    const { data: profile } = await admin
       .from("profiles")
       .select("role")
       .eq("user_id", user.id)
@@ -20,9 +23,6 @@ export async function GET() {
     if (profile?.role !== "admin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-
-    // Use admin client (service_role) to bypass RLS
-    const admin = createAdminClient();
 
     const [usersRes, paymentsRes, todayPaymentsRes, projectsRes, recentUsersRes] = await Promise.all([
       admin.from("profiles").select("*", { count: "exact", head: true }),

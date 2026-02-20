@@ -1,0 +1,50 @@
+"use client";
+
+import { createContext, useContext, useState, useCallback } from "react";
+import Sidebar from "@/components/Sidebar";
+import MobileBottomNav from "@/components/MobileBottomNav";
+import PublicFooter from "@/components/PublicFooter";
+import { UserProvider, type InitialUser } from "@/components/UserContext";
+
+interface DashboardShellContextValue {
+  setMobileNavVisible: (visible: boolean) => void;
+}
+
+const DashboardShellContext = createContext<DashboardShellContextValue>({
+  setMobileNavVisible: () => {},
+});
+
+export function useDashboardShell() {
+  return useContext(DashboardShellContext);
+}
+
+export default function DashboardShell({
+  initialUser,
+  children,
+}: {
+  initialUser: InitialUser | null;
+  children: React.ReactNode;
+}) {
+  const [mobileNavVisible, setMobileNavVisible] = useState(true);
+
+  const setNav = useCallback((visible: boolean) => setMobileNavVisible(visible), []);
+
+  return (
+    <UserProvider initialUser={initialUser}>
+      <DashboardShellContext.Provider value={{ setMobileNavVisible: setNav }}>
+        <div className="min-h-screen bg-bg-primary text-text-primary">
+          <Sidebar />
+          <main className="md:ml-[240px] min-h-screen md:h-screen md:overflow-y-auto pb-20 md:pb-0">
+            <div className="max-w-[1400px] mx-auto w-full">
+              {children}
+            </div>
+            <div className="md:hidden pb-4">
+              <PublicFooter variant="compact" />
+            </div>
+          </main>
+          {mobileNavVisible && <MobileBottomNav />}
+        </div>
+      </DashboardShellContext.Provider>
+    </UserProvider>
+  );
+}

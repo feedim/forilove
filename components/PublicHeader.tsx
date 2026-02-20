@@ -1,8 +1,11 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Heart, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { FeedimIcon } from "@/components/FeedimLogo";
+import { createClient } from "@/lib/supabase/client";
 
 interface PublicHeaderProps {
   variant?: "home" | "back";
@@ -11,26 +14,56 @@ interface PublicHeaderProps {
 
 export default function PublicHeader({ variant = "back", backLabel = "Geri" }: PublicHeaderProps) {
   const router = useRouter();
+  const [userInfo, setUserInfo] = useState<{ username: string; avatarUrl: string | null } | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        supabase.from("profiles").select("username, avatar_url").eq("user_id", user.id).single().then(({ data }) => {
+          if (data) setUserInfo({ username: data.username, avatarUrl: data.avatar_url });
+        });
+      }
+    });
+  }, []);
 
   return (
     <header>
       <nav className="container mx-auto px-6 py-6 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2" aria-label="Forilove Ana Sayfa">
-          <Heart className="h-7 w-7 text-pink-500 fill-pink-500" aria-hidden="true" />
-          <span className="text-xl font-bold">Forilove</span>
+        <Link href="/" aria-label="Feedim Ana Sayfa" className="flex items-center gap-3">
+          <FeedimIcon className="h-14 w-14" />
+          <span className="w-px h-7 bg-border-primary" />
+          <span className="text-lg font-semibold">Yardım Merkezi</span>
         </Link>
-        {variant === "home" ? (
-          <div className="flex items-center gap-3">
-            <Link href="/login" className="btn-secondary px-4 py-3 sm:px-8">
+        <div className="flex items-center gap-3">
+          {variant === "home" ? (
+            !userInfo && (
+              <Link href="/login" className="t-btn cancel text-sm h-10 px-5">
                 Giriş Yap
+              </Link>
+            )
+          ) : (
+            <button
+              onClick={() => {
+                if (window.history.length > 2) router.back();
+                else router.push("/");
+              }}
+              className="flex items-center gap-2 text-text-muted hover:text-text-primary transition"
+            >
+              <ArrowLeft className="h-5 w-5" />
+              <span>{backLabel}</span>
+            </button>
+          )}
+          {userInfo && (
+            <Link href={`/u/${userInfo.username}`} className="shrink-0">
+              {userInfo.avatarUrl ? (
+                <img src={userInfo.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
+              ) : (
+                <img className="default-avatar-auto h-8 w-8 rounded-full object-cover" alt="" />
+              )}
             </Link>
-          </div>
-        ) : (
-          <button onClick={() => { if (window.history.length > 2) { router.back(); } else { router.push('/'); } }} className="flex items-center gap-2 text-zinc-400 hover:text-white transition">
-            <ArrowLeft className="h-5 w-5" />
-            <span>{backLabel}</span>
-          </button>
-        )}
+          )}
+        </div>
       </nav>
     </header>
   );

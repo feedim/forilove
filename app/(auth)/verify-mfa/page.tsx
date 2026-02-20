@@ -3,9 +3,9 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import toast from "react-hot-toast";
+import { feedimAlert } from "@/components/FeedimAlert";
 import AuthLayout from "@/components/AuthLayout";
-import { Shield, Loader2 } from "lucide-react";
+import { Shield } from "lucide-react";
 
 export default function VerifyMfaPage() {
   const [code, setCode] = useState("");
@@ -47,14 +47,14 @@ export default function VerifyMfaPage() {
         options: { shouldCreateUser: false },
       });
       if (error) {
-        toast.error("Kod gönderilemedi. Lütfen tekrar deneyin.");
+        feedimAlert("error", "Kod gönderilemedi. Lütfen tekrar deneyin.");
         if (process.env.NODE_ENV === "development") console.log("OTP error:", error.message);
       } else {
-        toast.success("Doğrulama kodu e-postanıza gönderildi");
+        feedimAlert("success", "Doğrulama kodu e-postanıza gönderildi");
         setCooldown(60);
       }
     } catch {
-      toast.error("Bir hata oluştu");
+      feedimAlert("error", "Bir hata oluştu");
     } finally {
       setSending(false);
     }
@@ -63,7 +63,7 @@ export default function VerifyMfaPage() {
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     if (code.length < 6) {
-      toast.error("Doğrulama kodunu girin");
+      feedimAlert("error", "Doğrulama kodunu girin");
       return;
     }
 
@@ -76,20 +76,27 @@ export default function VerifyMfaPage() {
       });
 
       if (error) {
-        toast.error("Kod geçersiz veya süresi dolmuş");
+        feedimAlert("error", "Kod geçersiz veya süresi dolmuş");
         if (process.env.NODE_ENV === "development") console.log("Verify error:", error.message);
         return;
       }
 
-      // Clean up
       sessionStorage.removeItem("mfa_email");
-      toast.success("Doğrulama başarılı!");
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Record session
+      try {
+        const { getDeviceHash } = await import("@/lib/deviceHash");
+        await fetch("/api/account/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ device_hash: getDeviceHash(), user_agent: navigator.userAgent }),
+        });
+      } catch {}
+
       router.push("/dashboard");
       router.refresh();
     } catch {
-      toast.error("Bir hata oluştu");
+      feedimAlert("error", "Bir hata oluştu");
     } finally {
       setLoading(false);
     }
@@ -106,7 +113,7 @@ export default function VerifyMfaPage() {
       subtitle={email ? `${email} adresine gönderilen 8 haneli kodu girin.` : "Doğrulama kodu bekleniyor..."}
     >
       <form onSubmit={handleVerify} className="space-y-4">
-        <div className="flex items-center justify-center gap-2 text-pink-500 mb-2">
+        <div className="flex items-center justify-center gap-2 text-accent-main mb-2">
           <Shield className="h-5 w-5" />
           <span className="text-sm font-semibold">İki Faktörlü Doğrulama</span>
         </div>
@@ -129,28 +136,21 @@ export default function VerifyMfaPage() {
 
         <button
           type="submit"
-          className="btn-primary w-full text-lg h-12"
+          className="t-btn accept w-full relative"
           disabled={loading || code.length < 6}
         >
-          {loading ? (
-            <span className="flex items-center justify-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Doğrulanıyor...
-            </span>
-          ) : (
-            "Doğrula"
-          )}
+          {loading ? <span className="loader" /> : "Doğrula"}
         </button>
       </form>
 
       <div className="text-center mt-4">
         {sending ? (
-          <p className="text-sm text-zinc-500">Kod gönderiliyor...</p>
+          <p className="text-sm text-text-muted">Kod gönderiliyor...</p>
         ) : (
           <button
             onClick={handleResend}
             disabled={cooldown > 0}
-            className="text-sm text-zinc-400 hover:text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-sm text-text-muted hover:text-text-primary transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {cooldown > 0
               ? `Tekrar gönder (${cooldown}s)`
@@ -159,7 +159,7 @@ export default function VerifyMfaPage() {
         )}
       </div>
 
-      <p className="text-center text-zinc-500 text-xs mt-4">
+      <p className="text-center text-text-muted text-xs mt-4">
         E-postanızı kontrol edin. Kod 60 saniye geçerlidir.
         <br />
         Spam/gereksiz klasörünü de kontrol etmeyi unutmayın.

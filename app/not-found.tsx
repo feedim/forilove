@@ -1,40 +1,42 @@
 "use client";
 
 import Link from "next/link";
-import { Heart, Home, ArrowLeft } from "lucide-react";
+import { FeedimIcon } from "@/components/FeedimLogo";
+import PublicFooter from "@/components/PublicFooter";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center px-4 py-12">
-      <div className="text-center max-w-md" role="main">
-        <Heart
-          className="h-20 w-20 mx-auto mb-6 text-pink-500 fill-pink-500 animate-pulse"
-          aria-hidden="true"
-        />
-        <h1 className="text-6xl font-bold mb-4 text-pink-500">404</h1>
-        <h2 className="text-2xl font-bold mb-3">Sayfa Bulunamadı</h2>
-        <p className="text-zinc-400 mb-8">
-          Aradığınız sayfa mevcut değil veya taşınmış olabilir
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <button
-            onClick={() => window.history.back()}
-            className="btn-secondary flex items-center justify-center gap-2"
-            aria-label="Geri dön"
-          >
-            <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-            Geri Dön
-          </button>
-          <Link
-            href="/"
-            className="btn-primary flex items-center justify-center gap-2"
-            aria-label="Ana sayfaya dön"
-          >
-            <Home className="h-5 w-5" aria-hidden="true" />
-            Ana Sayfa
-          </Link>
+    <div className="min-h-screen bg-bg-primary text-text-primary flex flex-col">
+      <header className="flex items-center justify-center py-8">
+        <Link href="/">
+          <FeedimIcon className="h-[4.5rem] w-[4.5rem]" />
+        </Link>
+      </header>
+
+      <main className="flex-1 flex items-center justify-center px-4 pb-24">
+        <div className="text-center max-w-sm">
+          <p className="text-[7rem] font-bold leading-none tracking-tight text-text-primary select-none mb-4">
+            404
+          </p>
+          <h1 className="text-xl font-semibold mb-2">Bu sayfa mevcut değil</h1>
+          <p className="text-sm text-text-muted mb-8 leading-relaxed">
+            Aradığınız sayfa kaldırılmış, adı değiştirilmiş veya hiç var olmamış olabilir.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-2.5 justify-center">
+            <button
+              onClick={() => window.history.back()}
+              className="t-btn cancel"
+            >
+              Geri Dön
+            </button>
+            <Link href="/" className="t-btn accept">
+              Ana Sayfa
+            </Link>
+          </div>
         </div>
-      </div>
+      </main>
+
+      <PublicFooter />
     </div>
   );
 }

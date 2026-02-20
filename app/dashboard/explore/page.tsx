@@ -1,371 +1,657 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState, useCallback, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Search, X, Hash, TrendingUp } from "lucide-react";
 import Link from "next/link";
-import { Heart, Eye, ArrowLeft, Wand2, X, ChevronUp, Search, Share2, Bookmark } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import { formatCount } from "@/lib/utils";
-import toast from "react-hot-toast";
-import MobileBottomNav from "@/components/MobileBottomNav";
-import { ShareSheet } from "@/components/ShareIconButton";
+import AppLayout from "@/components/AppLayout";
+import PostCard from "@/components/PostCard";
+import NoteListSection from "@/components/NoteListSection";
+import type { NoteData } from "@/components/NoteCard";
+import { PostGridSkeleton, NoteListSkeleton } from "@/components/Skeletons";
+import { cn, formatCount } from "@/lib/utils";
+import UserListItem from "@/components/UserListItem";
+import { useAuthModal } from "@/components/AuthModal";
+import LoadMoreTrigger from "@/components/LoadMoreTrigger";
+import { fetchWithCache } from "@/lib/fetchWithCache";
+import { FeedAdSlot } from "@/components/AdBanner";
 
-interface PublicProject {
-  id: string;
+interface ExplorePost {
+  id: number;
   title: string;
   slug: string;
-  description: string;
-  view_count: number;
-  template_id: string;
-  user_id: string;
-  templates: any;
+  excerpt?: string;
+  featured_image?: string;
+  reading_time?: number;
+  like_count?: number;
+  comment_count?: number;
+  view_count?: number;
+  save_count?: number;
+  trending_score?: number;
+  published_at?: string;
+  profiles?: {
+    user_id: string;
+    username: string;
+    avatar_url?: string;
+    is_verified?: boolean;
+    premium_plan?: string | null;
+  };
 }
 
-const ITEMS_PER_PAGE = 6;
+interface SearchUser {
+  user_id: string;
+  username: string;
+  full_name?: string;
+  name?: string;
+  avatar_url?: string;
+  is_verified?: boolean;
+  premium_plan?: string | null;
+  bio?: string;
+}
+
+interface SearchTag {
+  id: number;
+  name: string;
+  slug: string;
+  post_count: number;
+  is_following?: boolean;
+}
+
+type ExploreTab = "for_you" | "users" | "tags" | "posts" | "notes";
+
+function SearchPrompt() {
+  return (
+    <div className="py-16 text-center">
+      <Search className="h-10 w-10 text-text-muted/30 mx-auto mb-3" />
+      <p className="text-sm text-text-muted">Arama yapmak için yazmaya başlayın.</p>
+    </div>
+  );
+}
 
 export default function ExplorePage() {
-  const [projects, setProjects] = useState<PublicProject[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [page, setPage] = useState(0);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [inspectingProject, setInspectingProject] = useState<PublicProject | null>(null);
-  const [sharingProject, setSharingProject] = useState<PublicProject | null>(null);
-  const [savedProjects, setSavedProjects] = useState<string[]>([]);
-  const [creatorNames, setCreatorNames] = useState<Record<string, string>>({});
-  const containerRef = useRef<HTMLDivElement>(null);
+  return (
+    <Suspense fallback={<AppLayout hideRightSidebar><PostGridSkeleton count={4} /></AppLayout>}>
+      <ExploreContent />
+    </Suspense>
+  );
+}
+
+function ExploreContent() {
   const router = useRouter();
-  const supabase = createClient();
+  const searchParams = useSearchParams();
 
-  useEffect(() => { loadData(); }, []);
-  useEffect(() => { if (page > 0) loadMore(); }, [page]);
+  // Tab state
+  const [activeTab, setActiveTab] = useState<ExploreTab>(
+    (searchParams.get("tab") as ExploreTab) || "for_you"
+  );
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const idx = Number(entry.target.getAttribute("data-index"));
-            if (!isNaN(idx)) setActiveIndex(idx);
-          }
-        });
-      },
-      { root: container, threshold: 0.6 }
-    );
-    container.querySelectorAll("[data-index]").forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, [projects]);
+  // Tag filter
+  const [activeTag, setActiveTag] = useState<{ name: string; slug: string } | null>(null);
 
-  useEffect(() => {
-    if (activeIndex >= projects.length - 3 && hasMore && !loadingMore) {
-      setPage((p) => p + 1);
-    }
-  }, [activeIndex, projects.length, hasMore, loadingMore]);
+  // Explore data
+  const [loading, setLoading] = useState(true);
+  const [trendingPosts, setTrendingPosts] = useState<ExplorePost[]>([]);
+  const [trendingTags, setTrendingTags] = useState<SearchTag[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [followedTagIds, setFollowedTagIds] = useState<Set<number>>(new Set());
+  const [exploreNotes, setExploreNotes] = useState<NoteData[]>([]);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [notesPage, setNotesPage] = useState(1);
+  const [notesHasMore, setNotesHasMore] = useState(false);
+  const [notesLoaded, setNotesLoaded] = useState(false);
 
-  const fetchCreatorNames = async (projects: PublicProject[]) => {
-    const userIds = [...new Set(projects.map(p => p.user_id).filter(Boolean))];
-    if (userIds.length === 0) return;
+  // Search state
+  const [query, setQuery] = useState(searchParams.get("q") || "");
+  const [focused, setFocused] = useState(!!searchParams.get("q"));
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<{
+    users: SearchUser[];
+    posts: ExplorePost[];
+    tags: SearchTag[];
+  } | null>(null);
+  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { requireAuth } = useAuthModal();
+
+  // Load explore data
+  const loadExplore = useCallback(async (pageNum: number, tagSlug?: string) => {
     try {
-      const res = await fetch("/api/creators", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userIds }),
-      });
-      if (res.ok) {
-        const map = await res.json();
-        setCreatorNames(prev => ({ ...prev, ...map }));
-      }
-    } catch (e) { if (process.env.NODE_ENV === 'development') console.warn('Operation failed:', e); }
-  };
-
-  const loadData = async () => {
-    try {
-      const { data } = await supabase
-        .from("projects")
-        .select("id, title, slug, description, view_count, template_id, user_id, templates(name)")
-        .eq("is_published", true)
-        .eq("is_public", true)
-        .order("view_count", { ascending: false })
-        .range(0, ITEMS_PER_PAGE - 1);
-      setProjects(data || []);
-      setHasMore((data?.length || 0) === ITEMS_PER_PAGE);
-
-      if (data?.length) fetchCreatorNames(data);
-
-      // Load saved projects for current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: savedData } = await supabase
-          .from("saved_projects")
-          .select("project_id")
-          .eq("user_id", user.id);
-        setSavedProjects(savedData?.map(s => s.project_id) || []);
-      }
-    } catch (e) { if (process.env.NODE_ENV === 'development') console.warn('Operation failed:', e); } finally { setLoading(false); }
-  };
-
-  const loadMore = async () => {
-    if (loadingMore || !hasMore) return;
-    setLoadingMore(true);
-    try {
-      const start = page * ITEMS_PER_PAGE;
-      const { data } = await supabase
-        .from("projects")
-        .select("id, title, slug, description, view_count, template_id, user_id, templates(name)")
-        .eq("is_published", true)
-        .eq("is_public", true)
-        .order("view_count", { ascending: false })
-        .range(start, start + ITEMS_PER_PAGE - 1);
-      setProjects((prev) => [...prev, ...(data || [])]);
-      setHasMore((data?.length || 0) === ITEMS_PER_PAGE);
-      if (data?.length) fetchCreatorNames(data);
-    } catch (e) { if (process.env.NODE_ENV === 'development') console.warn('Operation failed:', e); } finally { setLoadingMore(false); }
-  };
-
-  const getTemplateName = (project: PublicProject) => {
-    const t = project.templates;
-    return t?.name || t?.[0]?.name || "";
-  };
-
-  const handleToggleSave = async (projectId: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const isSaved = savedProjects.includes(projectId);
-
-    // Optimistic update
-    if (isSaved) {
-      setSavedProjects(prev => prev.filter(id => id !== projectId));
-    } else {
-      setSavedProjects(prev => [...prev, projectId]);
-    }
-
-    try {
-      if (isSaved) {
-        const { error } = await supabase
-          .from("saved_projects")
-          .delete()
-          .eq("user_id", user.id)
-          .eq("project_id", projectId);
-        if (error) throw error;
-        toast.success("Kaydedilenlerden çıkarıldı.");
+      let url = `/api/posts/explore?page=${pageNum}`;
+      if (tagSlug) url += `&tag=${encodeURIComponent(tagSlug)}`;
+      const data = await fetchWithCache(url, { ttlSeconds: 60, forceRefresh: pageNum > 1 }) as any;
+      if (pageNum === 1) {
+        setTrendingPosts(data.posts || []);
       } else {
-        const { error } = await supabase
-          .from("saved_projects")
-          .insert({ user_id: user.id, project_id: projectId });
-        if (error) throw error;
-        toast.success("Kaydedilenlere eklendi!");
+        setTrendingPosts(prev => [...prev, ...(data.posts || [])]);
+      }
+      if (data.tag) {
+        setActiveTag({ name: data.tag.name, slug: data.tag.slug });
+      }
+      setHasMore(data.hasMore || false);
+      setPage(pageNum);
+    } catch {
+      // Silent
+    }
+  }, []);
+
+  const loadTrendingTags = useCallback(async () => {
+    try {
+      const [tagsRes, followsRes] = await Promise.all([
+        fetch("/api/tags"),
+        fetch("/api/tags?followed=true"),
+      ]);
+      const tagsData = await tagsRes.json();
+      setTrendingTags((tagsData.tags || []).slice(0, 15));
+
+      if (followsRes.ok) {
+        const followsData = await followsRes.json();
+        if (followsData.followedTagIds) {
+          setFollowedTagIds(new Set(followsData.followedTagIds));
+        }
       }
     } catch {
-      // Rollback
-      if (isSaved) {
-        setSavedProjects(prev => [...prev, projectId]);
+      // Silent
+    }
+  }, []);
+
+
+  const loadExploreNotes = useCallback(async (pageNum: number) => {
+    setNotesLoading(true);
+    try {
+      const res = await fetch(`/api/notes?tab=for-you&page=${pageNum}`);
+      const data = await res.json();
+      if (pageNum === 1) {
+        setExploreNotes(data.notes || []);
       } else {
-        setSavedProjects(prev => prev.filter(id => id !== projectId));
+        setExploreNotes(prev => [...prev, ...(data.notes || [])]);
       }
-      toast.error("İşlem başarısız.");
+      setNotesHasMore(data.hasMore || false);
+      setNotesPage(pageNum);
+      setNotesLoaded(true);
+    } catch {
+      // Silent
+    } finally {
+      setNotesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const urlTag = searchParams.get("tag");
+    const urlQ = searchParams.get("q");
+
+    const init = async () => {
+      setLoading(true);
+      if (urlTag) {
+        // Redirect to new tag page
+        router.replace(`/dashboard/explore/tag/${urlTag}`);
+        return;
+      } else {
+        setActiveTag(null);
+        await Promise.all([loadExplore(1), loadTrendingTags()]);
+      }
+      setLoading(false);
+
+      if (urlQ && urlQ.trim().length >= 2) {
+        doSearch(urlQ, activeTab);
+      }
+    };
+    init();
+  }, [searchParams]);
+
+  const loadMore = async () => {
+    setLoadingMore(true);
+    await loadExplore(page + 1, activeTag?.slug);
+    setLoadingMore(false);
+  };
+
+  const clearTag = () => {
+    setActiveTag(null);
+    setTrendingPosts([]);
+    setLoading(true);
+    router.replace("/dashboard/explore", { scroll: false });
+    loadExplore(1).then(() => setLoading(false));
+  };
+
+  // Detect # or @ prefix for smart search
+  const parseSearchPrefix = (value: string): { cleanQuery: string; forceType: string | null } => {
+    const trimmed = value.trim();
+    if (trimmed.startsWith("#") && trimmed.length >= 2) {
+      return { cleanQuery: trimmed.slice(1), forceType: "tags" };
+    }
+    if (trimmed.startsWith("@") && trimmed.length >= 2) {
+      return { cleanQuery: trimmed.slice(1), forceType: "users" };
+    }
+    return { cleanQuery: trimmed, forceType: null };
+  };
+
+  // Search
+  const doSearch = (value: string, tab: ExploreTab) => {
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    const { cleanQuery, forceType } = parseSearchPrefix(value);
+    if (!cleanQuery || cleanQuery.length < 1) {
+      setSearchResults(null);
+      setSearching(false);
+      return;
+    }
+
+    setSearching(true);
+    const typeParam = forceType || (tab === "for_you" ? "all" : tab === "posts" ? "posts" : tab);
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(cleanQuery)}&type=${typeParam}`);
+        const data = await res.json();
+        setSearchResults({
+          users: data.users || [],
+          posts: data.posts || [],
+          tags: data.tags || [],
+        });
+      } catch {
+        // Silent
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+  };
+
+  const updateUrl = (q: string, tab: ExploreTab) => {
+    const params = new URLSearchParams();
+    if (q.trim()) params.set("q", q.trim());
+    if (tab !== "for_you") params.set("tab", tab);
+    const qs = params.toString();
+    router.replace(`/dashboard/explore${qs ? `?${qs}` : ""}`, { scroll: false });
+  };
+
+  const handleSearch = (value: string) => {
+    setQuery(value);
+    // Auto-switch tab based on prefix
+    const trimmed = value.trim();
+    if (trimmed.startsWith("#") && activeTab !== "tags") {
+      setActiveTab("tags");
+    } else if (trimmed.startsWith("@") && activeTab !== "users") {
+      setActiveTab("users");
+    }
+    doSearch(value, trimmed.startsWith("#") ? "tags" : trimmed.startsWith("@") ? "users" : activeTab);
+  };
+
+  const handleSearchSubmit = () => {
+    if (query.trim().length >= 2) {
+      updateUrl(query, activeTab);
+      doSearch(query, activeTab);
+      inputRef.current?.blur();
     }
   };
 
-  if (loading) {
+  const handleTabChange = (tab: ExploreTab) => {
+    setActiveTab(tab);
+    if (query.trim().length >= 2) {
+      updateUrl(query, tab);
+      doSearch(query, tab);
+    }
+  };
+
+  const clearSearch = () => {
+    setQuery("");
+    setSearchResults(null);
+    setSearching(false);
+    setFocused(false);
+    router.replace("/dashboard/explore", { scroll: false });
+    inputRef.current?.blur();
+  };
+
+  const isSearchMode = focused || query.trim().length > 0;
+  const hasPrefix = query.trim().startsWith("#") || query.trim().startsWith("@");
+  const isSearchActive = hasPrefix ? query.trim().length >= 2 : query.trim().length >= 2;
+
+  const tabs: { key: ExploreTab; label: string }[] = [
+    { key: "for_you", label: "Sana Özel" },
+    { key: "users", label: "Kişiler" },
+    { key: "tags", label: "Etiketler" },
+    { key: "posts", label: "Gönderiler" },
+    { key: "notes", label: "Notlar" },
+  ];
+
+  const handleTagClick = (tag: SearchTag) => {
+    router.push(`/dashboard/explore/tag/${tag.slug}`);
+  };
+
+  const handleTagFollow = async (e: React.MouseEvent, tagId: number) => {
+    e.stopPropagation();
+    const user = await requireAuth();
+    if (!user) return;
+    const wasFollowing = followedTagIds.has(tagId);
+    setFollowedTagIds(prev => {
+      const next = new Set(prev);
+      if (wasFollowing) next.delete(tagId);
+      else next.add(tagId);
+      return next;
+    });
+
+    const res = await fetch(`/api/tags/${tagId}/follow`, { method: "POST" });
+    if (!res.ok) {
+      // Rollback
+      setFollowedTagIds(prev => {
+        const next = new Set(prev);
+        if (wasFollowing) next.add(tagId);
+        else next.delete(tagId);
+        return next;
+      });
+    }
+  };
+
+  const TagRow = ({ tag }: { tag: SearchTag }) => {
     return (
-      <div className="h-dvh bg-black flex flex-col">
-        <header className="bg-transparent min-h-[73px]">
-          <nav className="container mx-auto px-3 sm:px-6 flex items-center justify-between min-h-[73px]">
-            <div className="flex items-center gap-2 text-white/80"><ArrowLeft className="h-5 w-5" /><span className="font-medium">Geri</span></div>
-            <h1 className="text-lg font-semibold text-white/90">Keşfet</h1>
-            <div className="w-16" />
-          </nav>
-        </header>
-        <div className="flex-1 relative w-full sm:max-w-[480px] sm:mx-auto">
-          <div className="animate-pulse bg-white/[0.04] absolute inset-0 rounded-none" />
-          <div className="absolute bottom-20 left-4 right-20 space-y-2">
-            <div className="animate-pulse bg-white/[0.08] h-3 w-24 rounded-lg" />
-            <div className="animate-pulse bg-white/[0.08] h-6 w-48 rounded-lg" />
-            <div className="animate-pulse bg-white/[0.08] h-4 w-32 rounded-lg" />
-          </div>
-          <div className="absolute right-3 bottom-32 flex flex-col gap-5">
-            {[1,2,3,4].map(i => <div key={i} className="animate-pulse bg-white/[0.08] w-12 h-12 rounded-full" />)}
-          </div>
+      <Link
+        href={`/dashboard/explore/tag/${tag.slug}`}
+        className="flex items-center gap-3 py-2.5 px-3 -mx-3 hover:bg-bg-secondary rounded-[10px] transition"
+      >
+        <div className="h-11 w-11 rounded-full bg-bg-tertiary flex items-center justify-center shrink-0">
+          <Hash className="h-5 w-5 text-text-muted" />
         </div>
-        <MobileBottomNav />
-      </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[0.9rem] font-semibold">#{tag.name}</p>
+          <p className="text-xs text-text-muted">{formatCount(tag.post_count || 0)} gönderi</p>
+        </div>
+      </Link>
     );
-  }
+  };
 
-  if (projects.length === 0) {
-    return (
-      <div className="h-dvh bg-black flex flex-col items-center justify-center text-white px-6">
-        <Heart className="h-12 w-12 sm:h-16 sm:w-16 text-white mx-auto mb-3" />
-        <h2 className="text-lg sm:text-xl font-bold mb-2">Henüz içerik yok</h2>
-        <p className="text-zinc-400 text-sm text-center mb-6">Herkese açık paylaşılan sayfalar burada görünecek.</p>
-        <Link href="/dashboard" className="btn-primary px-6 py-3">Ana Sayfa</Link>
-        <MobileBottomNav />
-      </div>
-    );
-  }
+  // Render tab content
+  const renderTabContent = () => {
+    // Search mode
+    if (isSearchActive && searchResults) {
+      const hasAny =
+        (searchResults.users?.length || 0) > 0 ||
+        (searchResults.posts?.length || 0) > 0 ||
+        (searchResults.tags?.length || 0) > 0;
 
-  return (
-    <div className="h-dvh bg-black text-white overflow-hidden relative">
-      {/* Header — transparent, overlays reels */}
-      <header className="absolute top-0 left-0 right-0 z-30">
-        <nav className="container mx-auto px-3 sm:px-6 flex items-center justify-between min-h-[73px]">
-          <button onClick={() => { if (window.history.length > 1) { router.back(); } else { router.push('/dashboard'); } }} className="flex items-center gap-2 text-white/80 hover:text-white transition-colors">
-            <ArrowLeft className="h-5 w-5" />
-            <span className="font-medium">Geri</span>
-          </button>
-          <h1 className="text-lg font-semibold text-white/90">Keşfet</h1>
-          <div className="w-16" />
-        </nav>
-      </header>
+      if (searching && !searchResults) {
+        return (
+          <div className="py-16 text-center">
+            <span className="loader mx-auto" style={{ width: 24, height: 24 }} />
+          </div>
+        );
+      }
 
-      {/* Reels wrapper — mobile: full, desktop: phone-sized column */}
-      <div className="relative h-full w-full sm:max-w-[480px] sm:mx-auto">
-        {/* Reels Container */}
-        <div
-          ref={containerRef}
-          className="h-dvh overflow-y-auto snap-y snap-mandatory scrollbar-hide overscroll-contain"
-          style={{ scrollbarWidth: "none" }}
-        >
-        {projects.map((project, index) => (
-          <div
-            key={project.id}
-            data-index={index}
-            className="h-dvh w-full snap-start snap-always relative flex-shrink-0 overflow-hidden"
-          >
-            {/* Background: iframe thumbnail — no scroll, no interaction */}
-            <div className="absolute inset-0 bg-black overflow-hidden">
-              <iframe
-                src={`/api/projects/${project.id}/preview`}
-                className="w-full h-full pointer-events-none"
-                sandbox="allow-scripts"
-                scrolling="no"
-                loading={index < 2 ? "eager" : "lazy"}
-                style={{ overflow: "hidden" }}
-              />
-            </div>
+      if (!hasAny) {
+        return (
+          <div className="py-16 text-center">
+            <p className="text-text-muted text-sm">&quot;{query}&quot; için sonuç bulunamadı.</p>
+          </div>
+        );
+      }
 
-            {/* Top gradient */}
-            <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/60 to-transparent pointer-events-none z-10" />
-
-            {/* Bottom gradient */}
-            <div className="absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-none z-10" />
-
-            {/* Right side actions */}
-            <div className="absolute right-3 bottom-32 sm:bottom-20 z-20 flex flex-col items-center gap-5 py-3 px-1.5">
-              {/* Inspect */}
-              <button onClick={() => setInspectingProject(project)} className="flex flex-col items-center gap-1" aria-label="Sayfayı incele">
-                <div className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center active:scale-95 transition border border-white/10">
-                  <Search className="h-5 w-5 text-white" />
+      if (activeTab === "for_you") {
+        return (
+          <div className="space-y-6 mt-4 px-3 sm:px-4">
+            {searchResults.users.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-text-muted mb-2">Kişiler</h3>
+                <div className="space-y-0.5">
+                  {searchResults.users.slice(0, 3).map(u => <UserListItem key={u.user_id} user={u} autoSubtitle />)}
                 </div>
-                <span className="text-[10px] font-semibold" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.5)' }}>İncele</span>
-              </button>
-
-              {/* Use template */}
-              {project.template_id && (
-                <Link href={`/dashboard/editor/${project.template_id}`} className="flex flex-col items-center gap-1">
-                  <div className="w-12 h-12 rounded-full bg-pink-500/80 backdrop-blur-md flex items-center justify-center active:scale-95 transition border border-pink-500/30">
-                    <Wand2 className="h-5 w-5 text-white" />
-                  </div>
-                  <span className="text-[10px] font-semibold" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.5)' }}>Kullan</span>
-                </Link>
-              )}
-
-              {/* Save */}
-              <button onClick={() => handleToggleSave(project.id)} className="flex flex-col items-center gap-1" aria-label={savedProjects.includes(project.id) ? "Kaydedilenlerden çıkar" : "Kaydet"}>
-                <div className={`w-12 h-12 rounded-full backdrop-blur-md flex items-center justify-center active:scale-95 transition border ${savedProjects.includes(project.id) ? 'bg-pink-500/80 border-pink-500/30' : 'bg-black/50 border-white/10'}`}>
-                  <Bookmark className={`h-5 w-5 ${savedProjects.includes(project.id) ? 'text-white fill-white' : 'text-white'}`} />
-                </div>
-                <span className="text-[10px] font-semibold" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.5)' }}>Kaydet</span>
-              </button>
-
-              {/* Share */}
-              <button onClick={() => setSharingProject(project)} className="flex flex-col items-center gap-1" aria-label="Paylaş">
-                <div className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center active:scale-95 transition border border-white/10">
-                  <Share2 className="h-5 w-5 text-white" />
-                </div>
-                <span className="text-[10px] font-semibold" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.5)' }}>Paylaş</span>
-              </button>
-            </div>
-
-            {/* Bottom info */}
-            <div className="absolute bottom-20 sm:bottom-6 left-0 right-20 z-20 px-4">
-              <p className="text-xs font-semibold text-white/50 mb-1 truncate">@{creatorNames[project.user_id] || "Anonim"}</p>
-              <h3 className="text-xl font-bold mb-1 drop-shadow-lg truncate">{project.title}</h3>
-              {project.description && (
-                <p className="text-sm text-white/60 mb-1 truncate">{project.description}</p>
-              )}
-              <div className="flex items-center gap-3">
-                {getTemplateName(project) && (
-                  <span className="text-xs text-white/40 truncate max-w-[160px]">Şablon: {getTemplateName(project)}</span>
-                )}
-                <span className="flex items-center gap-1 text-xs text-white/30 shrink-0">
-                  <Eye className="h-3 w-3" />
-                  {formatCount(project.view_count || 0)}
-                </span>
               </div>
-            </div>
-
-            {/* Swipe hint */}
-            {index === 0 && (
-              <div className="absolute bottom-28 sm:bottom-14 left-1/2 -translate-x-1/2 z-20 animate-bounce pointer-events-none">
-                <ChevronUp className="h-5 w-5 text-white/30" />
+            )}
+            {searchResults.tags.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-text-muted mb-2">Etiketler</h3>
+                <div className="space-y-0.5">
+                  {searchResults.tags.slice(0, 3).map(tag => <TagRow key={tag.id} tag={tag} />)}
+                </div>
+              </div>
+            )}
+            {searchResults.posts.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-text-muted mb-2">Gönderiler</h3>
+                {searchResults.posts.map(post => <PostCard key={post.id} post={post} />)}
               </div>
             )}
           </div>
-        ))}
+        );
+      }
 
-        {loadingMore && (
-          <div className="h-dvh w-full snap-start flex items-center justify-center bg-black">
-            <Heart className="h-12 w-12 text-pink-500 fill-pink-500 animate-pulse" />
+      if (activeTab === "users") {
+        return (
+          <div className="mt-4 space-y-0.5 px-3 sm:px-4">
+            {searchResults.users.length > 0 ? (
+              searchResults.users.map(u => <UserListItem key={u.user_id} user={u} autoSubtitle />)
+            ) : (
+              <p className="text-sm text-text-muted text-center py-8">Kullanıcı bulunamadı.</p>
+            )}
           </div>
-        )}
-      </div>
-      </div>{/* end reels wrapper */}
+        );
+      }
 
-      {/* Inspect Modal */}
-      {inspectingProject && (
-        <div className="fixed inset-0 z-[9999] bg-black">
-          <div className="absolute top-0 left-0 right-0 z-[10000] flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent">
-            <button
-              onClick={() => setInspectingProject(null)}
-              className="flex items-center gap-2 text-white/80 hover:text-white transition"
-              aria-label="Geri"
-            >
-              <ArrowLeft className="h-5 w-5" />
-              <span className="text-sm font-medium">Geri</span>
+      if (activeTab === "tags") {
+        return (
+          <div className="mt-4 space-y-0.5 px-3 sm:px-4">
+            {searchResults.tags.length > 0 ? (
+              searchResults.tags.map(tag => <TagRow key={tag.id} tag={tag} />)
+            ) : (
+              <p className="text-sm text-text-muted text-center py-8">Etiket bulunamadı.</p>
+            )}
+          </div>
+        );
+      }
+
+      if (activeTab === "posts") {
+        return (
+          <div className="mt-1">
+            {searchResults.posts.length > 0 ? (
+              searchResults.posts.map(post => <PostCard key={post.id} post={post} />)
+            ) : (
+              <p className="text-sm text-text-muted text-center py-8 px-4">Gönderi bulunamadı.</p>
+            )}
+          </div>
+        );
+      }
+    }
+
+    // Searching spinner
+    if (isSearchActive && searching) {
+      return (
+        <div className="py-16 text-center">
+          <span className="loader mx-auto" style={{ width: 24, height: 24 }} />
+        </div>
+      );
+    }
+
+    // Search prompt
+    if (isSearchMode && !isSearchActive) {
+      return <SearchPrompt />;
+    }
+
+    // Default explore content per tab
+    if (loading) {
+      return <div className="mt-4"><PostGridSkeleton count={4} /></div>;
+    }
+
+    // Tag filter mode
+    if (activeTag) {
+      const activeTagObj = trendingTags.find(t => t.slug === activeTag.slug);
+      const isFollowingTag = activeTagObj ? followedTagIds.has(activeTagObj.id) : false;
+      return (
+        <div className="mt-1">
+          <div className="flex items-center gap-2 px-3 sm:px-4 py-3 border-b border-border-primary">
+            <Hash className="h-4 w-4 text-text-muted" />
+            <span className="text-sm font-semibold">#{activeTag.name}</span>
+            {activeTagObj && (
+              <button
+                onClick={(e) => handleTagFollow(e, activeTagObj.id)}
+                className={cn(
+                  "px-3 py-1 rounded-full text-xs font-semibold transition",
+                  isFollowingTag
+                    ? "bg-bg-tertiary text-text-primary"
+                    : "bg-bg-inverse text-bg-primary"
+                )}
+              >
+                {isFollowingTag ? "Takipte" : "Takip Et"}
+              </button>
+            )}
+            <button onClick={clearTag} className="ml-auto text-xs text-text-muted hover:text-text-primary transition">
+              <X className="h-4 w-4" />
             </button>
-            <div className="flex items-center gap-1.5">
-              {inspectingProject.template_id && (
-                <Link href={`/dashboard/editor/${inspectingProject.template_id}`} className="btn-primary px-2.5 py-1 text-[11px]">
-                  Kullan
-                </Link>
-              )}
-              <Link href={`/p/${inspectingProject.slug}`} target="_blank" className="btn-secondary px-2.5 py-1 text-[11px]">
-                Görüntüle
-              </Link>
-            </div>
           </div>
-          <iframe
-            src={`/p/${inspectingProject.slug}?embed=1`}
-            className="w-full h-full"
-            sandbox="allow-scripts allow-same-origin"
+          {loading ? (
+            <div className="mt-4"><PostGridSkeleton count={4} /></div>
+          ) : trendingPosts.length > 0 ? (
+            <>
+              {trendingPosts.map((post, index) => (
+                <div key={post.id}>
+                  <PostCard post={post} />
+                  <FeedAdSlot index={index} />
+                </div>
+              ))}
+              <LoadMoreTrigger onLoadMore={loadMore} loading={loadingMore} hasMore={hasMore} />
+            </>
+          ) : (
+            <p className="text-sm text-text-muted py-8 text-center">Bu etikette gönderi bulunamadı.</p>
+          )}
+        </div>
+      );
+    }
+
+    if (activeTab === "for_you") {
+      return (
+        <div className="mt-1">
+          {trendingPosts.length > 0 ? (
+            <>
+              {trendingPosts.map((post, index) => (
+                <div key={post.id}>
+                  <PostCard post={post} />
+                  <FeedAdSlot index={index} />
+                </div>
+              ))}
+              <LoadMoreTrigger onLoadMore={loadMore} loading={loadingMore} hasMore={hasMore} />
+            </>
+          ) : (
+            <p className="text-sm text-text-muted py-8 text-center">Henüz gönderi yok.</p>
+          )}
+        </div>
+      );
+    }
+
+    if (activeTab === "users") {
+      return <SearchPrompt />;
+    }
+
+    if (activeTab === "tags") {
+      return (
+        <div className="mt-4 px-3 sm:px-4">
+          {trendingTags.length > 0 ? (
+            <>
+              <div className="flex items-center gap-2 mb-3">
+                <TrendingUp className="h-4 w-4 text-accent-main" />
+                <span className="text-sm font-semibold text-text-muted">Gündemdekiler</span>
+              </div>
+              <div className="space-y-0.5">
+                {trendingTags.map(tag => <TagRow key={tag.id} tag={tag} />)}
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-text-muted py-8 text-center">Henüz etiket yok.</p>
+          )}
+        </div>
+      );
+    }
+
+    if (activeTab === "posts") {
+      return (
+        <div className="mt-1">
+          {trendingPosts.length > 0 ? (
+            <>
+              {trendingPosts.map((post, index) => (
+                <div key={post.id}>
+                  <PostCard post={post} />
+                  <FeedAdSlot index={index} />
+                </div>
+              ))}
+              <LoadMoreTrigger onLoadMore={loadMore} loading={loadingMore} hasMore={hasMore} />
+            </>
+          ) : (
+            <p className="text-sm text-text-muted py-8 text-center">Henüz gönderi yok.</p>
+          )}
+        </div>
+      );
+    }
+
+    if (activeTab === "notes") {
+      if (!notesLoaded) {
+        loadExploreNotes(1);
+        return <div className="mt-4"><NoteListSkeleton count={4} /></div>;
+      }
+      return (
+        <div className="mt-1">
+          <NoteListSection
+            notes={exploreNotes}
+            loading={notesLoading}
+            hasMore={notesHasMore}
+            onLoadMore={() => loadExploreNotes(notesPage + 1)}
+            emptyTitle="Henüz not yok"
+            emptyDescription="Topluluk notları burada görünecek."
           />
         </div>
-      )}
+      );
+    }
 
-      {/* Share Sheet */}
-      <ShareSheet
-        url={`${typeof window !== 'undefined' ? window.location.origin : ''}/p/${sharingProject?.slug || ''}`}
-        title={sharingProject?.title || ''}
-        isOpen={!!sharingProject}
-        onClose={() => setSharingProject(null)}
-      />
+    return null;
+  };
 
-      <MobileBottomNav />
-    </div>
+  return (
+    <AppLayout hideRightSidebar scrollableHeader>
+      {/* Search input */}
+      <div className="flex items-center gap-2.5 mb-0 px-3 sm:px-4 pt-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-[18px] w-[18px] text-text-muted pointer-events-none" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => handleSearch(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSearchSubmit(); } }}
+            placeholder="#etiket veya @kullanıcı ara..."
+            className="input-modern w-full !pl-10 pr-9 py-2.5 text-[0.9rem]"
+          />
+          {query && (
+            <button
+              onClick={() => { setQuery(""); setSearchResults(null); setSearching(false); inputRef.current?.focus(); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full bg-text-muted/30 flex items-center justify-center"
+            >
+              <X className="h-2.5 w-2.5 text-bg-primary" />
+            </button>
+          )}
+        </div>
+        {isSearchMode && (
+          <button onClick={clearSearch} className="text-[0.84rem] font-medium text-accent-main shrink-0 transition active:opacity-60">
+            Vazgeç
+          </button>
+        )}
+      </div>
+
+      {/* Tabs — always visible */}
+      <div className="sticky top-0 z-20 bg-bg-primary border-b border-border-primary px-3 sm:px-4 mt-1 overflow-x-auto scrollbar-hide">
+        <div className="flex gap-0 min-w-max">
+          {tabs.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => handleTabChange(tab.key)}
+              className={cn(
+                "px-4 py-3 text-[0.97rem] font-bold whitespace-nowrap border-b-[2.5px] transition-colors",
+                activeTab === tab.key
+                  ? "border-accent-main text-text-primary"
+                  : "border-transparent text-text-muted opacity-60 hover:opacity-100 hover:text-text-primary"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab content */}
+      {renderTabContent()}
+    </AppLayout>
   );
 }

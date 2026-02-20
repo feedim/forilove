@@ -18,3 +18,93 @@ export function formatCount(n: number): string {
   const m = n / 1_000_000;
   return m % 1 === 0 ? `${m}Mn` : `${parseFloat(m.toFixed(1))}Mn`;
 }
+
+const TR_MAP: Record<string, string> = {
+  'ç': 'c', 'Ç': 'C', 'ğ': 'g', 'Ğ': 'G', 'ı': 'i', 'İ': 'I',
+  'ö': 'o', 'Ö': 'O', 'ş': 's', 'Ş': 'S', 'ü': 'u', 'Ü': 'U',
+};
+
+/** Türkçe karakterleri ASCII karşılıklarına çevirir (aşk → ask) */
+export function transliterateTurkish(text: string): string {
+  return text
+    .replace(/[çÇğĞıİöÖşŞüÜ]/g, (ch) => TR_MAP[ch] || ch)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+export function slugify(text: string): string {
+  return text
+    .replace(/[çÇğĞıİöÖşŞüÜ]/g, (ch) => TR_MAP[ch] || ch)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 120);
+}
+
+export function generateSlugHash(): string {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let hash = '';
+  for (let i = 0; i < 12; i++) {
+    hash += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return hash;
+}
+
+export function calculateReadingTime(html: string): { wordCount: number; readingTime: number } {
+  const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  const wordCount = text ? text.split(' ').length : 0;
+  const readingTime = Math.max(1, Math.ceil(wordCount / 200));
+  return { wordCount, readingTime };
+}
+
+export function generateExcerpt(html: string, maxLen = 160): string {
+  const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (text.length <= maxLen) return text;
+  return text.substring(0, maxLen).replace(/\s+\S*$/, '') + '…';
+}
+
+export function normalizeUsername(input: string): string {
+  return input
+    .replace(/[çÇğĞıİöÖşŞüÜ]/g, (ch) => TR_MAP[ch] || ch)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9._]/g, '');
+}
+
+export function filterNameInput(input: string): string {
+  return input.replace(/[^\p{L}\s]/gu, '');
+}
+
+/** Tag adını temizler ve Title Case yapar: "makine öğrenmesi" → "Makine Öğrenmesi" */
+export function formatTagName(name: string): string {
+  return name
+    .trim()
+    .replace(/\s+/g, ' ')
+    .split(' ')
+    .map(w => w.charAt(0).toLocaleUpperCase('tr-TR') + w.slice(1).toLocaleLowerCase('tr-TR'))
+    .join(' ');
+}
+
+export function formatRelativeDate(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diff = Math.floor((now - then) / 1000);
+
+  if (diff < 60) return 'az önce';
+  const mins = Math.floor(diff / 60);
+  if (diff < 3600) return `${mins} dakika önce`;
+  const hours = Math.floor(diff / 3600);
+  if (diff < 86400) return `${hours} saat önce`;
+  const days = Math.floor(diff / 86400);
+  if (days < 7) return `${days} gün önce`;
+  const weeks = Math.floor(days / 7);
+  if (days < 30) return `${weeks} hafta önce`;
+  const months = Math.floor(days / 30);
+  if (days < 365) return `${months} ay önce`;
+  const years = Math.floor(days / 365);
+  return `${years} yıl önce`;
+}

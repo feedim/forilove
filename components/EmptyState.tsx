@@ -1,19 +1,42 @@
-import { Heart } from "lucide-react";
+import Link from "next/link";
 import { ReactNode } from "react";
 
 interface EmptyStateProps {
   title: string;
   description: string;
-  action?: ReactNode;
+  icon?: ReactNode;
+  action?: ReactNode | { label: string; href?: string; onClick?: () => void };
 }
 
-export default function EmptyState({ title, description, action }: EmptyStateProps) {
+export default function EmptyState({ title, description, icon, action }: EmptyStateProps) {
   return (
     <div className="text-center py-12 sm:py-20">
-      <Heart className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-3 sm:mb-4" strokeWidth={1.2} />
+      {icon && (
+        <div className="flex justify-center mb-3 sm:mb-4 text-text-muted">
+          {icon}
+        </div>
+      )}
       <h2 className="text-lg sm:text-xl font-bold mb-2">{title}</h2>
-      <p className="text-sm text-zinc-400 mb-5 sm:mb-6 px-4">{description}</p>
-      {action}
+      <p className="text-sm text-text-muted mb-5 sm:mb-6 px-4 max-w-[300px] mx-auto">{description}</p>
+      {action && (
+        typeof action === "object" && action !== null && "label" in action ? (
+          action.href ? (
+            <Link
+              href={action.href}
+              className="inline-flex items-center px-5 py-2.5 rounded-full bg-bg-inverse text-bg-primary text-sm font-semibold hover:opacity-90 transition"
+            >
+              {action.label}
+            </Link>
+          ) : (
+            <button
+              onClick={action.onClick}
+              className="inline-flex items-center px-5 py-2.5 rounded-full bg-bg-inverse text-bg-primary text-sm font-semibold hover:opacity-90 transition"
+            >
+              {action.label}
+            </button>
+          )
+        ) : action
+      )}
     </div>
   );
 }

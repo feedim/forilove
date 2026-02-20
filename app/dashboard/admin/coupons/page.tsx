@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Ticket, Plus, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import toast from "react-hot-toast";
+import { feedimAlert } from "@/components/FeedimAlert";
 import MobileBottomNav from "@/components/MobileBottomNav";
 
 const ITEMS_PER_PAGE = 10;
@@ -52,7 +52,7 @@ export default function AdminCouponsPage() {
 
   const handleCreateCoupon = async () => {
     if (!couponForm.code.trim()) {
-      toast.error("Kupon kodu girin");
+      feedimAlert("error", "Kupon kodu girin");
       return;
     }
     setCouponCreating(true);
@@ -69,14 +69,14 @@ export default function AdminCouponsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || 'Kupon oluşturulamadı');
+        feedimAlert("error",data.error || 'Kupon oluşturulamadı');
         return;
       }
-      toast.success(`Kupon oluşturuldu: ${data.coupon.code}`);
+      feedimAlert("success",`Kupon oluşturuldu: ${data.coupon.code}`);
       setCoupons([data.coupon, ...coupons]);
       setCouponForm({ code: '', discountPercent: 15, maxUses: 100, expiryHours: 720, isFree: false });
     } catch {
-      toast.error('Bir hata oluştu');
+      feedimAlert("error",'Bir hata oluştu');
     } finally {
       setCouponCreating(false);
     }
@@ -90,21 +90,21 @@ export default function AdminCouponsPage() {
         body: JSON.stringify({ couponId }),
       });
       if (!res.ok) {
-        toast.error('Kupon silinemedi');
+        feedimAlert("error",'Kupon silinemedi');
         return;
       }
       setCoupons(coupons.filter(c => c.id !== couponId));
-      toast.success('Kupon silindi');
+      feedimAlert("success",'Kupon silindi');
     } catch {
-      toast.error('Bir hata olustu');
+      feedimAlert("error",'Bir hata oluştu');
     }
   };
 
   const generalCoupons = coupons.filter(c => c.coupon_type === 'general');
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-xl min-h-[73px]">
+    <div className="min-h-screen bg-bg-primary text-text-primary">
+      <header className="sticky top-0 z-50 bg-bg-primary min-h-[73px]">
         <nav className="container mx-auto px-6 flex items-center justify-between min-h-[73px]">
           <button onClick={() => router.back()} className="flex items-center gap-2 transition-colors">
             <ArrowLeft className="h-5 w-5" />
@@ -118,12 +118,12 @@ export default function AdminCouponsPage() {
       <main className="container mx-auto px-3 sm:px-6 py-4 sm:py-8 pb-24 md:pb-16 max-w-2xl">
         {loading ? (
           <div className="space-y-4">
-            <div className="bg-zinc-900 rounded-2xl p-6 animate-pulse h-60" />
+            <div className="skeleton rounded-2xl h-60" />
           </div>
         ) : (
-          <div className="bg-zinc-900 rounded-2xl p-6">
+          <div className="bg-bg-primary rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-4">
-              <Ticket className="h-5 w-5 text-pink-500" />
+              <Ticket className="h-5 w-5 text-accent-main" />
               <h3 className="font-semibold">Kupon Yönetimi</h3>
             </div>
 
@@ -131,7 +131,7 @@ export default function AdminCouponsPage() {
             <div className="space-y-3 mb-5">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-zinc-400 mb-1">Kupon Kodu (max 9)</label>
+                  <label className="block text-xs text-text-muted mb-1">Kupon Kodu (max 9)</label>
                   <input
                     type="text"
                     value={couponForm.code}
@@ -142,7 +142,7 @@ export default function AdminCouponsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-zinc-400 mb-1">İndirim %</label>
+                  <label className="block text-xs text-text-muted mb-1">İndirim %</label>
                   <input
                     type="number"
                     value={couponForm.isFree ? 100 : couponForm.discountPercent}
@@ -161,11 +161,11 @@ export default function AdminCouponsPage() {
                   onChange={(e) => setCouponForm({ ...couponForm, isFree: e.target.checked })}
                   className="cursor-pointer"
                 />
-                <span className="text-sm text-zinc-400">Bedava (ucretsiz satin alma)</span>
+                <span className="text-sm text-text-muted">Bedava (ücretsiz satın alma)</span>
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-zinc-400 mb-1">Max Kullanim</label>
+                  <label className="block text-xs text-text-muted mb-1">Max Kullanım</label>
                   <input
                     type="number"
                     value={couponForm.maxUses}
@@ -176,7 +176,7 @@ export default function AdminCouponsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-zinc-400 mb-1">Sure (saat)</label>
+                  <label className="block text-xs text-text-muted mb-1">Süre (saat)</label>
                   <input
                     type="number"
                     value={couponForm.expiryHours}
@@ -193,29 +193,29 @@ export default function AdminCouponsPage() {
                 className="btn-primary w-full py-2.5 text-sm flex items-center justify-center gap-2"
               >
                 <Plus className="h-4 w-4" />
-                {couponCreating ? "Olusturuluyor..." : "Kupon Olustur"}
+                {couponCreating ? "Oluşturuluyor..." : "Kupon Oluştur"}
               </button>
             </div>
 
             {/* Coupons List */}
             {generalCoupons.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Mevcut Kuponlar</p>
+                <p className="text-xs text-text-muted font-medium uppercase tracking-wider">Mevcut Kuponlar</p>
                 {generalCoupons.slice(0, visibleCoupons).map((coupon) => (
-                  <div key={coupon.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5">
+                  <div key={coupon.id} className="flex items-center justify-between p-3 rounded-xl bg-bg-inverse/5">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-bold text-yellow-500 font-mono">{coupon.code}</span>
-                        <span className="text-xs bg-pink-600/20 text-pink-400 px-2 py-0.5 rounded-full">
+                        <span className="text-xs bg-accent-main/20 text-accent-main px-2 py-0.5 rounded-full">
                           {coupon.discount_percent === 100 ? 'BEDAVA' : `%${coupon.discount_percent}`}
                         </span>
                       </div>
-                      <p className="text-xs text-zinc-500 mt-1">
-                        {coupon.current_uses}/{coupon.max_uses || '∞'} kullanim
-                        {coupon.expires_at && ` · ${new Date(coupon.expires_at) > new Date() ? `${Math.ceil((new Date(coupon.expires_at).getTime() - Date.now()) / (1000 * 60 * 60))}s kaldi` : 'suresi dolmus'}`}
+                      <p className="text-xs text-text-muted mt-1">
+                        {coupon.current_uses}/{coupon.max_uses || '∞'} kullanım
+                        {coupon.expires_at && ` · ${new Date(coupon.expires_at) > new Date() ? `${Math.ceil((new Date(coupon.expires_at).getTime() - Date.now()) / (1000 * 60 * 60))}s kaldı` : 'süresi dolmuş'}`}
                       </p>
                     </div>
-                    <button onClick={() => handleDeleteCoupon(coupon.id)} className="p-2 text-zinc-500 hover:text-red-400 transition shrink-0" title="Sil">
+                    <button onClick={() => handleDeleteCoupon(coupon.id)} className="p-2 text-text-muted hover:text-red-400 transition shrink-0" title="Sil">
                       <X className="h-4 w-4" />
                     </button>
                   </div>
@@ -223,7 +223,7 @@ export default function AdminCouponsPage() {
                 {visibleCoupons < generalCoupons.length && (
                   <button
                     onClick={() => setVisibleCoupons(prev => prev + ITEMS_PER_PAGE)}
-                    className="w-full py-2 text-sm text-pink-500 hover:text-pink-400 font-medium transition"
+                    className="w-full py-2 text-sm text-accent-main hover:text-accent-main font-medium transition"
                   >
                     Daha Fazla Göster ({generalCoupons.length - visibleCoupons} kalan)
                   </button>

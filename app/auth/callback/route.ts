@@ -33,8 +33,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Google OAuth already provides strong authentication (Google's own 2FA).
-  // Skip MFA check for OAuth logins — MFA only applies to password-based login.
+  // Check onboarding status
+  let needsOnboarding = false;
+  if (data.user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("onboarding_completed")
+      .eq("user_id", data.user.id)
+      .single();
+    needsOnboarding = !profile?.onboarding_completed;
+  }
 
   // Popup mode — send postMessage to opener and close
   const isPopup = requestUrl.searchParams.get("popup") === "true";
@@ -44,7 +52,7 @@ export async function GET(request: NextRequest) {
       `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>
         <script>
           if (window.opener) {
-            window.opener.postMessage({ type: 'AUTH_CALLBACK_COMPLETE' }, window.location.origin);
+            window.opener.postMessage({ type: 'AUTH_CALLBACK_COMPLETE', needsOnboarding: ${needsOnboarding} }, window.location.origin);
           }
           window.close();
         </script>
@@ -56,23 +64,45 @@ export async function GET(request: NextRequest) {
     latestCookies.forEach(({ name, value, options }) => {
       popupResponse.cookies.set(name, value, options);
     });
+    popupResponse.cookies.set('fdm-status', '', { maxAge: 0, path: '/' });
 
     return popupResponse;
   }
 
-  // Normal flow — check localStorage returnTo (set by AuthModal fallback) or query param
+  // Normal flow — redirect to onboarding if not completed
   const returnTo = requestUrl.searchParams.get("returnTo");
   const safeReturnTo = returnTo?.startsWith('/editor/') ? returnTo : null;
+  const defaultDest = needsOnboarding ? "/onboarding" : (safeReturnTo ? `${safeReturnTo}?auth_return=true` : "/dashboard");
 
   const normalResponse = new NextResponse(
     `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>
       <script>
-        var saved = localStorage.getItem('forilove_auth_return');
-        if (saved) {
-          localStorage.removeItem('forilove_auth_return');
+        // Record session
+        (function() {
+          try {
+            var raw = [navigator.userAgent, screen.width+"x"+screen.height, navigator.language, Intl.DateTimeFormat().resolvedOptions().timeZone].join("|");
+            var h = 0;
+            for (var i = 0; i < raw.length; i++) { h = ((h << 5) - h) + raw.charCodeAt(i); h |= 0; }
+            var dh = Math.abs(h).toString(36);
+            if (!localStorage.getItem("fdm_device_hash")) localStorage.setItem("fdm_device_hash", dh);
+            else dh = localStorage.getItem("fdm_device_hash");
+            fetch("/api/account/sessions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ device_hash: dh, user_agent: navigator.userAgent })
+            }).catch(function(){});
+          } catch(e) {}
+        })();
+
+        var saved = localStorage.getItem('fdm_auth_return');
+        if (${needsOnboarding}) {
+          localStorage.removeItem('fdm_auth_return');
+          window.location.replace("/onboarding");
+        } else if (saved) {
+          localStorage.removeItem('fdm_auth_return');
           window.location.replace(saved);
         } else {
-          window.location.replace(${JSON.stringify(safeReturnTo ? `${safeReturnTo}?auth_return=true` : "/dashboard")});
+          window.location.replace(${JSON.stringify(defaultDest)});
         }
       </script>
     </body></html>`,
@@ -83,6 +113,7 @@ export async function GET(request: NextRequest) {
   latestCookies.forEach(({ name, value, options }) => {
     normalResponse.cookies.set(name, value, options);
   });
+  normalResponse.cookies.set('fdm-status', '', { maxAge: 0, path: '/' });
 
   return normalResponse;
 }

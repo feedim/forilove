@@ -1,88 +1,73 @@
 import Link from "next/link";
-import { Heart } from "lucide-react";
 
-export default function PublicFooter() {
-  return (
-    <footer className="border-t border-white/10 pt-12 pb-0">
-      <div className="container mx-auto px-6">
-        {/* Links + Payment */}
-        <div className="flex flex-col items-center gap-6 mb-8">
-          <div className="flex flex-wrap gap-x-8 gap-y-4 text-sm justify-center max-w-4xl">
-            <Link href="/templates" className="text-zinc-400 hover:text-white transition">
-              Şablonlar
-            </Link>
-            <Link href="/blog" className="text-zinc-400 hover:text-white transition">
-              Blog
-            </Link>
-            <Link href="/about" className="text-zinc-400 hover:text-white transition">
-              Hakkımızda
-            </Link>
-            <Link href="/contact" className="text-zinc-400 hover:text-white transition">
-              İletişim
-            </Link>
-            <Link href="/affiliate" className="text-zinc-400 hover:text-white transition">
-              Satış Ortağımız Olun
-            </Link>
-            <Link href="/distance-sales-contract" className="text-zinc-400 hover:text-white transition">
-              Mesafeli Satış Sözleşmesi
-            </Link>
-            <Link href="/pre-information-form" className="text-zinc-400 hover:text-white transition">
-              Ön Bilgilendirme
-            </Link>
-            <Link href="/disclaimer" className="text-zinc-400 hover:text-white transition">
-              Sorumluluk Reddi
-            </Link>
-            <Link href="/fl-coins" className="text-zinc-400 hover:text-white transition">
-              FL
-            </Link>
-            <Link href="/payment-security" className="text-zinc-400 hover:text-white transition">
-              Ödeme Güvenliği
-            </Link>
-            <Link href="/refund-policy" className="text-zinc-400 hover:text-white transition">
-              İade Politikası
-            </Link>
-            <Link href="/privacy" className="text-zinc-400 hover:text-white transition">
-              Gizlilik
-            </Link>
-            <Link href="/terms" className="text-zinc-400 hover:text-white transition">
-              Kullanım Koşulları
-            </Link>
-          </div>
-          <img src="/logo_band_white.svg" alt="Ödeme yöntemleri" height={25} style={{ height: 25, width: 'auto', opacity: 0.7 }} />
+interface PublicFooterProps {
+  variant?: "default" | "compact" | "inline" | "minimal";
+}
+
+const links = [
+  { href: "/help", label: "Yardım Merkezi", short: "Yardım Merkezi" },
+  { href: "/help/about", label: "Hakkımızda", short: "Hakkımızda" },
+  { href: "/help/terms", label: "Kullanım Koşulları", short: "Koşullar" },
+  { href: "/help/privacy", label: "Gizlilik", short: "Gizlilik" },
+  { href: "/help/privacy", label: "KVKK", short: "KVKK" },
+  { href: "/help/contact", label: "İletişim", short: "İletişim" },
+  { href: "/help/disclaimer", label: "Sorumluluk Reddi", short: "Sorumluluk Reddi" },
+];
+
+export default function PublicFooter({ variant = "default" }: PublicFooterProps) {
+  const year = new Date().getFullYear();
+
+  // Minimal — sadece copyright (error sayfası)
+  if (variant === "minimal") {
+    return (
+      <footer className="py-6 text-center">
+        <p className="text-xs text-text-muted/50">&copy; {year} Feedim</p>
+      </footer>
+    );
+  }
+
+  // Compact — sidebar footer
+  if (variant === "compact") {
+    return (
+      <nav className="px-4 pb-3 pt-1">
+        <div className="flex flex-wrap gap-x-2.5 gap-y-0.5 text-[0.65rem] text-text-muted leading-relaxed">
+          {links.map((link) => (
+            <Link key={link.href + link.label} href={link.href} className="hover:underline">{link.short}</Link>
+          ))}
+          <Link href="/premium" className="hover:underline">Premium ol</Link>
         </div>
+        <p className="text-[0.6rem] text-text-muted/60 mt-1">&copy; {year} Feedim. Tüm hakları saklıdır.</p>
+      </nav>
+    );
+  }
 
-        {/* Bottom bar: Forilove + social | Venivex | Copyright */}
-        <div className="py-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          {/* Left: Logo + Social */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Heart className="h-4 w-4 text-pink-500 fill-pink-500" />
-              <span className="text-sm font-semibold">Forilove</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <a href="https://instagram.com/forilovecom" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white/70 transition" aria-label="Forilove Instagram">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-              </a>
-              <a href="https://tiktok.com/@forilove" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white/70 transition" aria-label="Forilove TikTok">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 0 0-.79-.05A6.34 6.34 0 0 0 3.15 15a6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.36a8.16 8.16 0 0 0 4.76 1.53v-3.4a4.85 4.85 0 0 1-1-.2z"/></svg>
-              </a>
-              <a href="https://pinterest.com/forilovecom" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white/70 transition" aria-label="Forilove Pinterest">
-                <svg width="14" height="14" viewBox="0 0 1024 1024" fill="currentColor"><path d="M467.669333 538.24c0.426667 1.408 0.768 2.858667 1.024 4.352C480.768 611.285333 512.426667 640 573.013333 640 669.610667 640 768 520.106667 768 395.093333 768 264.832 663.082667 170.666667 493.056 170.666667 345.728 170.666667 256 279.466667 256 395.093333c0 56.874667 11.690667 93.653333 32.085333 112.512a42.666667 42.666667 0 1 1-57.984 62.634667C189.482667 532.608 170.666667 473.514667 170.666667 395.093333 170.666667 235.52 294.570667 85.333333 493.056 85.333333 708.266667 85.333333 853.333333 215.509333 853.333333 395.093333c0 168.789333-132.437333 330.24-280.32 330.24-57.514667 0-103.424-18.474667-136.149333-53.546666l-53.973333 233.813333a42.666667 42.666667 0 1 1-83.114667-19.2l128-554.666667a42.666667 42.666667 0 0 1 83.114667 19.2l-43.221334 187.306667z"/></svg>
-              </a>
-              <a href="https://x.com/forilovecom" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white/70 transition" aria-label="Forilove X">
-                <svg width="14" height="14" viewBox="0 0 512 512" fill="currentColor"><path d="M389.2 48h70.6L305.6 224.2 487 464H345L233.7 318.6 106.5 464H35.8L200.7 275.5 26.8 48H172.4L272.9 180.9 389.2 48zM364.4 421.8h39.1L151.1 88h-42L364.4 421.8z"/></svg>
-              </a>
-            </div>
+  // Inline — landing page footer (centered, small)
+  if (variant === "inline") {
+    return (
+      <footer className="py-3 px-4 shrink-0">
+        <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[0.72rem] text-text-muted">
+          {links.map((link) => (
+            <Link key={link.href + link.label} href={link.href} className="hover:underline">{link.label}</Link>
+          ))}
+          <Link href="/premium" className="hover:underline">Premium ol</Link>
+          <span>&copy; {year} Feedim. Tüm hakları saklıdır.</span>
+        </nav>
+      </footer>
+    );
+  }
+
+  // Default — full footer (help, premium, not-found sayfaları)
+  return (
+    <footer className="mt-auto border-t border-border-primary py-8 px-4 sm:px-6">
+      <div className="container mx-auto">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm justify-center sm:justify-start">
+            {links.map((link) => (
+              <Link key={link.href + link.label} href={link.href} className="text-text-muted hover:text-text-primary transition">{link.label}</Link>
+            ))}
+            <Link href="/premium" className="text-text-muted hover:text-text-primary transition">Premium ol</Link>
           </div>
-
-          {/* Center: Venivex */}
-          <a href="https://venivex.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 transition">
-            <img src="https://venivex.com/assets/images/logo.png" alt="Venivex" className="h-4 w-auto opacity-60" />
-            <span className="text-xs">VENİVEX Tarafından geliştirildi</span>
-          </a>
-
-          {/* Right: Copyright */}
-          <p className="text-xs text-zinc-500">&copy; 2026 Forilove</p>
+          <p className="text-xs text-text-muted shrink-0">&copy; {year} Feedim. Tüm hakları saklıdır.</p>
         </div>
       </div>
     </footer>

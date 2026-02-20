@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Globe, Lock, Eye, ExternalLink, ChevronLeft, ChevronRight, Trash2, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import toast from "react-hot-toast";
+import { feedimAlert } from "@/components/FeedimAlert";
+import { formatCount } from "@/lib/utils";
 import MobileBottomNav from "@/components/MobileBottomNav";
 
 export default function AdminProjectsPage() {
@@ -61,7 +62,7 @@ export default function AdminProjectsPage() {
   };
 
   const handleDelete = async (projectId: string, title: string) => {
-    if (!confirm(`"${title}" sayfasını kalıcı olarak silmek istediğinize emin misiniz?`)) return;
+    if (!confirm(`"${title}" gönderisini kalıcı olarak silmek istediğinize emin misiniz?`)) return;
     setDeletingId(projectId);
     try {
       const res = await fetch("/api/admin/projects", {
@@ -70,13 +71,13 @@ export default function AdminProjectsPage() {
         body: JSON.stringify({ projectId }),
       });
       if (res.ok) {
-        toast.success("Sayfa silindi");
+        feedimAlert("success", "Gönderi silindi");
         loadProjects(page);
       } else {
-        toast.error("Silme başarısız");
+        feedimAlert("error", "Silme başarısız");
       }
     } catch {
-      toast.error("Silme başarısız");
+      feedimAlert("error", "Silme başarısız");
     } finally {
       setDeletingId(null);
     }
@@ -91,15 +92,15 @@ export default function AdminProjectsPage() {
     : projects;
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-xl min-h-[73px]">
+    <div className="min-h-screen bg-bg-primary text-text-primary">
+      <header className="sticky top-0 z-50 bg-bg-primary min-h-[73px]">
         <nav className="w-full px-3 sm:px-6 lg:px-10 flex items-center justify-between min-h-[73px]">
           <button onClick={() => router.push("/dashboard/profile")} className="flex items-center gap-2 transition-colors">
             <ArrowLeft className="h-5 w-5" />
             <span className="font-medium">Geri</span>
           </button>
-          <h1 className="text-lg font-semibold">Yayınlanan Sayfalar</h1>
-          <span className="text-sm text-zinc-500 w-16 text-right">{total}</span>
+          <h1 className="text-lg font-semibold">Yayınlanan Gönderiler</h1>
+          <span className="text-sm text-text-muted w-16 text-right">{total}</span>
         </nav>
       </header>
 
@@ -107,31 +108,31 @@ export default function AdminProjectsPage() {
         {loading ? (
           <div className="space-y-3">
             {[1,2,3,4,5].map(i => (
-              <div key={i} className="animate-pulse bg-white/5 rounded-xl h-16" />
+              <div key={i} className="skeleton rounded-xl h-16" />
             ))}
           </div>
         ) : (<>
           {/* Search */}
           <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value.slice(0, 100))}
-              placeholder="Sayfa, kullanıcı veya slug ara..."
+              placeholder="Gönderi, kullanıcı veya slug ara..."
               maxLength={100}
-              className="w-full bg-white/5 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-zinc-400"
+              className="w-full bg-bg-inverse/5 rounded-xl pl-10 pr-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted"
             />
           </div>
           {filtered.length === 0 ? (
-          <p className="text-sm text-zinc-500 text-center py-12">
-            {searchQuery ? "Sonuç bulunamadı." : "Henüz yayınlanan sayfa yok."}
+          <p className="text-sm text-text-muted text-center py-12">
+            {searchQuery ? "Sonuç bulunamadı." : "Henüz yayınlanan gönderi yok."}
           </p>
         ) : (
           <>
             <div className="space-y-2">
               {filtered.map((p: any) => (
-                <div key={p.id} className="bg-white/[0.06] rounded-xl p-3 sm:p-4 flex items-center justify-between gap-3">
+                <div key={p.id} className="bg-bg-inverse/[0.06] rounded-xl p-3 sm:p-4 flex items-center justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       {p.is_public ? (
@@ -144,26 +145,26 @@ export default function AdminProjectsPage() {
                         {p.is_public ? 'Public' : 'Gizli'}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-zinc-500">
+                    <div className="flex items-center gap-3 text-xs text-text-muted">
                       <span className="truncate">@{p.creator_name}</span>
                       <span className="flex items-center gap-1 shrink-0">
                         <Eye className="h-3 w-3" />
-                        {(p.view_count || 0).toLocaleString('tr-TR')}
+                        {formatCount(p.view_count || 0)}
                       </span>
                       <span className="shrink-0">{new Date(p.created_at).toLocaleDateString('tr-TR')}</span>
                     </div>
                     <div className="mt-1">
-                      <span className="text-[11px] text-zinc-400 font-mono truncate block">/p/{p.slug}</span>
+                      <span className="text-[11px] text-text-muted font-mono truncate block">/p/{p.slug}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <Link
                       href={`/p/${p.slug}`}
                       target="_blank"
-                      className="p-2 rounded-lg hover:bg-white/10 transition"
+                      className="p-2 rounded-lg hover:bg-bg-inverse/10 transition"
                       title="Görüntüle"
                     >
-                      <ExternalLink className="h-4 w-4 text-zinc-400" />
+                      <ExternalLink className="h-4 w-4 text-text-muted" />
                     </Link>
                     <button
                       onClick={() => handleDelete(p.id, p.title)}
@@ -171,7 +172,7 @@ export default function AdminProjectsPage() {
                       className="p-2 rounded-lg hover:bg-red-500/10 transition disabled:opacity-30"
                       title="Sil"
                     >
-                      <Trash2 className={`h-4 w-4 ${deletingId === p.id ? 'text-zinc-600' : 'text-red-400'}`} />
+                      <Trash2 className={`h-4 w-4 ${deletingId === p.id ? 'text-text-muted' : 'text-red-400'}`} />
                     </button>
                   </div>
                 </div>
@@ -180,22 +181,22 @@ export default function AdminProjectsPage() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-6 pt-4 border-t border-white/5">
+              <div className="flex items-center justify-between mt-6 pt-4 border-t border-border-primary">
                 <button
                   onClick={() => setPage(p => p - 1)}
                   disabled={page === 0}
-                  className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition"
+                  className="flex items-center gap-1 text-sm text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition"
                 >
                   <ChevronLeft className="h-4 w-4" />
                   Önceki
                 </button>
-                <span className="text-xs text-zinc-500">
+                <span className="text-xs text-text-muted">
                   Sayfa {page + 1} / {totalPages}
                 </span>
                 <button
                   onClick={() => setPage(p => p + 1)}
                   disabled={page >= totalPages - 1}
-                  className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition"
+                  className="flex items-center gap-1 text-sm text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition"
                 >
                   Sonraki
                   <ChevronRight className="h-4 w-4" />

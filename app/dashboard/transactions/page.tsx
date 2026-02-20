@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Coins, Heart } from "lucide-react";
+import { Coins } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import TransactionCard from "@/components/TransactionCard";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import { TransactionListSkeleton } from "@/components/Skeletons";
+import AppLayout from "@/components/AppLayout";
+import LoadMoreTrigger from "@/components/LoadMoreTrigger";
 
 interface Transaction {
   id: string;
@@ -39,41 +40,20 @@ export default function TransactionsPage() {
     }
   }, [page]);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      if (loadingMore || !hasMore) return;
-
-      const scrollHeight = document.documentElement.scrollHeight;
-      const scrollTop = document.documentElement.scrollTop;
-      const clientHeight = document.documentElement.clientHeight;
-
-      if (scrollTop + clientHeight >= scrollHeight - 100) {
-        setPage(p => p + 1);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [loadingMore, hasMore]);
+  const loadMore = () => { setPage(p => p + 1); };
 
   const loadData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push("/login");
-        return;
-      }
+      if (!user) { router.push("/login"); return; }
 
-      // Load user's coin balance
       const { data: profile } = await supabase
         .from('profiles')
         .select('coin_balance')
         .eq('user_id', user.id)
         .single();
-
       setBalance(profile?.coin_balance || 0);
 
-      // Load transactions
       const { data: txns } = await supabase
         .from('coin_transactions')
         .select('*')
@@ -81,9 +61,7 @@ export default function TransactionsPage() {
         .order('created_at', { ascending: false })
         .range(0, ITEMS_PER_PAGE - 1);
 
-      const hasMoreItems = (txns?.length || 0) === ITEMS_PER_PAGE;
-      setHasMore(hasMoreItems);
-
+      setHasMore((txns?.length || 0) === ITEMS_PER_PAGE);
       setTransactions(txns || []);
     } catch (error) {
       console.error(error);
@@ -94,26 +72,20 @@ export default function TransactionsPage() {
 
   const loadMoreTransactions = async () => {
     if (loadingMore || !hasMore) return;
-
     setLoadingMore(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-
       const start = page * ITEMS_PER_PAGE;
       const end = start + ITEMS_PER_PAGE - 1;
-
       const { data: txns } = await supabase
         .from('coin_transactions')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .range(start, end);
-
-      const hasMoreItems = (txns?.length || 0) === ITEMS_PER_PAGE;
-
       setTransactions([...transactions, ...(txns || [])]);
-      setHasMore(hasMoreItems);
+      setHasMore((txns?.length || 0) === ITEMS_PER_PAGE);
     } catch (error) {
       console.error(error);
     } finally {
@@ -121,73 +93,37 @@ export default function TransactionsPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-black text-white">
-        <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-xl min-h-[73px]">
-          <nav className="container mx-auto px-3 sm:px-6 flex items-center justify-between min-h-[73px]">
-            <div className="flex items-center gap-2"><ArrowLeft className="h-5 w-5" /><span className="font-medium">Geri</span></div>
-            <h1 className="text-lg font-semibold">İşlem Geçmişi</h1>
-            <div className="w-16" />
-          </nav>
-        </header>
-        <main className="container mx-auto px-3 sm:px-6 pt-16 pb-24 md:pb-16 max-w-4xl">
-          <TransactionListSkeleton count={6} />
-        </main>
-        <MobileBottomNav />
-      </div>
-    );
-  }
+  const headerRight = (
+    <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-yellow-500/10 rounded-full">
+      <Coins className="h-4 w-4 text-yellow-500" />
+      <span className="text-sm font-bold text-yellow-500">{balance.toLocaleString()}</span>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-xl min-h-[73px]">
-        <nav className="container mx-auto px-3 sm:px-6 flex items-center justify-between min-h-[73px]">
-          <button onClick={() => { if (window.history.length > 1) { router.back(); } else { router.push('/dashboard'); } }} className="flex items-center gap-2 transition-colors">
-            <ArrowLeft className="h-5 w-5" />
-            <span className="font-medium">Geri</span>
-          </button>
-          <h1 className="text-lg font-semibold">İşlem Geçmişi</h1>
-          <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
-            <Coins className="h-5 w-5 text-yellow-500" />
-            <div className="flex items-baseline gap-1">
-              <span className="font-bold text-yellow-500">{balance.toLocaleString()}</span>
-              <span className="text-sm text-yellow-500 font-medium">FL</span>
-            </div>
-          </div>
-        </nav>
-      </header>
-
-      <main className="w-full px-3 sm:px-6 lg:px-10 pt-16 pb-24 md:pb-16">
-
-        {transactions.length === 0 ? (
-          <div className="text-center py-12 sm:py-20">
-            <Heart className="h-12 w-12 sm:h-16 sm:w-16 text-white mx-auto mb-3 sm:mb-4" />
-            <h2 className="text-lg sm:text-xl font-bold mb-2">Henüz işlem yok</h2>
-            <p className="text-zinc-400 mb-5 sm:mb-6 text-sm sm:text-base">Başlamak için coin satın alın.</p>
-            <Link href="/dashboard/coins">
-              <button className="btn-primary">
-                FL Satın Al
-              </button>
+    <AppLayout headerRightAction={headerRight} hideRightSidebar>
+      <div className="px-4 py-4">
+        {loading ? (
+          <TransactionListSkeleton count={6} />
+        ) : transactions.length === 0 ? (
+          <div className="text-center py-16">
+            <Coins className="h-12 w-12 text-yellow-500/40 mx-auto mb-3" />
+            <h2 className="text-lg font-bold mb-2">Henüz işlem yok</h2>
+            <p className="text-sm text-text-muted mb-5">Başlamak için Jeton satın alın.</p>
+            <Link href="/dashboard/coins" className="t-btn accept inline-block">
+              Jeton Satın Al
             </Link>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div>
             {transactions.map((txn) => (
               <TransactionCard key={txn.id} transaction={txn} />
             ))}
           </div>
         )}
 
-        {/* Loading More Indicator */}
-        {loadingMore && (
-          <div className="flex justify-center py-8">
-            <Heart className="h-12 w-12 text-pink-500 fill-pink-500 animate-pulse" />
-          </div>
-        )}
-      </main>
-
-      <MobileBottomNav />
-    </div>
+        <LoadMoreTrigger onLoadMore={loadMore} loading={loadingMore} hasMore={hasMore} />
+      </div>
+    </AppLayout>
   );
 }

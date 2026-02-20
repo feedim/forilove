@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import { redirect } from "next/navigation";
 
-export default function KVKKPage() {
-  redirect('/privacy');
+export default function KVKKRedirect() {
+  redirect("/help/privacy");
 }

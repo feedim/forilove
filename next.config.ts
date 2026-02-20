@@ -1,11 +1,26 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ['@tensorflow/tfjs', 'nsfwjs', 'jpeg-js', 'pngjs', '@anthropic-ai/sdk'],
+  // Prepare for next/image optimization (Supabase Storage domain)
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
+    ],
+  },
   // Strip console.* calls from client-side production bundles
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production'
       ? { exclude: ['error', 'warn'] }
       : false,
+  },
+  // Enable experimental optimizations
+  experimental: {
+    optimizePackageImports: ['lucide-react', '@emoji-mart/react', 'emoji-mart'],
   },
   // Security headers to protect against common web vulnerabilities
   async headers() {

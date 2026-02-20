@@ -1,19 +1,17 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getR2Client } from '@/lib/r2/client';
-import { ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
 
+// POST — soft-delete account (14-day grace period)
 export async function POST(request: Request) {
   try {
-    // 0. CSRF protection — verify request origin
+    // CSRF protection
     const origin = request.headers.get('origin') || '';
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
     if (!origin || !siteUrl || origin !== siteUrl.replace(/\/$/, '')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // 1. Verify user via anon client (cookie-based auth)
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
@@ -21,133 +19,88 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = user.id;
     const admin = createAdminClient();
 
-    // 2. Get all user's projects
-    const { data: projects } = await admin
-      .from('projects')
-      .select('id')
-      .eq('user_id', userId);
-
-    // 3. Delete all R2 files under userId/ prefix
+    // Parse optional reason from body
+    let reason: string | null = null;
     try {
-      const r2 = getR2Client();
-      const bucket = process.env.R2_BUCKET_NAME!;
-      let continuationToken: string | undefined;
+      const body = await request.json();
+      if (body.reason && typeof body.reason === 'string') {
+        reason = body.reason.slice(0, 500);
+      }
+    } catch {}
 
-      do {
-        const listResult = await r2.send(new ListObjectsV2Command({
-          Bucket: bucket,
-          Prefix: `${userId}/`,
-          ContinuationToken: continuationToken,
-        }));
-
-        if (listResult.Contents && listResult.Contents.length > 0) {
-          await r2.send(new DeleteObjectsCommand({
-            Bucket: bucket,
-            Delete: {
-              Objects: listResult.Contents.map(obj => ({ Key: obj.Key! })),
-              Quiet: true,
-            },
-          }));
-        }
-
-        continuationToken = listResult.IsTruncated ? listResult.NextContinuationToken : undefined;
-      } while (continuationToken);
-    } catch {
-      // R2 deletion failure shouldn't block account deletion
-    }
-
-    // 4. Delete saved_projects where project belongs to user (others' saves of user's pages)
-    if (projects && projects.length > 0) {
-      const projectIds = projects.map(p => p.id);
-      await admin
-        .from('saved_projects')
-        .delete()
-        .in('project_id', projectIds);
-    }
-
-    // 5. Delete saved_projects by user (user's own saves)
-    await admin
-      .from('saved_projects')
-      .delete()
-      .eq('user_id', userId);
-
-    // 6. Delete projects
-    await admin
-      .from('projects')
-      .delete()
-      .eq('user_id', userId);
-
-    // 7. Delete purchases
-    await admin
-      .from('purchases')
-      .delete()
-      .eq('user_id', userId);
-
-    // 8. Delete coin_transactions
-    await admin
-      .from('coin_transactions')
-      .delete()
-      .eq('user_id', userId);
-
-    // 9. Delete saved_templates
-    await admin
-      .from('saved_templates')
-      .delete()
-      .eq('user_id', userId);
-
-    // 10. Delete promo_signups (where user signed up via a promo)
-    await admin
-      .from('promo_signups')
-      .delete()
-      .eq('user_id', userId);
-
-    // 11. Delete promo_links (user's own promo links)
-    await admin
-      .from('promo_links')
-      .delete()
-      .eq('created_by', userId);
-
-    // 12. Delete affiliate_applications
-    await admin
-      .from('affiliate_applications')
-      .delete()
-      .eq('user_id', userId);
-
-    // 13. Delete affiliate_payouts
-    await admin
-      .from('affiliate_payouts')
-      .delete()
-      .eq('affiliate_user_id', userId);
-
-    // 14. Delete coin_payments
-    await admin
-      .from('coin_payments')
-      .delete()
-      .eq('user_id', userId);
-
-    // 15. Delete profile
-    await admin
+    // Soft-delete: mark as deleted, don't remove data
+    const { error } = await admin
       .from('profiles')
-      .delete()
-      .eq('user_id', userId);
+      .update({
+        status: 'deleted',
+        deleted_at: new Date().toISOString(),
+        delete_reason: reason,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', user.id);
 
-    // 11. Delete auth user
-    const { error: deleteUserError } = await admin.auth.admin.deleteUser(userId);
-    if (deleteUserError) {
-      return NextResponse.json(
-        { error: 'Kullanıcı hesabı silinemedi' },
-        { status: 500 }
-      );
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // Sign out the user
+    await supabase.auth.signOut();
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || 'Hesap silme hatası' }, { status: 500 });
+  }
+}
+
+// PUT — reactivate deleted account (within 14-day grace period)
+export async function PUT() {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const admin = createAdminClient();
+
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('status, deleted_at')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!profile || profile.status !== 'deleted') {
+      return NextResponse.json({ error: 'Hesap silinmemiş' }, { status: 400 });
+    }
+
+    // Check 14-day window
+    if (profile.deleted_at) {
+      const deletedAt = new Date(profile.deleted_at).getTime();
+      const fourteenDays = 14 * 24 * 60 * 60 * 1000;
+      if (Date.now() - deletedAt > fourteenDays) {
+        return NextResponse.json({ error: 'Hesap kurtarma süresi dolmuş' }, { status: 410 });
+      }
+    }
+
+    const { error } = await admin
+      .from('profiles')
+      .update({
+        status: 'active',
+        deleted_at: null,
+        delete_reason: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', user.id);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Hesap silme hatası' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message || 'Hesap kurtarma hatası' }, { status: 500 });
   }
 }

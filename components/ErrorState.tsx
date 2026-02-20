@@ -23,10 +23,10 @@ export default function ErrorState({
 }: ErrorStateProps) {
   const colors = {
     error: {
-      bg: 'bg-pink-500/10',
-      border: 'border-pink-500/20',
-      icon: 'text-pink-500',
-      title: 'text-pink-500'
+      bg: 'bg-accent-main/10',
+      border: 'border-accent-main/20',
+      icon: 'text-accent-main',
+      title: 'text-accent-main'
     },
     warning: {
       bg: 'bg-yellow-500/10',
@@ -58,7 +58,7 @@ export default function ErrorState({
         {title}
       </h2>
 
-      <p className="text-zinc-400 mb-6">
+      <p className="text-text-muted mb-6">
         {message}
       </p>
 
@@ -66,7 +66,7 @@ export default function ErrorState({
         {action && (
           <button
             onClick={action.onClick}
-            className="w-full bg-pink-500 hover:bg-pink-600 text-white py-3 px-6 rounded-full font-semibold transition-colors flex items-center justify-center gap-2"
+            className="w-full bg-accent-main hover:bg-accent-main text-text-primary py-3 px-6 rounded-full font-semibold transition-colors flex items-center justify-center gap-2"
             aria-label={action.label}
           >
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
@@ -77,7 +77,7 @@ export default function ErrorState({
         {showBackLink && (
           <button
             onClick={() => window.history.back()}
-            className="w-full bg-zinc-800 hover:bg-zinc-700 text-white py-3 px-6 rounded-full font-semibold transition-colors flex items-center justify-center gap-2"
+            className="w-full bg-bg-secondary hover:bg-bg-tertiary text-text-primary py-3 px-6 rounded-full font-semibold transition-colors flex items-center justify-center gap-2"
             aria-label="Geri dön"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
@@ -88,7 +88,7 @@ export default function ErrorState({
         {showHomeLink && (
           <Link
             href="/"
-            className="w-full bg-zinc-800 hover:bg-zinc-700 text-white py-3 px-6 rounded-full font-semibold transition-colors flex items-center justify-center gap-2"
+            className="w-full bg-bg-secondary hover:bg-bg-tertiary text-text-primary py-3 px-6 rounded-full font-semibold transition-colors flex items-center justify-center gap-2"
             aria-label="Ana sayfaya dön"
           >
             <Home className="h-4 w-4" aria-hidden="true" />
@@ -134,8 +134,8 @@ export function LoadingState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center p-12" role="status" aria-live="polite">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mb-4" aria-hidden="true"></div>
-      <p className="text-zinc-600 dark:text-zinc-400">{message}</p>
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-main mb-4" aria-hidden="true"></div>
+      <p className="text-text-muted dark:text-text-muted">{message}</p>
       <span className="sr-only">Yükleniyor</span>
     </div>
   );
@@ -163,15 +163,15 @@ export function EmptyState({
     <div className="text-center p-8 sm:p-12" role="status">
       {Icon && (
         <div className="flex justify-center mb-3 sm:mb-4">
-          <Icon className="h-12 w-12 sm:h-16 sm:w-16 text-zinc-400" aria-hidden="true" />
+          <Icon className="h-12 w-12 sm:h-16 sm:w-16 text-text-muted" aria-hidden="true" />
         </div>
       )}
 
-      <h3 className="text-lg sm:text-xl font-semibold mb-2 text-white">
+      <h3 className="text-lg sm:text-xl font-semibold mb-2 text-text-primary">
         {title}
       </h3>
 
-      <p className="text-zinc-400 mb-5 sm:mb-6 text-sm">
+      <p className="text-text-muted mb-5 sm:mb-6 text-sm">
         {message}
       </p>
 

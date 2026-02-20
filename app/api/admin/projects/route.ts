@@ -12,7 +12,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: profile } = await supabase
+    const admin = createAdminClient();
+
+    const { data: profile } = await admin
       .from("profiles")
       .select("role")
       .eq("user_id", user.id)
@@ -24,8 +26,6 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const page = Math.max(0, parseInt(searchParams.get("page") || "0", 10));
-
-    const admin = createAdminClient();
     const start = page * PAGE_SIZE;
     const end = start + PAGE_SIZE - 1;
 
@@ -79,7 +79,9 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: profile } = await supabase
+    const admin = createAdminClient();
+
+    const { data: profile } = await admin
       .from("profiles")
       .select("role")
       .eq("user_id", user.id)
@@ -93,8 +95,6 @@ export async function DELETE(request: NextRequest) {
     if (!projectId) {
       return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
     }
-
-    const admin = createAdminClient();
     const { error } = await admin
       .from("projects")
       .delete()

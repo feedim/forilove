@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 interface AuthLayoutProps {
@@ -10,23 +10,25 @@ interface AuthLayoutProps {
 }
 
 export default function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
+  const router = useRouter();
+
   return (
-    <div className="min-h-screen bg-black px-4 py-12 relative">
-      <Link
-        href="/"
-        className="absolute top-6 left-4 flex items-center gap-2 text-zinc-400 hover:text-white transition-colors"
-        aria-label="Ana sayfaya dön"
+    <div className="min-h-screen bg-bg-primary px-4 py-12 relative">
+      <button
+        onClick={() => router.back()}
+        className="absolute top-6 left-4 flex items-center gap-2 text-text-muted hover:text-text-primary transition-colors"
+        aria-label="Geri dön"
       >
         <ArrowLeft className="h-5 w-5" />
-        <span className="text-sm font-medium">Ana Sayfa</span>
-      </Link>
+        <span className="text-sm font-medium">Geri</span>
+      </button>
 
-      <div className="flex items-center justify-center min-h-[calc(100vh-96px)]">
+      <div className="flex items-center justify-center min-h-[calc(100vh-96px)] pb-[18vh] sm:pb-0">
         <div className="w-full max-w-md">
           <div className="space-y-3">
-            <div className="text-center">
-              <h1 className="text-3xl font-bold mb-[5px] text-white">{title}</h1>
-              <p className="text-zinc-400 text-sm">{subtitle}</p>
+            <div className="text-left">
+              <h1 className="text-[1.6rem] font-bold mb-[5px]">{title}</h1>
+              <p className="text-text-muted text-sm">{subtitle}</p>
             </div>
             {children}
           </div>

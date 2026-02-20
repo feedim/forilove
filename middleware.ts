@@ -1,9 +1,11 @@
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { checkUrl, isExemptPath } from '@/lib/waf'
 
-// ♥ Global IP-based rate limiter for API routes
+// ─── IP Rate Limiter ───
 const apiRateMap = new Map<string, { count: number; resetAt: number }>()
-const API_RATE_LIMIT = 60      // requests per window
-const API_RATE_WINDOW = 60_000 // 1 minute
+const API_RATE_LIMIT = 60
+const API_RATE_WINDOW = 60_000
 
 function checkApiRateLimit(ip: string): boolean {
   const now = Date.now()
@@ -17,7 +19,6 @@ function checkApiRateLimit(ip: string): boolean {
   return true
 }
 
-// Prevent unbounded memory growth — clean stale entries every 5 minutes
 let lastCleanup = Date.now()
 function cleanupRateMap() {
   const now = Date.now()
@@ -31,12 +32,46 @@ function cleanupRateMap() {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // ♥ API Rate Limiting — applies to all /api/* routes
-  if (pathname.startsWith('/api/')) {
-    // PayTR callback muaf — retry'lar rate limit'e takılmasın
-    if (pathname === '/api/payment/payttr/callback') {
-      return NextResponse.next()
+  // ─── 1. Create Supabase client with cookie-based session ───
+  // This is the ONLY place where tokens get refreshed server-side.
+  // The setAll callback updates both the request (for downstream handlers)
+  // and the response (for the browser).
+  let supabaseResponse = NextResponse.next({ request })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          // Update request cookies so downstream route handlers see fresh tokens
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({ request })
+          // Set cookies on response so browser receives fresh tokens
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
     }
+  )
+
+  // ─── 2. WAF: Check URL for attacks ───
+  if (pathname.startsWith('/api/') && !isExemptPath(pathname)) {
+    const wafResult = checkUrl(pathname, request.nextUrl.searchParams)
+    if (wafResult.blocked) {
+      return NextResponse.json(
+        { error: 'Request blocked' },
+        { status: 403 }
+      )
+    }
+  }
+
+  // ─── 3. API Rate Limiting (before getUser to save a round-trip on blocked requests) ───
+  if (pathname.startsWith('/api/')) {
     cleanupRateMap()
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
     if (!checkApiRateLimit(ip)) {
@@ -45,115 +80,149 @@ export async function middleware(request: NextRequest) {
         { status: 429, headers: { 'Retry-After': '60' } }
       )
     }
-    return NextResponse.next()
   }
 
-  const isHomePage = pathname === '/'
-  const isProtected = pathname.startsWith('/dashboard') || pathname.startsWith('/admin') || pathname.startsWith('/creator')
-  const isAuthPage = pathname === '/login' || pathname === '/register' || pathname === '/verify-mfa'
+  // ─── 3. Refresh session — CRITICAL ───
+  // supabase.auth.getUser() validates the access token against the Supabase auth server.
+  // If the token is expired, the SSR client automatically refreshes it using the
+  // refresh token and calls setAll() with the new tokens.
+  // This ensures ALL downstream handlers (API routes, server components) get valid tokens.
+  //
+  // Optimization: only call getUser() if auth cookies exist
+  const hasAuthCookies = request.cookies.getAll().some(c => c.name.startsWith('sb-'))
+  let user: { id: string; [key: string]: any } | null = null
 
-  if (!isProtected && !isAuthPage && !isHomePage) {
-    return NextResponse.next()
+  if (hasAuthCookies) {
+    const { data } = await supabase.auth.getUser()
+    user = data.user
   }
 
-  // Derive cookie prefix from Supabase URL
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-  const projectRef = supabaseUrl.match(/https:\/\/([^.]+)\./)?.[1] || ''
-  const cookiePrefix = `sb-${projectRef}-auth-token`
+  // Pass validated user ID to server components via request header.
+  // This eliminates duplicate getUser() calls in server components.
+  // Even if a client sends a fake x-user-id header, middleware overwrites it.
+  if (user) {
+    request.headers.set('x-user-id', user.id)
+  }
+  // Recreate response with modified request headers, preserve cookies
+  const responseCookies = supabaseResponse.cookies.getAll()
+  supabaseResponse = NextResponse.next({ request })
+  responseCookies.forEach(c => supabaseResponse.cookies.set(c))
 
-  // Reassemble Supabase auth cookie (may be chunked: .0, .1, .2, ...)
-  let tokenStr = ''
-  const baseCookie = request.cookies.get(cookiePrefix)
-  if (baseCookie) {
-    tokenStr = baseCookie.value
-  } else {
-    for (let i = 0; i < 10; i++) {
-      const chunk = request.cookies.get(`${cookiePrefix}.${i}`)
-      if (!chunk) break
-      tokenStr += chunk.value
+  // ─── 3b. Account status check (frozen / moderation / blocked / deleted) ───
+  if (user && !pathname.startsWith('/api/auth/') && !pathname.startsWith('/api/account/freeze') && !pathname.startsWith('/api/account/delete')) {
+    const statusCookie = request.cookies.get('fdm-status')?.value
+    let status = statusCookie || ''
+
+    if (!status) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('status')
+        .eq('user_id', user.id)
+        .single()
+      status = profile?.status || 'active'
     }
-  }
 
-  let isAuthenticated = false
-  let accessToken = ''
-  let userId = ''
+    if (status !== 'active') {
+      // Cache status for 60s to avoid repeated queries
+      supabaseResponse.cookies.set('fdm-status', status, {
+        maxAge: 60, httpOnly: true, secure: true, sameSite: 'lax', path: '/',
+      })
 
-  if (tokenStr) {
-    try {
-      // @supabase/ssr v0.5+ prefixes cookie values with "base64-"
-      let jsonStr = tokenStr
-      if (jsonStr.startsWith('base64-')) {
-        jsonStr = atob(jsonStr.slice(7))
-      }
-
-      const session = JSON.parse(jsonStr)
-      accessToken = session.access_token || ''
-
-      if (accessToken) {
-        // Decode JWT payload (base64url → base64 → JSON)
-        const base64 = accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
-        const payload = JSON.parse(atob(base64))
-        isAuthenticated = Date.now() < payload.exp * 1000
-        userId = payload.sub || ''
-      }
-    } catch {
-      isAuthenticated = false
-    }
-  }
-
-  // Redirect unauthenticated users away from protected routes
-  if (!isAuthenticated && isProtected) {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  // Redirect authenticated users away from auth pages and home page
-  if (isAuthenticated && (isAuthPage || isHomePage)) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
-  }
-
-  // Role-based access control for admin/creator routes (includes /dashboard/admin/*)
-  if (isAuthenticated && userId && (pathname.startsWith('/admin') || pathname.startsWith('/creator') || pathname.startsWith('/dashboard/admin'))) {
-    // Check cached role cookie first (avoids Supabase REST call on every request)
-    let role = request.cookies.get('fl-role')?.value || ''
-
-    if (!role) {
-      try {
-        const res = await fetch(
-          `${supabaseUrl}/rest/v1/profiles?select=role&user_id=eq.${userId}`,
-          {
-            headers: {
-              'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-              'Authorization': `Bearer ${accessToken}`,
-            },
-          }
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json(
+          { error: 'Hesabiniz aktif degil', status },
+          { status: 403 }
         )
-        const profiles = await res.json()
-        role = profiles?.[0]?.role || 'user'
-      } catch {
-        return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
+
+      // Allow signout even for inactive accounts
+      if (pathname !== '/auth/signout' && pathname !== '/login') {
+        return redirect('/login')
       }
     }
+  }
 
-    if ((pathname.startsWith('/admin') || pathname.startsWith('/dashboard/admin')) && role !== 'admin') {
-      // Affiliates can access promos page
-      if (role === 'affiliate' && pathname === '/dashboard/admin/promos') {
-        const response = NextResponse.next()
-        response.cookies.set('fl-role', role, { maxAge: 300, httpOnly: true, secure: true, sameSite: 'lax', path: '/' })
-        return response
-      }
-      return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
-    if (pathname.startsWith('/creator') && role !== 'creator' && role !== 'admin') {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
+  // For API routes, return with refreshed cookies (no further middleware logic needed)
+  if (pathname.startsWith('/api/')) {
+    return supabaseResponse
+  }
 
-    // Cache role in cookie for 5 minutes
-    const response = NextResponse.next()
-    response.cookies.set('fl-role', role, { maxAge: 300, httpOnly: true, secure: true, sameSite: 'lax', path: '/' })
+  // ─── 4. Route protection ───
+  const isAuthenticated = !!user
+  const isProtected = pathname.startsWith('/dashboard') || pathname.startsWith('/admin')
+  const isAuthPage = pathname === '/login' || pathname === '/register'
+  const isOnboarding = pathname === '/onboarding'
+  const publicDashboardPaths = ['/dashboard', '/dashboard/explore']
+  const isPublicDashboard = publicDashboardPaths.includes(pathname) || pathname.startsWith('/dashboard/explore/')
+
+  // Helper: redirect that preserves refreshed auth cookies
+  const redirect = (path: string) => {
+    const response = NextResponse.redirect(new URL(path, request.url))
+    // Copy all cookies from supabaseResponse (includes refreshed auth + custom cookies)
+    supabaseResponse.cookies.getAll().forEach(c => response.cookies.set(c))
     return response
   }
 
-  return NextResponse.next()
+  // Unauthenticated → login (protected routes, except public dashboard)
+  if (!isAuthenticated && isProtected && !isPublicDashboard) {
+    return redirect('/login')
+  }
+
+  // Unauthenticated → login (onboarding)
+  if (!isAuthenticated && isOnboarding) {
+    return redirect('/login')
+  }
+
+  // Authenticated → dashboard (auth pages)
+  if (isAuthenticated && isAuthPage) {
+    return redirect('/dashboard')
+  }
+
+  // ─── 5. Onboarding check ───
+  if (isAuthenticated && user && !isOnboarding && !isAuthPage) {
+    const onboardingDone = request.cookies.get('fdm-onboarding')?.value
+    if (onboardingDone === undefined) {
+      // Query profile directly using the already-created Supabase client
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('onboarding_completed')
+        .eq('user_id', user.id)
+        .single()
+
+      if (profile && !profile.onboarding_completed) {
+        return redirect('/onboarding')
+      }
+
+      // Cache for 5 minutes to avoid re-checking on every request
+      supabaseResponse.cookies.set('fdm-onboarding', '1', {
+        maxAge: 300, httpOnly: true, secure: true, sameSite: 'lax', path: '/',
+      })
+    }
+  }
+
+  // ─── 6. Admin role check ───
+  if (isAuthenticated && user && pathname.startsWith('/dashboard/admin')) {
+    let role = request.cookies.get('fdm-role')?.value || ''
+
+    if (!role) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single()
+      role = profile?.role || 'user'
+    }
+
+    if (role !== 'admin' && role !== 'moderator') {
+      return redirect('/dashboard')
+    }
+
+    supabaseResponse.cookies.set('fdm-role', role, {
+      maxAge: 300, httpOnly: true, secure: true, sameSite: 'lax', path: '/',
+    })
+  }
+
+  return supabaseResponse
 }
 
 export const config = {
@@ -162,9 +231,11 @@ export const config = {
     '/api/:path*',
     '/dashboard/:path*',
     '/admin/:path*',
-    '/creator/:path*',
     '/login',
     '/register',
-    '/verify-mfa',
+    '/onboarding',
+    '/post/:path*',
+    '/note/:path*',
+    '/u/:path*',
   ],
 }

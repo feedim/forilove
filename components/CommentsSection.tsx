@@ -1,0 +1,318 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { Send, Heart, MessageCircle } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { useAuthModal } from "@/components/AuthModal";
+import { useUser } from "@/components/UserContext";
+import { isBlockedContent } from "@/lib/blockedWords";
+import { formatRelativeDate, cn, formatCount } from "@/lib/utils";
+import { VALIDATION } from "@/lib/constants";
+import { feedimAlert } from "@/components/FeedimAlert";
+import LoadMoreTrigger from "@/components/LoadMoreTrigger";
+import { CommentListSkeleton } from "@/components/Skeletons";
+
+interface Comment {
+  id: number;
+  content: string;
+  author_id: string | null;
+  parent_id: number | null;
+  like_count: number;
+  reply_count: number;
+  created_at: string;
+  profiles?: {
+    username: string;
+    avatar_url?: string;
+  } | null;
+  replies?: Comment[];
+}
+
+interface CommentsSectionProps {
+  postId: number;
+  commentCount: number;
+}
+
+export default function CommentsSection({ postId, commentCount: initialCount }: CommentsSectionProps) {
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(initialCount);
+  const [newComment, setNewComment] = useState("");
+  const [replyTo, setReplyTo] = useState<{ id: number; name: string } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [likedComments, setLikedComments] = useState<Set<number>>(new Set());
+  const { requireAuth } = useAuthModal();
+  const { user: ctxUser } = useUser();
+  const supabase = createClient();
+
+  // Plan bazli yorum karakter limiti: max/business 500, digerleri 250
+  const maxCommentLength = (ctxUser?.premiumPlan === "max" || ctxUser?.premiumPlan === "business") ? VALIDATION.comment.maxPremium : VALIDATION.comment.max;
+
+  const loadComments = useCallback(async (pageNum: number) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/posts/${postId}/comments?page=${pageNum}`);
+      const data = await res.json();
+      if (res.ok) {
+        if (pageNum === 1) {
+          setComments(data.comments || []);
+        } else {
+          setComments(prev => [...prev, ...(data.comments || [])]);
+        }
+        setHasMore(data.hasMore);
+      }
+    } catch {
+      // Silent
+    } finally {
+      setLoading(false);
+    }
+  }, [postId]);
+
+  useEffect(() => {
+    loadComments(1);
+    loadLikedComments();
+  }, []);
+
+  const loadLikedComments = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase
+      .from("comment_likes")
+      .select("comment_id")
+      .eq("user_id", user.id);
+    if (data) {
+      setLikedComments(new Set(data.map(l => l.comment_id)));
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim() || submitting) return;
+
+    const user = await requireAuth();
+    if (!user) return;
+
+    const content = newComment.trim();
+    const parentId = replyTo?.id || null;
+    const tempId = -Date.now();
+
+    // Optimistic comment
+    const optimisticComment: Comment = {
+      id: tempId,
+      content,
+      author_id: ctxUser?.id || null,
+      parent_id: parentId,
+      like_count: 0,
+      reply_count: 0,
+      created_at: new Date().toISOString(),
+      profiles: ctxUser ? {
+        username: ctxUser.username || "",
+        avatar_url: ctxUser.avatarUrl || undefined,
+      } : null,
+    };
+
+    if (parentId && replyTo) {
+      setComments(prev => prev.map(c => {
+        if (c.id === replyTo.id) {
+          return { ...c, replies: [...(c.replies || []), optimisticComment], reply_count: c.reply_count + 1 };
+        }
+        return c;
+      }));
+    } else {
+      setComments(prev => [optimisticComment, ...prev]);
+    }
+
+    setTotalCount(c => c + 1);
+    setNewComment("");
+    setReplyTo(null);
+
+    // Background API call
+    try {
+      const res = await fetch(`/api/posts/${postId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content, parent_id: parentId }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        // Rollback
+        if (parentId) {
+          setComments(prev => prev.map(c => {
+            if (c.id === parentId) {
+              return { ...c, replies: (c.replies || []).filter(r => r.id !== tempId), reply_count: c.reply_count - 1 };
+            }
+            return c;
+          }));
+        } else {
+          setComments(prev => prev.filter(c => c.id !== tempId));
+        }
+        setTotalCount(c => c - 1);
+        feedimAlert("error", data.error || "Yorum gonderilemedi");
+        return;
+      }
+
+      // Replace temp with real comment
+      if (parentId) {
+        setComments(prev => prev.map(c => {
+          if (c.id === parentId) {
+            return { ...c, replies: (c.replies || []).map(r => r.id === tempId ? data.comment : r) };
+          }
+          return c;
+        }));
+      } else {
+        setComments(prev => prev.map(c => c.id === tempId ? data.comment : c));
+      }
+    } catch {
+      if (parentId) {
+        setComments(prev => prev.map(c => {
+          if (c.id === parentId) {
+            return { ...c, replies: (c.replies || []).filter(r => r.id !== tempId), reply_count: c.reply_count - 1 };
+          }
+          return c;
+        }));
+      } else {
+        setComments(prev => prev.filter(c => c.id !== tempId));
+      }
+      setTotalCount(c => c - 1);
+      feedimAlert("error", "Yorum gonderilemedi");
+    }
+  };
+
+  const handleLikeComment = async (commentId: number) => {
+    const user = await requireAuth();
+    if (!user) return;
+
+    const isLiked = likedComments.has(commentId);
+
+    // Optimistic
+    setLikedComments(prev => {
+      const next = new Set(prev);
+      if (isLiked) next.delete(commentId);
+      else next.add(commentId);
+      return next;
+    });
+
+    const updateCount = (delta: number) => {
+      setComments(prev => prev.map(c => {
+        if (c.id === commentId) return { ...c, like_count: c.like_count + delta };
+        const replies = c.replies?.map(r => r.id === commentId ? { ...r, like_count: r.like_count + delta } : r);
+        return { ...c, replies };
+      }));
+    };
+
+    updateCount(isLiked ? -1 : 1);
+
+    if (isLiked) {
+      await supabase.from("comment_likes").delete().eq("user_id", user.id).eq("comment_id", commentId);
+    } else {
+      await supabase.from("comment_likes").insert({ user_id: user.id, comment_id: commentId });
+    }
+  };
+
+  const getAuthorName = (comment: Comment) => {
+    const p = comment.profiles;
+    if (!p) return "Anonim";
+    return p.username;
+  };
+
+  const CommentItem = ({ comment, isReply = false }: { comment: Comment; isReply?: boolean }) => (
+    <div className={cn("flex gap-3", isReply && "ml-10 mt-3")}>
+      {comment.profiles?.avatar_url ? (
+        <img src={comment.profiles.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover shrink-0 mt-0.5" />
+      ) : (
+        <img className="default-avatar-auto h-8 w-8 rounded-full object-cover shrink-0 mt-0.5" alt="" />
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-2">
+          <span className="text-sm font-semibold">{getAuthorName(comment)}</span>
+          <span className="text-xs text-text-muted">{formatRelativeDate(comment.created_at)}</span>
+        </div>
+        <p className="text-sm text-text-secondary mt-0.5 break-words">{comment.content}</p>
+        <div className="flex items-center gap-3 mt-1.5">
+          <button
+            onClick={() => handleLikeComment(comment.id)}
+            className={cn(
+              "flex items-center gap-1 text-xs transition",
+              likedComments.has(comment.id) ? "text-red-500" : "text-text-muted hover:text-red-500"
+            )}
+          >
+            <Heart className={cn("h-3.5 w-3.5", likedComments.has(comment.id) && "fill-current")} />
+            {comment.like_count > 0 && formatCount(comment.like_count)}
+          </button>
+          {!isReply && (
+            <button
+              onClick={() => setReplyTo({ id: comment.id, name: getAuthorName(comment) })}
+              className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary transition"
+            >
+              <MessageCircle className="h-3.5 w-3.5" /> Yanıtla
+            </button>
+          )}
+        </div>
+
+        {/* Replies */}
+        {!isReply && comment.replies && comment.replies.length > 0 && (
+          <div className="mt-2">
+            {comment.replies.map(reply => (
+              <CommentItem key={reply.id} comment={reply} isReply />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <section id="comments-section" className="mt-8">
+      <h3 className="text-lg font-bold mb-6">Yorumlar ({totalCount})</h3>
+
+      {/* Comment form */}
+      <form onSubmit={handleSubmit} className="mb-6">
+        {replyTo && (
+          <div className="flex items-center gap-2 text-xs text-text-muted mb-2">
+            <span>{replyTo.name} kullanıcısına yanıt veriyorsunuz</span>
+            <button type="button" onClick={() => setReplyTo(null)} className="text-accent-main hover:underline">İptal</button>
+          </div>
+        )}
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newComment}
+            onChange={e => setNewComment(e.target.value)}
+            maxLength={maxCommentLength}
+            placeholder="Yorumunuzu yazın..."
+            className="input-modern flex-1"
+          />
+          <button
+            type="submit"
+            disabled={!newComment.trim() || submitting}
+            className="btn-primary px-4 disabled:opacity-50"
+          >
+            <Send className="h-4 w-4" />
+          </button>
+        </div>
+        <p className="text-xs text-text-muted mt-1 text-right">{newComment.length}/{maxCommentLength}</p>
+      </form>
+
+      {/* Comments list */}
+      {loading && comments.length === 0 ? (
+        <CommentListSkeleton />
+      ) : (
+        <div className="space-y-5">
+          {comments
+            .filter(c => !isBlockedContent(c.content || "", c.author_id, ctxUser?.id))
+            .map(comment => (
+            <CommentItem key={comment.id} comment={{
+              ...comment,
+              replies: comment.replies?.filter(r => !isBlockedContent(r.content || "", r.author_id, ctxUser?.id)),
+            }} />
+          ))}
+        </div>
+      )}
+
+      {/* Load more */}
+      <LoadMoreTrigger onLoadMore={() => { setPage(p => p + 1); loadComments(page + 1); }} loading={loading} hasMore={hasMore} />
+    </section>
+  );
+}
