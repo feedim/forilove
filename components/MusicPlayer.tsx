@@ -31,7 +31,7 @@ function formatTime(seconds: number): string {
 }
 
 function getThumbnailUrl(videoId: string): string {
-  return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+  return `https://img.youtube.com/vi/${videoId}/0.jpg`;
 }
 
 // ─── Icons ───────────────────────────────────────────────────
@@ -79,7 +79,7 @@ function Thumbnail({ videoId, thumbError, onError, size = "md" }: {
 }) {
   const iconSize = size === "sm" ? 16 : 18;
   if (videoId && !thumbError) {
-    return <img src={getThumbnailUrl(videoId)} alt="" className="w-full h-full object-cover" onError={onError} />;
+    return <img src={getThumbnailUrl(videoId)} alt="" style={{ display: "block", width: "100%", height: "100%", objectFit: "cover" }} onError={onError} />;
   }
   return <div className="w-full h-full flex items-center justify-center"><MusicNoteIcon size={iconSize} /></div>;
 }
@@ -374,6 +374,8 @@ export default function MusicPlayer({ musicUrl }: { musicUrl: string }) {
 
   const togglePlay = useCallback(() => {
     if (!playerRef.current) return;
+
+    if (typeof playerRef.current.playVideo !== 'function') return;
 
     if (isPlaying) {
       playerRef.current.pauseVideo();

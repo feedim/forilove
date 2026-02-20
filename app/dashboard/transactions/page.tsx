@@ -57,11 +57,12 @@ export default function TransactionsPage() {
 
   const loadData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
         router.push("/login");
         return;
       }
+      const user = session.user;
 
       // Load user's coin balance
       const { data: profile } = await supabase
@@ -96,8 +97,9 @@ export default function TransactionsPage() {
 
     setLoadingMore(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const user = session.user;
 
       const start = page * ITEMS_PER_PAGE;
       const end = start + ITEMS_PER_PAGE - 1;
@@ -130,7 +132,7 @@ export default function TransactionsPage() {
             <div className="w-16" />
           </nav>
         </header>
-        <main className="container mx-auto px-3 sm:px-6 pt-16 pb-24 md:pb-16 max-w-4xl">
+        <main className="container mx-auto px-3 sm:px-6 pt-16 pb-24 md:pb-16 max-w-2xl">
           <TransactionListSkeleton count={6} />
         </main>
       </div>
@@ -156,7 +158,7 @@ export default function TransactionsPage() {
         </nav>
       </header>
 
-      <main className="w-full px-3 sm:px-6 lg:px-10 pt-16 pb-24 md:pb-16">
+      <main className="container mx-auto px-3 sm:px-6 pt-16 pb-24 md:pb-16 max-w-2xl">
 
         {transactions.length === 0 ? (
           <div className="text-center py-12 sm:py-20">

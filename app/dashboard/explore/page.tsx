@@ -95,13 +95,14 @@ export default function ExplorePage() {
       if (data?.length) fetchCreatorNames(data);
 
       // Load saved projects for current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const user = session.user;
         const { data: savedData } = await supabase
           .from("saved_projects")
           .select("project_id")
           .eq("user_id", user.id);
-        setSavedProjects(savedData?.map(s => s.project_id) || []);
+        setSavedProjects(savedData?.map((s: any) => s.project_id) || []);
       }
     } catch (e) { if (process.env.NODE_ENV === 'development') console.warn('Operation failed:', e); } finally { setLoading(false); }
   };
@@ -130,8 +131,9 @@ export default function ExplorePage() {
   };
 
   const handleToggleSave = async (projectId: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return;
+    const user = session.user;
 
     const isSaved = savedProjects.includes(projectId);
 

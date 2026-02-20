@@ -33,8 +33,8 @@ export default function MyPagesPage() {
   }, [page]);
 
   const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
       router.push("/login");
       return;
     }
@@ -43,8 +43,9 @@ export default function MyPagesPage() {
 
   const loadProjects = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const user = session.user;
 
       const { data, error } = await supabase
         .from("projects")
@@ -70,8 +71,9 @@ export default function MyPagesPage() {
 
     setLoadingMore(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const user = session.user;
 
       const start = page * ITEMS_PER_PAGE;
       const end = start + ITEMS_PER_PAGE - 1;
@@ -114,11 +116,12 @@ export default function MyPagesPage() {
 
   const handleDeleteProject = async (projectId: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
         toast.error("Kimlik doğrulaması gerekli");
         return;
       }
+      const user = session.user;
 
       const project = projects.find(p => p.id === projectId);
       if (!project) return;
@@ -197,7 +200,7 @@ export default function MyPagesPage() {
         </nav>
       </header>
 
-      <main className="w-full px-3 sm:px-6 lg:px-10 py-4 pb-24 md:pb-16">
+      <main className="container mx-auto px-3 sm:px-6 py-4 pb-24 md:pb-16 max-w-2xl">
 
         {projects && projects.length > 0 ? (
           <div className="space-y-2">

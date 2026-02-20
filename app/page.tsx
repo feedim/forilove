@@ -118,7 +118,7 @@ export default function Home() {
       try {
         const { data } = await supabase
           .from("templates")
-          .select("*")
+          .select("id, name, slug, coin_price, discount_price, discount_label, discount_expires_at, description, html_content, purchase_count, template_tags(tags(name, slug))")
           .eq("is_active", true)
           .eq("is_public", true)
           .order("purchase_count", { ascending: false, nullsFirst: false })
@@ -177,6 +177,9 @@ export default function Home() {
               <Link href="/templates" className="btn-secondary px-4 py-3 sm:px-8">
                 Şablonlar
               </Link>
+              <Link href="/paketler" className="btn-secondary px-4 py-3 sm:px-8">
+                Paketler
+              </Link>
               <Link href="/register" className="btn-primary px-4 py-3 sm:px-8">
                   Ücretsiz Başla
               </Link>
@@ -233,6 +236,7 @@ export default function Home() {
                       showSaveButton={true}
                       showPrice={true}
                       onClick={() => { router.push(`/editor/${template.id}`); }}
+                      tags={(template.template_tags || []).map((tt: any) => tt.tags).filter(Boolean)}
                     />
                   </div>
                 ))}
@@ -405,7 +409,7 @@ export default function Home() {
         <div className="w-full px-4 sm:px-6 lg:px-10">
           <div className="max-w-5xl mx-auto">
             <div ref={testimonialReveal.ref} className={`text-center mb-12 ${testimonialReveal.isVisible ? 'animate-fade-up' : 'opacity-0'}`}>
-              <h2 className="text-xl md:text-2xl font-bold mb-4">Kullanıcılarımız Ne Diyor?</h2>
+              <h2 className="text-2xl md:text-3xl font-bold mb-4">Kullanıcılarımız Ne Diyor?</h2>
               <p className="text-zinc-400 text-lg">Gerçek kullanıcılardan gerçek hikayeler</p>
             </div>
 

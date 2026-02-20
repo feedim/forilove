@@ -21,6 +21,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
+      url: `${baseUrl}/paketler`,
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.85,
+    },
+    {
       url: `${baseUrl}/blog`,
       lastModified: now,
       changeFrequency: 'weekly',
@@ -113,12 +119,54 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]
 
   // Blog posts
-  const blogPosts: MetadataRoute.Sitemap = getAllPosts().map((post) => ({
+  const allBlogPosts = await getAllPosts()
+  const blogPosts: MetadataRoute.Sitemap = allBlogPosts.map((post) => ({
     url: `${baseUrl}/blog/${post.slug}`,
-    lastModified: new Date(post.date).toISOString(),
+    lastModified: new Date(post.updatedAt || post.date).toISOString(),
     changeFrequency: 'monthly' as const,
     priority: 0.7,
   }))
+
+  // Tag pages
+  let tagPages: MetadataRoute.Sitemap = []
+  try {
+    const supabaseForTags = await createClient()
+    const { data: tags } = await supabaseForTags
+      .from('tags')
+      .select('slug')
+
+    if (tags) {
+      tagPages = tags.map((tag) => ({
+        url: `${baseUrl}/tag/${tag.slug}`,
+        lastModified: now,
+        changeFrequency: 'weekly' as const,
+        priority: 0.8,
+      }))
+    }
+  } catch {
+    // Sitemap still works without tags
+  }
+
+  // Bundle pages
+  let bundlePages: MetadataRoute.Sitemap = []
+  try {
+    const supabaseForBundles = await createClient()
+    const { data: bundles } = await supabaseForBundles
+      .from('bundles')
+      .select('slug, updated_at')
+      .eq('is_active', true)
+
+    if (bundles) {
+      bundlePages = bundles.map((bundle) => ({
+        url: `${baseUrl}/paketler/${bundle.slug}`,
+        lastModified: new Date(bundle.updated_at).toISOString(),
+        changeFrequency: 'weekly' as const,
+        priority: 0.8,
+      }))
+    }
+  } catch {
+    // Sitemap still works without bundles
+  }
 
   // Dynamic pages: published public projects
   let dynamicPages: MetadataRoute.Sitemap = []
@@ -144,5 +192,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Sitemap still works with static pages
   }
 
-  return [...staticPages, ...blogPosts, ...dynamicPages]
+  return [...staticPages, ...blogPosts, ...tagPages, ...bundlePages, ...dynamicPages]
 }

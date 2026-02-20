@@ -413,6 +413,44 @@ input[type="range"] {
   accent-color: lab(49.5493% 79.8381 2.31768);
 }
 
+/* Crop modal zoom slider */
+input[type="range"].crop-zoom-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  height: 44px;
+}
+input[type="range"].crop-zoom-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 3px;
+}
+input[type="range"].crop-zoom-slider::-moz-range-track {
+  height: 6px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 3px;
+}
+input[type="range"].crop-zoom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  margin-top: -9px;
+  cursor: pointer;
+}
+input[type="range"].crop-zoom-slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  border: none;
+  cursor: pointer;
+}
+
 input[type="color"] {
   cursor: pointer;
   border: 2px solid rgba(255, 255, 255, 0.2);

@@ -11,6 +11,9 @@ export default function PublicFooter() {
             <Link href="/templates" className="text-zinc-400 hover:text-white transition">
               Şablonlar
             </Link>
+            <Link href="/paketler" className="text-zinc-400 hover:text-white transition">
+              Paketler
+            </Link>
             <Link href="/blog" className="text-zinc-400 hover:text-white transition">
               Blog
             </Link>
@@ -82,7 +85,7 @@ export default function PublicFooter() {
           </a>
 
           {/* Right: Copyright */}
-          <p className="text-xs text-zinc-500">&copy; 2026 Forilove</p>
+          <p className="text-xs text-zinc-500">&copy; 2026 Forilove. Tüm hakları saklıdır.</p>
         </div>
       </div>
     </footer>

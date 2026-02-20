@@ -7,7 +7,7 @@ const VALID_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image
 /**
  * Check if file is HEIC/HEIF format (by mime or extension)
  */
-function isHeicFile(file: File): boolean {
+export function isHeicFile(file: File): boolean {
   if (HEIC_TYPES.includes(file.type)) return true;
   const ext = file.name.split('.').pop()?.toLowerCase();
   return ext === 'heic' || ext === 'heif';
@@ -16,7 +16,7 @@ function isHeicFile(file: File): boolean {
 /**
  * Convert HEIC/HEIF to JPEG using heic2any
  */
-async function convertHeicToJpeg(file: File): Promise<File> {
+export async function convertHeicToJpeg(file: File): Promise<File> {
   const heic2any = (await import('heic2any')).default;
 
   const blob = await heic2any({

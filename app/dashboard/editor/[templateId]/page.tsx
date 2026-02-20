@@ -6,7 +6,8 @@ import Link from "next/link";
 import { ArrowLeft, Eye, ChevronDown, ChevronUp, PanelLeftClose, PanelLeft, X, Heart, Coins, Upload, Music, Play, Pause, Globe, Lock, LayoutGrid, Undo2, Redo2, Sparkles, Trash2, Palette } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
-import { compressImage, validateImageFile, getOptimizedFileName } from '@/lib/utils/imageCompression';
+import { compressImage, validateImageFile, getOptimizedFileName, isHeicFile, convertHeicToJpeg } from '@/lib/utils/imageCompression';
+import ImageCropModal from '@/components/ImageCropModal';
 import { ShareSheet } from '@/components/ShareIconButton';
 import { usePurchaseConfirm } from '@/components/PurchaseConfirmModal';
 import { isDiscountActive } from '@/lib/discount';
@@ -78,6 +79,8 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
   const editorMusicAutoPlayRef = useRef(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isChangingImage, setIsChangingImage] = useState(false);
+  const [cropModalFile, setCropModalFile] = useState<File | null>(null);
+  const [cropModalSrc, setCropModalSrc] = useState<string>("");
   const [areas, setAreas] = useState<{ key: string; label: string }[]>([]);
   const [showSectionsModal, setShowSectionsModal] = useState(false);
   const [draftHiddenAreas, setDraftHiddenAreas] = useState<Set<string>>(new Set());
@@ -213,9 +216,9 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
     const handleVisibility = async () => {
       if (document.hidden) return;
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        const { data } = await supabase.from('profiles').select('coin_balance').eq('user_id', user.id).single();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return;
+        const { data } = await supabase.from('profiles').select('coin_balance').eq('user_id', session.user.id).single();
         if (data) setCoinBalance(data.coin_balance || 0);
       } catch {}
     };
@@ -282,19 +285,19 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
         // localStorage her durumda kontrol et (guest iken tamamlanmış olabilir)
         if (localStorage.getItem('forilove_editor_tour_done')) {
           // Giriş yapmış kullanıcıda DB'yi de senkronize et
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
+          const { data: { session: s } } = await supabase.auth.getSession();
+          if (s?.user) {
             supabase.from('profiles')
               .update({ has_seen_editor_tour: true })
-              .eq('user_id', user.id).then();
+              .eq('user_id', s.user.id).then();
           }
           return;
         }
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
+        const { data: { session: s2 } } = await supabase.auth.getSession();
+        if (s2?.user) {
           const { data: profile } = await supabase
             .from('profiles').select('has_seen_editor_tour')
-            .eq('user_id', user.id).single();
+            .eq('user_id', s2.user.id).single();
           if (profile?.has_seen_editor_tour) {
             localStorage.setItem('forilove_editor_tour_done', '1');
             return;
@@ -313,11 +316,11 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
     setShowTour(false);
     localStorage.setItem('forilove_editor_tour_done', '1');
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
         await supabase.from('profiles')
           .update({ has_seen_editor_tour: true })
-          .eq('user_id', user.id);
+          .eq('user_id', session.user.id);
       }
     } catch {}
   };
@@ -699,11 +702,12 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
         return;
       }
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
         router.push("/login");
         return;
       }
+      const user = session.user;
 
       // Load profile, purchase, and template in parallel
       const [profileRes, purchaseRes, templateRes] = await Promise.all([
@@ -818,21 +822,40 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
                 console.error('Project insert error:', insertError);
                 console.error('Error details:', JSON.stringify(insertError, null, 2));
               }
-              toast.error(`Proje oluşturulamadı: ${insertError.message || 'Bilinmeyen hata'}`);
 
-              // Create a temporary project object to show buttons
-              const tempProject = {
-                id: 'temp',
-                slug: `temp-${Date.now()}`,
-                user_id: user.id,
-                template_id: resolvedParams.templateId,
-                title: templateData.name,
-                hook_values: defaultValues,
-                is_published: false,
-                created_at: new Date().toISOString(),
-              };
-              setProject(tempProject as any);
-              setValues(restoreDraft(defaultValues));
+              // Unique constraint violation — project already exists, load it
+              if (insertError.code === '23505') {
+                const { data: existingFallback } = await supabase
+                  .from("projects")
+                  .select("*")
+                  .eq("user_id", user.id)
+                  .eq("template_id", resolvedParams.templateId)
+                  .maybeSingle();
+                if (existingFallback) {
+                  setProject(existingFallback);
+                  setValues(restoreDraft(migrateR2Urls(existingFallback.hook_values || defaultValues)));
+                  setMusicUrl(existingFallback.music_url || "");
+                  setUnlockedFields(new Set(existingFallback.unlocked_fields || []));
+                } else {
+                  toast.error("Proje oluşturulamadı");
+                }
+              } else {
+                toast.error(`Proje oluşturulamadı: ${insertError.message || 'Bilinmeyen hata'}`);
+
+                // Create a temporary project object to show buttons
+                const tempProject = {
+                  id: 'temp',
+                  slug: `temp-${Date.now()}`,
+                  user_id: user.id,
+                  template_id: resolvedParams.templateId,
+                  title: templateData.name,
+                  hook_values: defaultValues,
+                  is_published: false,
+                  created_at: new Date().toISOString(),
+                };
+                setProject(tempProject as any);
+                setValues(restoreDraft(defaultValues));
+              }
             } else {
               if (process.env.NODE_ENV === 'development') {
                 console.log('New project created:', newProject);
@@ -1357,6 +1380,19 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
       .single();
 
     if (insertError) {
+      // Unique constraint violation — project already exists, load it
+      if (insertError.code === '23505') {
+        const { data: existingFallback } = await supabase
+          .from("projects")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("template_id", resolvedParams.templateId)
+          .maybeSingle();
+        if (existingFallback) {
+          setProject(existingFallback);
+          return existingFallback;
+        }
+      }
       toast.error("Proje oluşturulamadı");
       return null;
     }
@@ -1419,9 +1455,9 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
     // Ensure project exists (may be null if user logged in via field unlock / AI)
     let currentProject = project;
     if (!currentProject) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      currentProject = await ensureProject(user.id);
+      const { data: { session: s } } = await supabase.auth.getSession();
+      if (!s?.user) return;
+      currentProject = await ensureProject(s.user.id);
       if (!currentProject) return;
     }
     // Pre-fill draft fields with current values
@@ -1434,8 +1470,9 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
   const handleUnpurchasedPublish = async () => {
     setPurchasing(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/login"); return; }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) { router.push("/login"); return; }
+      const user = session.user;
 
       const coinPrice = isDiscountActive(template) ? template.discount_price! : template.coin_price;
 
@@ -1905,7 +1942,9 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
       allowCoupon: false,
       onConfirm: async () => {
         // Sadece onay — coin harcama AI generate içinde yapılacak
-        const { data: profile } = await supabase.from("profiles").select("coin_balance").eq("user_id", (await supabase.auth.getUser()).data.user!.id).single();
+        const { data: { session: aiSession } } = await supabase.auth.getSession();
+        if (!aiSession?.user) return { success: false, error: "Oturum bulunamadı" };
+        const { data: profile } = await supabase.from("profiles").select("coin_balance").eq("user_id", aiSession.user.id).single();
         const bal = profile?.coin_balance ?? 0;
         if (bal < AI_COST) return { success: false, error: "Yetersiz bakiye" };
         return { success: true, newBalance: bal };
@@ -1959,6 +1998,9 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
   const closeEditModal = () => {
     setEditingHook(null);
     setIsChangingImage(false);
+    if (cropModalSrc) URL.revokeObjectURL(cropModalSrc);
+    setCropModalFile(null);
+    setCropModalSrc("");
   };
 
   const handleFieldUnlock = async (hookKey: string) => {
@@ -2023,38 +2065,71 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
   const handleImageUpload = async (file: File) => {
     if (!currentHook || !editingHook) return;
 
+    // Validate image file
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      toast.error(validation.error || 'Dosya doğrulama hatası');
+      return;
+    }
+
     setUploadingImage(true);
     try {
-      // Validate image file
-      const validation = validateImageFile(file);
-      if (!validation.valid) {
-        toast.error(validation.error || 'Dosya doğrulama hatası');
-        return;
+      // Convert HEIC to JPEG before crop modal
+      let processedFile = file;
+      if (isHeicFile(file)) {
+        processedFile = await convertHeicToJpeg(file);
       }
 
-      // Compress image locally
-      const compressedFile = await compressImage(file);
-
-      // Read into memory immediately so disk file changes don't affect upload
-      const buf = await compressedFile.arrayBuffer();
-      const memoryFile = new File([buf], compressedFile.name, { type: compressedFile.type });
-
-      // Store as data URL for local preview (no R2 upload yet)
-      const reader = new FileReader();
-      reader.onload = () => {
-        setDraftValue(reader.result as string);
-        setIsChangingImage(false);
-        // Store in-memory File for deferred upload at publish time
-        pendingUploadsRef.current[editingHook] = memoryFile;
-      };
-      reader.readAsDataURL(memoryFile);
-
-      toast.success('Görsel eklendi!');
+      // Create object URL for crop modal preview
+      const objectUrl = URL.createObjectURL(processedFile);
+      setCropModalFile(processedFile);
+      setCropModalSrc(objectUrl);
     } catch (error: any) {
       toast.error('Görsel hatası: ' + error.message);
     } finally {
       setUploadingImage(false);
     }
+  };
+
+  const handleCropConfirm = async (croppedBlob: Blob) => {
+    if (!editingHook) return;
+
+    // Cleanup crop modal object URL
+    if (cropModalSrc) URL.revokeObjectURL(cropModalSrc);
+    setCropModalFile(null);
+    setCropModalSrc("");
+
+    setUploadingImage(true);
+    try {
+      // Convert blob to File for compression
+      const croppedFile = new File([croppedBlob], 'cropped.jpg', { type: 'image/jpeg' });
+      const compressedFile = await compressImage(croppedFile);
+
+      // Read into memory immediately
+      const buf = await compressedFile.arrayBuffer();
+      const memoryFile = new File([buf], compressedFile.name, { type: compressedFile.type });
+
+      // Store as data URL for local preview
+      const reader = new FileReader();
+      reader.onload = () => {
+        setDraftValue(reader.result as string);
+        setIsChangingImage(false);
+        pendingUploadsRef.current[editingHook] = memoryFile;
+      };
+      reader.readAsDataURL(memoryFile);
+
+      toast.success('Görsel kırpıldı!');
+    } catch (error: any) {
+      toast.error('Görsel hatası: ' + error.message);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleCropCancel = () => {
+    if (cropModalSrc) URL.revokeObjectURL(cropModalSrc);
+    setCropModalFile(null);
+    setCropModalSrc("");
   };
 
   const currentHook = editingHook ? hooks.find(h => h.key === editingHook) : null;
@@ -3093,6 +3168,14 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
             </div>
           </>
         )}
+
+      {/* Image Crop Modal */}
+      <ImageCropModal
+        isOpen={!!cropModalFile}
+        imageSrc={cropModalSrc}
+        onConfirm={handleCropConfirm}
+        onCancel={handleCropCancel}
+      />
 
       {/* Music Picker Modal */}
       <MusicPickerModal

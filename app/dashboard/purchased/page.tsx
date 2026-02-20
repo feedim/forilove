@@ -25,18 +25,19 @@ export default function PurchasedTemplatesPage() {
 
   const loadPurchasedTemplates = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
         router.push("/login");
         return;
       }
+      const user = session.user;
 
       // Load user purchases with template details
       const { data: purchasesData, error: purchasesError } = await supabase
         .from("purchases")
         .select(`
           template_id,
-          templates (id, name, slug, coin_price, discount_price, discount_label, discount_expires_at, description, html_content)
+          templates (id, name, slug, coin_price, discount_price, discount_label, discount_expires_at, description, html_content, template_tags(tags(name, slug)))
         `)
         .eq("user_id", user.id)
         .eq("payment_status", "completed")
@@ -57,17 +58,17 @@ export default function PurchasedTemplatesPage() {
 
       // Create a map of template_id to project data
       const projectsMap = new Map(
-        projectsData?.map(p => [p.template_id, { is_published: p.is_published, slug: p.slug }]) || []
+        projectsData?.map((p: any) => [p.template_id, { is_published: p.is_published, slug: p.slug }]) || []
       );
 
       // Keep all purchased templates and add project status info
       const templatesArray = purchasesData
-        ?.map(item => ({
+        ?.map((item: any) => ({
           ...item.templates,
-          projectStatus: projectsMap.get(item.template_id)?.is_published ? 'published' : null,
-          projectSlug: projectsMap.get(item.template_id)?.slug || null,
+          projectStatus: (projectsMap.get(item.template_id) as any)?.is_published ? 'published' : null,
+          projectSlug: (projectsMap.get(item.template_id) as any)?.slug || null,
         }))
-        .filter(template => template) || [];
+        .filter((template: any) => template) || [];
 
       setTemplates(templatesArray);
 
@@ -77,7 +78,7 @@ export default function PurchasedTemplatesPage() {
         .select("template_id")
         .eq("user_id", user.id);
 
-      setSavedTemplates(savedData?.map(item => item.template_id) || []);
+      setSavedTemplates(savedData?.map((item: any) => item.template_id) || []);
     } catch (error) {
       console.error(error);
     } finally {
@@ -105,8 +106,9 @@ export default function PurchasedTemplatesPage() {
     }
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const user = session.user;
 
       if (isSaved) {
         // Unsave
@@ -155,7 +157,7 @@ export default function PurchasedTemplatesPage() {
             <div className="w-16" />
           </nav>
         </header>
-        <main className="container mx-auto px-3 sm:px-6 py-8 pb-24 md:pb-16">
+        <main className="container mx-auto px-3 sm:px-6 py-8 pb-24 md:pb-16 max-w-6xl">
           <TemplateGridSkeleton count={3} />
         </main>
       </div>
@@ -175,7 +177,7 @@ export default function PurchasedTemplatesPage() {
         </nav>
       </header>
 
-      <main className="container mx-auto px-3 sm:px-6 py-8 pb-24 md:pb-16">
+      <main className="container mx-auto px-3 sm:px-6 py-8 pb-24 md:pb-16 max-w-6xl">
         {templates.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 sm:py-20 text-center">
             <ShoppingBag className="h-14 w-14 sm:h-20 sm:w-20 text-white mb-3 sm:mb-4" strokeWidth={1} />
@@ -203,6 +205,7 @@ export default function PurchasedTemplatesPage() {
                     showSaveButton={true}
                     onSaveToggle={handleToggleSave}
                     onClick={() => handleTemplateClick(template)}
+                    tags={(template.template_tags || []).map((tt: any) => tt.tags).filter(Boolean)}
                   />
                 );
               })}
@@ -211,9 +214,9 @@ export default function PurchasedTemplatesPage() {
               <div className="flex justify-center mt-8">
                 <button
                   onClick={() => setVisibleCount(prev => prev + ITEMS_PER_PAGE)}
-                  className="px-6 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-sm font-medium transition"
+                  className="px-6 py-3 bg-white/10 hover:bg-white/15 rounded-full text-sm font-medium transition"
                 >
-                  Daha Fazla Göster ({templates.length - visibleCount} kalan)
+                  Daha Fazla Göster
                 </button>
               </div>
             )}

@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, User, Mail, LogOut, Heart, Clock, Calendar, Wallet, Edit2, Bookmark, ShoppingBag, Sparkles, HelpCircle, FileText, Shield, MessageCircle, ScrollText, BarChart3, Globe, Ticket, TrendingUp, Check } from "lucide-react";
+import { ArrowLeft, User, Mail, LogOut, Heart, Clock, Calendar, Wallet, Edit2, Bookmark, ShoppingBag, Sparkles, HelpCircle, FileText, Shield, MessageCircle, ScrollText, BarChart3, Globe, Ticket, TrendingUp, Check, Tag, Package } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { ProfileSkeleton } from "@/components/Skeletons";
-import ReferralSection from "@/components/ReferralSection";
+import GiftSection from "@/components/GiftSection";
 import { translateError } from "@/lib/utils/translateError";
 
 export default function ProfilePage() {
@@ -32,11 +32,12 @@ export default function ProfilePage() {
 
   const loadProfile = async () => {
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
         router.push("/login");
         return;
       }
+      const authUser = session.user;
 
       setUser(authUser);
 
@@ -363,6 +364,42 @@ export default function ProfilePage() {
                 <ArrowLeft className="h-4 w-4 text-zinc-400 rotate-180 group-hover:translate-x-1 transition-transform" />
               </div>
             </Link>
+            <Link href="/dashboard/admin/tags" className="block bg-zinc-900 rounded-2xl p-5 hover:bg-zinc-800 transition group">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Tag className="h-5 w-5 text-pink-500" />
+                  <div>
+                    <h3 className="font-semibold">Etiket Yönetimi</h3>
+                    <p className="text-xs text-zinc-500">Etiketleri oluştur ve yönet</p>
+                  </div>
+                </div>
+                <ArrowLeft className="h-4 w-4 text-zinc-400 rotate-180 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Link>
+            <Link href="/dashboard/admin/bundles" className="block bg-zinc-900 rounded-2xl p-5 hover:bg-zinc-800 transition group">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Package className="h-5 w-5 text-pink-500" />
+                  <div>
+                    <h3 className="font-semibold">Paket Yönetimi</h3>
+                    <p className="text-xs text-zinc-500">Şablon paketlerini oluştur ve yönet</p>
+                  </div>
+                </div>
+                <ArrowLeft className="h-4 w-4 text-zinc-400 rotate-180 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Link>
+            <Link href="/dashboard/admin/posts" className="block bg-zinc-900 rounded-2xl p-5 hover:bg-zinc-800 transition group">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-5 w-5 text-pink-500" />
+                  <div>
+                    <h3 className="font-semibold">Yazılar</h3>
+                    <p className="text-xs text-zinc-500">Blog yazılarını oluştur ve yönet</p>
+                  </div>
+                </div>
+                <ArrowLeft className="h-4 w-4 text-zinc-400 rotate-180 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Link>
           </div>
         )}
 
@@ -385,8 +422,8 @@ export default function ProfilePage() {
                       <p className="text-xs text-zinc-500">{new Date(u.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
                     </div>
                   </div>
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${u.hasPurchased || u.coin_balance ? 'bg-pink-500/20 text-pink-400' : 'bg-white/10 text-zinc-400'}`}>
-                    {u.hasPurchased || u.coin_balance ? 'Satın Aldı' : 'Kayıt'}
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${u.hasPurchased ? 'bg-pink-500/20 text-pink-400' : 'bg-white/10 text-zinc-400'}`}>
+                    {u.hasPurchased ? 'Satın Aldı' : 'Kayıt'}
                   </span>
                 </div>
               ))}
@@ -412,8 +449,8 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Referral Section */}
-        <ReferralSection userId={user.id} />
+        {/* Gift Section */}
+        <GiftSection userId={user.id} coinBalance={profile?.coin_balance || 0} onSent={(amount) => setProfile((p: any) => p ? { ...p, coin_balance: (p.coin_balance || 0) - amount } : p)} />
 
         {/* Settings Sections */}
         <div className="space-y-4 mt-6">
@@ -463,6 +500,17 @@ export default function ProfilePage() {
                     <span className="font-semibold text-pink-500">Creator Studio</span>
                   </div>
                   <ArrowLeft className="h-4 w-4 text-pink-500 rotate-180" />
+                </Link>
+              )}
+
+              {/* Paket Yönetimi - Creator/Admin */}
+              {(profile?.role === 'creator' || profile?.role === 'admin') && (
+                <Link href="/dashboard/admin/bundles" className="flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <Package className="h-5 w-5 text-zinc-400" />
+                    <span className="font-medium">Paket Yönetimi</span>
+                  </div>
+                  <ArrowLeft className="h-4 w-4 text-zinc-400 rotate-180" />
                 </Link>
               )}
 

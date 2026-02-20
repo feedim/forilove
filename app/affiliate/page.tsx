@@ -30,7 +30,7 @@ const steps = [
   {
     icon: Percent,
     title: "Link Oluşturun",
-    description: "Profilinizden özel indirim linkinizi oluşturun. Takipçilerinize %5 ile %20 arası indirim sunun.",
+    description: "Profilinizden özel indirim linkinizi oluşturun. Takipçilerinize %0 ile %20 arası indirim sunun.",
   },
   {
     icon: TrendingUp,
@@ -42,7 +42,7 @@ const steps = [
 const faqs = [
   {
     q: "Komisyon oranım nasıl belirlenir?",
-    a: "Takipçilerinize verdiğiniz indirim ne kadar düşükse, komisyonunuz o kadar yüksek olur. Örneğin: %5 indirim → %30 komisyon, %10 indirim → %25 komisyon, %20 indirim → %15 komisyon. Minimum indirim oranı %5'tir.",
+    a: "Takipçilerinize verdiğiniz indirim ne kadar düşükse, komisyonunuz o kadar yüksek olur. Örneğin: %0 indirim → %30 komisyon, %5 indirim → %25 komisyon, %10 indirim → %20 komisyon, %20 indirim → %10 komisyon. İndirim vermeden sadece takip amaçlı kod da oluşturabilirsiniz.",
   },
   {
     q: "Ödemeler nasıl yapılır?",
@@ -50,11 +50,11 @@ const faqs = [
   },
   {
     q: "Kaç tane indirim linki oluşturabilirim?",
-    a: "Her affiliate 1 adet indirim linki oluşturabilir. Bu linki tüm platformlarınızda paylaşabilirsiniz.",
+    a: "Her affiliate 5 adet indirim linki oluşturabilir (her indirim oranından 1 adet). Bu linkleri tüm platformlarınızda paylaşabilirsiniz.",
   },
   {
     q: "Maksimum indirim oranı nedir?",
-    a: "Affiliate'ler en az %5, en fazla %20 indirim sunabilir. İndirim oranınızı düşük tutarak daha yüksek komisyon kazanabilirsiniz.",
+    a: "Affiliate'ler en az %0, en fazla %20 indirim sunabilir. İndirim oranınızı düşük tutarak daha yüksek komisyon kazanabilirsiniz.",
   },
   {
     q: "Kazançlarımı nasıl takip edebilirim?",
@@ -86,7 +86,7 @@ export default function AffiliatePage() {
             <span className="block text-pink-500 mt-3">Satış Ortaklığı</span>
           </h1>
           <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
-            Takipçilerinize özel indirim linkleri oluşturun, her satıştan %15 ile %30 arası komisyon kazanın.
+            Takipçilerinize özel indirim linkleri oluşturun, her satıştan %10 ile %30 arası komisyon kazanın.
           </p>
         </div>
       </section>
@@ -161,7 +161,7 @@ export default function AffiliatePage() {
       <section className="border-t border-white/10 py-20">
         <div className="container mx-auto px-4 sm:px-6 max-w-2xl">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-4">Komisyon Tablosu</h2>
-          <p className="text-zinc-400 text-center mb-10">İndiriminiz ne kadar düşükse, komisyonunuz o kadar yüksek! (Min. %5 — Maks. %20)</p>
+          <p className="text-zinc-400 text-center mb-10">İndiriminiz ne kadar düşükse, komisyonunuz o kadar yüksek! İndirim vermeden de link oluşturabilirsiniz.</p>
           <div className="bg-zinc-900 rounded-2xl overflow-hidden border border-white/10">
             <div className="grid grid-cols-3 gap-0 text-center text-sm font-semibold border-b border-white/10 bg-white/5">
               <div className="p-4">İndirim</div>
@@ -169,10 +169,11 @@ export default function AffiliatePage() {
               <div className="p-4">100 TRY Satışta</div>
             </div>
             {[
-              { discount: 5, commission: 30 },
-              { discount: 10, commission: 25 },
-              { discount: 15, commission: 20 },
-              { discount: 20, commission: 15 },
+              { discount: 0, commission: 30 },
+              { discount: 5, commission: 25 },
+              { discount: 10, commission: 20 },
+              { discount: 15, commission: 15 },
+              { discount: 20, commission: 10 },
             ].map((row) => (
               <div key={row.discount} className="grid grid-cols-3 gap-0 text-center text-sm border-b border-white/5 last:border-0">
                 <div className="p-4 text-pink-400 font-medium">%{row.discount}</div>

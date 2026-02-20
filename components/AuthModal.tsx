@@ -32,8 +32,8 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
 
   const requireAuth = useCallback(async (rp?: string): Promise<User | null> => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) return user;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) return session.user;
 
     return new Promise((resolve) => {
       resolveRef.current = resolve;
@@ -219,8 +219,8 @@ function AuthModalSheet({ onClose, onSuccess, returnPath }: SheetProps) {
         window.removeEventListener("message", handleMessage);
         clearInterval(pollTimer);
         setLoading(false);
-        supabase.auth.getUser().then(({ data: { user } }) => {
-          if (user) onSuccess(user);
+        supabase.auth.getSession().then(({ data: { session } }: any) => {
+          if (session?.user) onSuccess(session.user);
           else setError("Giriş doğrulanamadı. Lütfen tekrar deneyin.");
         });
       }
@@ -233,8 +233,8 @@ function AuthModalSheet({ onClose, onSuccess, returnPath }: SheetProps) {
         clearInterval(pollTimer);
         window.removeEventListener("message", handleMessage);
         setLoading(false);
-        supabase.auth.getUser().then(({ data: { user } }) => {
-          if (user) onSuccess(user);
+        supabase.auth.getSession().then(({ data: { session } }: any) => {
+          if (session?.user) onSuccess(session.user);
         });
       }
     }, 500);

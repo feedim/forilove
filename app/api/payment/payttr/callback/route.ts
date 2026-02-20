@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { processCoinCommission } from '@/lib/process-coin-commission';
 import { processAffiliateCommission } from '@/lib/process-affiliate-commission';
 import crypto from 'crypto';
 
@@ -121,10 +120,7 @@ export async function POST(request: NextRequest) {
         console.error('[PayTR Callback] Transaction insert failed:', txnError.message);
       }
 
-      // 4. Referans komisyonu (kritik değil — direkt DB sorguları ile)
-      await processCoinCommission(supabase, payment.user_id, payment.id, totalCoins);
-
-      // 5. Affiliate promo komisyon kaydı (promo kodu sahibine + referrer'a)
+      // 4. Affiliate promo komisyon kaydı (promo kodu sahibine + referrer'a)
       await processAffiliateCommission(supabase, payment.user_id, payment.id, payment.price_paid);
 
       console.warn('[PayTR Callback] ✓', merchant_oid);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { Heart } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -9,40 +9,97 @@ import PublicFooter from "@/components/PublicFooter";
 import CTASection from "@/components/CTASection";
 import TemplateCard from "@/components/TemplateCard";
 
-const TEMPLATE_LIMIT = 6; // Show only 6 templates
+const ITEMS_PER_PAGE = 6;
 
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(0);
+  const [tags, setTags] = useState<{ id: string; name: string; slug: string }[]>([]);
   const supabase = createClient();
 
   useEffect(() => {
     loadTemplates();
+    loadTags();
   }, []);
+
+  useEffect(() => {
+    if (page > 0) {
+      loadMoreTemplates();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   const loadTemplates = async () => {
     try {
-      // Load top 6 templates by purchase count (most popular)
       const { data: templatesData } = await supabase
         .from("templates")
-        .select("*")
+        .select("id, name, slug, coin_price, discount_price, discount_label, discount_expires_at, description, html_content, purchase_count, template_tags(tags(name, slug))")
         .eq("is_active", true)
         .eq("is_public", true)
+        .order("coin_price", { ascending: true })
         .order("purchase_count", { ascending: false, nullsFirst: false })
-        .limit(12);
+        .range(0, ITEMS_PER_PAGE - 1);
 
-      // Client-side: ucretsiz once, sonra populerlik
-      const sorted = (templatesData || []).sort((a: any, b: any) => {
-        const aFree = a.coin_price === 0 ? 0 : 1;
-        const bFree = b.coin_price === 0 ? 0 : 1;
-        if (aFree !== bFree) return aFree - bFree;
-        return (b.purchase_count || 0) - (a.purchase_count || 0);
-      }).slice(0, TEMPLATE_LIMIT);
-      setTemplates(sorted);
+      setHasMore((templatesData?.length || 0) === ITEMS_PER_PAGE);
+      setTemplates(templatesData || []);
     } catch (error) {
       console.error("Error loading templates:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTags = async () => {
+    try {
+      const { data } = await supabase
+        .from("tags")
+        .select("id, name, slug")
+        .order("name");
+      setTags(data || []);
+    } catch (error) {
+      console.error("Error loading tags:", error);
+    }
+  };
+
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  const loadMoreTemplates = async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    const prevCount = templates.length;
+    await new Promise(r => setTimeout(r, 1000));
+    try {
+      const start = page * ITEMS_PER_PAGE;
+      const { data: templatesData } = await supabase
+        .from("templates")
+        .select("id, name, slug, coin_price, discount_price, discount_label, discount_expires_at, description, html_content, purchase_count, template_tags(tags(name, slug))")
+        .eq("is_active", true)
+        .eq("is_public", true)
+        .order("coin_price", { ascending: true })
+        .order("purchase_count", { ascending: false, nullsFirst: false })
+        .range(start, start + ITEMS_PER_PAGE - 1);
+
+      setHasMore((templatesData?.length || 0) === ITEMS_PER_PAGE);
+      setTemplates(prev => [...prev, ...(templatesData || [])]);
+
+      // Scroll to first new card after render
+      if (templatesData && templatesData.length > 0) {
+        requestAnimationFrame(() => {
+          const grid = loadMoreRef.current?.previousElementSibling;
+          if (!grid) return;
+          const newFirstCard = grid.children[prevCount] as HTMLElement;
+          if (newFirstCard) {
+            newFirstCard.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Error loading more templates:", error);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -97,6 +154,23 @@ export default function TemplatesPage() {
           </div>
         </section>
 
+        {/* Tag Pills */}
+        {tags.length > 0 && (
+          <section className="container mx-auto px-6 pt-8">
+            <div className="flex flex-wrap gap-2">
+              {tags.map((tag) => (
+                <Link
+                  key={tag.id}
+                  href={`/tag/${tag.slug}`}
+                  className="bg-white/10 hover:bg-white/15 rounded-full px-4 py-2 text-sm text-zinc-300 transition-colors"
+                >
+                  {tag.name}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Templates Grid */}
         <main className="container mx-auto px-6 py-16">
           {loading ? (
@@ -109,20 +183,38 @@ export default function TemplatesPage() {
               <p className="text-xl text-zinc-400">Henüz şablon eklenmedi.</p>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {templates.map((template) => (
-                <div key={template.id}>
-                  <TemplateCard
-                    template={template}
-                    isPurchased={false}
-                    isSaved={false}
-                    showSaveButton={true}
-                    showPrice={true}
-                    onClick={() => handleTemplateClick(template.id)}
-                  />
+            <>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {templates.map((template) => (
+                  <div key={template.id}>
+                    <TemplateCard
+                      template={template}
+                      isPurchased={false}
+                      isSaved={false}
+                      showSaveButton={true}
+                      showPrice={true}
+                      onClick={() => handleTemplateClick(template.id)}
+                      tags={(template.template_tags || []).map((tt: any) => tt.tags).filter(Boolean)}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {hasMore && (
+                <div ref={loadMoreRef} className="flex justify-center mt-12">
+                  {loadingMore ? (
+                    <Heart className="h-10 w-10 text-pink-500 fill-pink-500 animate-pulse" aria-hidden="true" />
+                  ) : (
+                    <button
+                      onClick={() => setPage(p => p + 1)}
+                      className="px-8 py-3 bg-white/10 hover:bg-white/15 text-white rounded-full font-medium transition active:scale-95"
+                    >
+                      Daha Fazla Gör
+                    </button>
+                  )}
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
 
         </main>

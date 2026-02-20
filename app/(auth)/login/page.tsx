@@ -18,8 +18,8 @@ export default function LoginPage() {
 
   // Zaten giriş yapmışsa dashboard'a yönlendir
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) router.replace("/dashboard");
+    supabase.auth.getSession().then(({ data: { session } }: any) => {
+      if (session?.user) router.replace("/dashboard");
     });
   }, [supabase, router]);
 

@@ -141,6 +141,12 @@ export async function middleware(request: NextRequest) {
         response.cookies.set('fl-role', role, { maxAge: 300, httpOnly: true, secure: true, sameSite: 'lax', path: '/' })
         return response
       }
+      // Creators can access bundles page
+      if (role === 'creator' && pathname === '/dashboard/admin/bundles') {
+        const response = NextResponse.next()
+        response.cookies.set('fl-role', role, { maxAge: 300, httpOnly: true, secure: true, sameSite: 'lax', path: '/' })
+        return response
+      }
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
     if (pathname.startsWith('/creator') && role !== 'creator' && role !== 'admin') {

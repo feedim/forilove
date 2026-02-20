@@ -34,11 +34,12 @@ export default function CoinsPage() {
 
   const loadData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
         router.push("/login");
         return;
       }
+      const user = session.user;
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -149,7 +150,7 @@ export default function CoinsPage() {
         </nav>
       </header>
 
-      <main className="w-full px-3 sm:px-6 lg:px-10 pt-16 pb-24 md:pb-16">
+      <main className="container mx-auto px-3 sm:px-6 pt-16 pb-24 md:pb-16 max-w-xl">
         {packages.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 sm:py-20 text-center">
             <Coins className="h-14 w-14 sm:h-20 sm:w-20 text-yellow-500 mb-3 sm:mb-4" />

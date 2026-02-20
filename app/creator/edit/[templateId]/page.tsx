@@ -22,6 +22,8 @@ export default function EditŞablonPage({ params }: { params: Promise<{ template
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
+  const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const router = useRouter();
   const supabase = createClient();
 
@@ -51,11 +53,12 @@ export default function EditŞablonPage({ params }: { params: Promise<{ template
 
   const loadŞablon = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
         router.push("/login");
         return;
       }
+      const user = session.user;
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -85,12 +88,25 @@ export default function EditŞablonPage({ params }: { params: Promise<{ template
       setName(template.name || "");
       setSlug(template.slug || "");
       setDescription(template.description || "");
-      setCoinPrice(template.coin_price || 100);
+      setCoinPrice(template.coin_price ?? 100);
       setDiscountPrice(template.discount_price || null);
       setDiscountLabel(template.discount_label || "");
       setDiscountExpiresAt(template.discount_expires_at || null);
       setHtmlContent(template.html_content || "");
       setPreviewHtml(template.html_content || "");
+
+      // Load all tags + existing selections
+      const { data: tags } = await supabase
+        .from("tags")
+        .select("id, name")
+        .order("name");
+      setAllTags(tags || []);
+
+      const { data: existingTags } = await supabase
+        .from("template_tags")
+        .select("tag_id")
+        .eq("template_id", resolvedParams.templateId);
+      setSelectedTagIds(existingTags?.map((t: any) => t.tag_id) || []);
     } catch (error) {
       console.error(error);
       router.push("/creator");
@@ -170,6 +186,20 @@ export default function EditŞablonPage({ params }: { params: Promise<{ template
         .eq("id", resolvedParams.templateId);
 
       if (error) throw error;
+
+      // Save tags: clear then re-insert
+      await supabase
+        .from("template_tags")
+        .delete()
+        .eq("template_id", resolvedParams.templateId);
+      if (selectedTagIds.length > 0) {
+        await supabase.from("template_tags").insert(
+          selectedTagIds.map((tagId) => ({
+            template_id: resolvedParams.templateId,
+            tag_id: tagId,
+          }))
+        );
+      }
 
       toast.success("Şablon güncellendi!");
     } catch (error: any) {
@@ -389,6 +419,39 @@ export default function EditŞablonPage({ params }: { params: Promise<{ template
                 </>
               )}
             </div>
+
+            {/* Tags */}
+            {allTags.length > 0 && (
+              <div>
+                <label className="block text-sm text-zinc-400 mb-1.5">Etiketler</label>
+                <div className="flex flex-wrap gap-2">
+                  {allTags.map((tag) => {
+                    const isSelected = selectedTagIds.includes(tag.id);
+                    return (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedTagIds((prev) => prev.filter((id) => id !== tag.id));
+                          } else if (selectedTagIds.length < 3) {
+                            setSelectedTagIds((prev) => [...prev, tag.id]);
+                          }
+                        }}
+                        className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+                          isSelected
+                            ? "bg-pink-500 text-white"
+                            : "bg-white/10 text-zinc-300 hover:bg-white/15"
+                        }`}
+                      >
+                        {tag.name}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-zinc-500 mt-1">{selectedTagIds.length}/3 etiket seçildi</p>
+              </div>
+            )}
           </div>
 
           {/* HTML Editor */}

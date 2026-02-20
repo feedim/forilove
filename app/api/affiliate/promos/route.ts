@@ -4,9 +4,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isBlockedPromoCode } from "@/lib/promo-blocklist";
 
 const MAX_AFFILIATE_DISCOUNT = 20;
-// Commission formula: affiliate earns (35 - discount)% of each sale
-// e.g. 5% discount → 30% commission, 20% discount → 15% commission
-const TOTAL_ALLOCATION = 35;
+// Commission formula: affiliate earns (30 - discount)% of each sale
+// e.g. 0% discount → 30% commission, 5% discount → 25% commission, 20% discount → 10% commission
+const TOTAL_ALLOCATION = 30;
 
 async function verifyAffiliate(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: { user } } = await supabase.auth.getUser();
@@ -301,17 +301,17 @@ export async function POST(request: NextRequest) {
 
     // Validate discount is a finite integer
     const parsedDiscount = Number(discountPercent);
-    if (!Number.isFinite(parsedDiscount) || !Number.isInteger(parsedDiscount) || parsedDiscount < 1) {
+    if (!Number.isFinite(parsedDiscount) || !Number.isInteger(parsedDiscount) || parsedDiscount < 0) {
       return NextResponse.json({ error: "Geçersiz indirim yüzdesi" }, { status: 400 });
     }
 
-    // Affiliates: only 5%, 10%, 15%, 20% allowed — one of each
-    const AFFILIATE_DISCOUNT_OPTIONS = [5, 10, 15, 20];
-    const MAX_AFFILIATE_PROMOS = 4;
+    // Affiliates: only 0%, 5%, 10%, 15%, 20% allowed — one of each
+    const AFFILIATE_DISCOUNT_OPTIONS = [0, 5, 10, 15, 20];
+    const MAX_AFFILIATE_PROMOS = 5;
     const effectiveDiscount = Math.min(parsedDiscount, user.role === "admin" ? 100 : MAX_AFFILIATE_DISCOUNT);
     if (user.role === "affiliate") {
       if (!AFFILIATE_DISCOUNT_OPTIONS.includes(effectiveDiscount)) {
-        return NextResponse.json({ error: "İndirim oranı %5, %10, %15 veya %20 olmalı" }, { status: 400 });
+        return NextResponse.json({ error: "İndirim oranı %0, %5, %10, %15 veya %20 olmalı" }, { status: 400 });
       }
     }
 
@@ -327,7 +327,7 @@ export async function POST(request: NextRequest) {
 
     const admin = createAdminClient();
 
-    // Affiliates can create up to 4 promo codes, one per discount rate
+    // Affiliates can create up to 5 promo codes, one per discount rate
     if (user.role === "affiliate") {
       const { data: existingOwn } = await admin
         .from("promo_links")

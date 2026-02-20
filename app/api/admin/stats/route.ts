@@ -29,8 +29,21 @@ export async function GET() {
       admin.from("coin_payments").select("price_paid, coins_purchased", { count: "exact" }).eq("status", "completed"),
       admin.from("coin_payments").select("price_paid, coins_purchased").eq("status", "completed").gte("completed_at", new Date().toISOString().split("T")[0]),
       admin.from("projects").select("*", { count: "exact", head: true }).eq("is_published", true),
-      admin.from("profiles").select("name, surname, full_name, coin_balance, created_at").order("created_at", { ascending: false }).limit(10),
+      admin.from("profiles").select("user_id, name, surname, full_name, coin_balance, created_at").order("created_at", { ascending: false }).limit(10),
     ]);
+
+    // Son 10 üyenin satın alma durumunu kontrol et
+    const recentUsers = recentUsersRes.data || [];
+    const recentUserIds = recentUsers.map((u: any) => u.user_id).filter(Boolean);
+    let purchasedUserIds: string[] = [];
+    if (recentUserIds.length > 0) {
+      const { data: purchasers } = await admin
+        .from("coin_payments")
+        .select("user_id")
+        .in("user_id", recentUserIds)
+        .eq("status", "completed");
+      purchasedUserIds = [...new Set((purchasers || []).map((p: any) => p.user_id))];
+    }
 
     return NextResponse.json({
       totalUsers: usersRes.count || 0,
@@ -40,7 +53,10 @@ export async function GET() {
       todayRevenueTRY: todayPaymentsRes.data?.reduce((s: number, p: any) => s + (p.price_paid || 0), 0) || 0,
       todayPayments: todayPaymentsRes.data?.length || 0,
       publishedPages: projectsRes.count || 0,
-      recentUsers: recentUsersRes.data || [],
+      recentUsers: recentUsers.map((u: any) => ({
+        ...u,
+        hasPurchased: purchasedUserIds.includes(u.user_id),
+      })),
     });
   } catch (error) {
     if (process.env.NODE_ENV === "development") console.error("Admin stats error:", error);

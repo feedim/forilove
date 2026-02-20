@@ -31,11 +31,12 @@ export default function SavedTemplatesPage() {
 
   const loadSavedTemplates = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
         router.push("/login");
         return;
       }
+      const user = session.user;
 
       // Load user's coin balance
       const { data: profile } = await supabase
@@ -51,7 +52,7 @@ export default function SavedTemplatesPage() {
         .from("saved_templates")
         .select(`
           template_id,
-          templates (id, name, slug, coin_price, discount_price, discount_label, discount_expires_at, description, html_content, purchase_count)
+          templates (id, name, slug, coin_price, discount_price, discount_label, discount_expires_at, description, html_content, purchase_count, template_tags(tags(name, slug)))
         `)
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
@@ -84,17 +85,17 @@ export default function SavedTemplatesPage() {
 
       // Create a map of template_id to project data
       const projectsMap = new Map(
-        projectsData?.map(p => [p.template_id, { is_published: p.is_published, slug: p.slug }]) || []
+        projectsData?.map((p: any) => [p.template_id, { is_published: p.is_published, slug: p.slug }]) || []
       );
 
-      const templatesArray = savedData?.map(item => ({
+      const templatesArray = savedData?.map((item: any) => ({
         ...item.templates,
-        projectStatus: projectsMap.get(item.template_id)?.is_published ? 'published' : null,
-        projectSlug: projectsMap.get(item.template_id)?.slug || null,
+        projectStatus: (projectsMap.get(item.template_id) as any)?.is_published ? 'published' : null,
+        projectSlug: (projectsMap.get(item.template_id) as any)?.slug || null,
       })).filter(Boolean) || [];
 
       setTemplates(templatesArray);
-      setPurchases(purchasesData?.map(p => p.template_id) || []);
+      setPurchases(purchasesData?.map((p: any) => p.template_id) || []);
     } catch (error) {
       console.error(error);
     } finally {
@@ -104,8 +105,9 @@ export default function SavedTemplatesPage() {
 
   const handleUnsave = useCallback(async (templateId: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const user = session.user;
 
       const { error } = await supabase
         .from("saved_templates")
@@ -163,8 +165,9 @@ export default function SavedTemplatesPage() {
       icon: 'template',
       allowCoupon: true,
       onConfirm: async (couponInfo?: CouponInfo) => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Oturum bulunamadı');
+        const { data: { session: s } } = await supabase.auth.getSession();
+        if (!s?.user) throw new Error('Oturum bulunamadı');
+        const user = s.user;
 
         let finalPrice = coinPrice;
 
@@ -226,7 +229,7 @@ export default function SavedTemplatesPage() {
             <div className="w-16" />
           </nav>
         </header>
-        <main className="container mx-auto px-3 sm:px-6 py-8 pb-24 md:pb-16">
+        <main className="container mx-auto px-3 sm:px-6 py-8 pb-24 md:pb-16 max-w-4xl">
           <TemplateGridSkeleton count={3} />
         </main>
       </div>
@@ -246,7 +249,7 @@ export default function SavedTemplatesPage() {
         </nav>
       </header>
 
-      <main className="container mx-auto px-3 sm:px-6 py-8 pb-24 md:pb-16">
+      <main className="container mx-auto px-3 sm:px-6 py-8 pb-24 md:pb-16 max-w-4xl">
         {templates.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 sm:py-20 text-center">
             <Bookmark className="h-14 w-14 sm:h-20 sm:w-20 text-white mb-3 sm:mb-4" strokeWidth={1.2} />
@@ -274,6 +277,7 @@ export default function SavedTemplatesPage() {
                     showSaveButton={true}
                     onSaveToggle={handleUnsave}
                     onClick={() => handleTemplateClick(template)}
+                    tags={(template.template_tags || []).map((tt: any) => tt.tags).filter(Boolean)}
                   />
                 );
               })}
@@ -282,9 +286,9 @@ export default function SavedTemplatesPage() {
               <div className="flex justify-center mt-8">
                 <button
                   onClick={() => setVisibleCount(prev => prev + ITEMS_PER_PAGE)}
-                  className="px-6 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-sm font-medium transition"
+                  className="px-6 py-3 bg-white/10 hover:bg-white/15 rounded-full text-sm font-medium transition"
                 >
-                  Daha Fazla Göster ({templates.length - visibleCount} kalan)
+                  Daha Fazla Göster
                 </button>
               </div>
             )}

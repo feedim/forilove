@@ -21,8 +21,9 @@ export default function AdminAffiliatePayoutsPage() {
 
   const loadData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/login"); return; }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) { router.push("/login"); return; }
+      const user = session.user;
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -243,9 +244,9 @@ export default function AdminAffiliatePayoutsPage() {
                   {hasMore && (
                     <button
                       onClick={() => setVisibleCount(prev => prev + ITEMS_PER_PAGE)}
-                      className="w-full py-3 text-sm text-pink-500 hover:text-pink-400 font-medium transition"
+                      className="w-full py-3 bg-white/10 hover:bg-white/15 rounded-full text-sm font-medium transition"
                     >
-                      Daha Fazla Göster ({filteredPayouts.length - visibleCount} kalan)
+                      Daha Fazla Göster
                     </button>
                   )}
                 </>

@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
+
+const QRCodeModal = lazy(() => import("./QRCodeModal"));
 
 /* ─── Bottom Sheet (standalone, controlled) ─── */
 /* All spacing uses inline styles to resist template CSS resets (e.g. * { padding: 0 }) */
@@ -16,6 +18,7 @@ interface ShareSheetProps {
 
 export function ShareSheet({ url, title = "", isOpen, onClose }: ShareSheetProps) {
   const [canNativeShare, setCanNativeShare] = useState(false);
+  const [showQR, setShowQR] = useState(false);
 
   useEffect(() => {
     setCanNativeShare(!!navigator.share);
@@ -166,7 +169,7 @@ export function ShareSheet({ url, title = "", isOpen, onClose }: ShareSheetProps
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
+            gridTemplateColumns: `repeat(${canNativeShare ? 5 : 4}, 1fr)`,
             gap: 8,
           }}
         >
@@ -203,6 +206,22 @@ export function ShareSheet({ url, title = "", isOpen, onClose }: ShareSheetProps
               <span style={{ fontSize: 12, fontWeight: 500, color: "rgba(255,255,255,0.8)", margin: 0 }}>Diğer</span>
             </button>
           )}
+
+          {/* QR Code */}
+          <button onClick={() => setShowQR(true)} style={optionBtnStyle} aria-label="QR Kod oluştur">
+            <div style={{ ...iconCircleBase, background: "rgba(255,255,255,0.1)" }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="2" width="8" height="8" rx="1" />
+                <rect x="14" y="2" width="8" height="8" rx="1" />
+                <rect x="2" y="14" width="8" height="8" rx="1" />
+                <rect x="14" y="14" width="4" height="4" rx="0" />
+                <line x1="22" y1="14" x2="22" y2="14.01" />
+                <line x1="22" y1="18" x2="22" y2="22" />
+                <line x1="18" y1="22" x2="18" y2="22.01" />
+              </svg>
+            </div>
+            <span style={{ fontSize: 12, fontWeight: 500, color: "rgba(255,255,255,0.8)", margin: 0 }}>QR Kod</span>
+          </button>
 
           {/* Copy Link */}
           <button onClick={handleCopyLink} style={optionBtnStyle} aria-label="Linki kopyala">
@@ -248,6 +267,13 @@ export function ShareSheet({ url, title = "", isOpen, onClose }: ShareSheetProps
           <p style={{ margin: 0, fontSize: 15, color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{url}</p>
         </div>
       </div>
+
+      {/* QR Code Modal (overlays on top of ShareSheet) */}
+      {showQR && (
+        <Suspense fallback={null}>
+          <QRCodeModal url={url} title={title} isOpen={showQR} onClose={() => setShowQR(false)} />
+        </Suspense>
+      )}
     </div>,
     document.body
   );

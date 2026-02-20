@@ -51,12 +51,13 @@ export default function PaymentPage() {
 
     const initiatePayment = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) {
           toast.error("Giriş yapılmadı");
           router.push("/login");
           return;
         }
+        const user = session.user;
 
         const response = await fetch("/api/payment/payttr/initiate", {
           method: "POST",

@@ -42,11 +42,12 @@ export default function AffiliateApplyPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (!authUser) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) {
           router.push("/login");
           return;
         }
+        const authUser = session.user;
         setUser(authUser);
 
         const { data: profileData } = await supabase
@@ -230,7 +231,7 @@ export default function AffiliateApplyPage() {
               </div>
               <div>
                 <h2 className="text-xl font-bold">Affiliate Programına Başvur</h2>
-                <p className="text-sm text-zinc-500">Takipçilerinize özel indirim linkleri oluşturun, her satıştan %15-%30 komisyon kazanın.</p>
+                <p className="text-sm text-zinc-500">Takipçilerinize özel indirim linkleri oluşturun, her satıştan %10-%30 komisyon kazanın.</p>
               </div>
             </div>
 

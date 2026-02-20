@@ -48,8 +48,9 @@ export default function AffiliateTransactionsPage() {
   }, [period]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.push("/login"); return; }
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) { router.push("/login"); return; }
+    const user = session.user;
 
     const { data: profile } = await supabase
       .from("profiles")
@@ -180,7 +181,7 @@ export default function AffiliateTransactionsPage() {
               <button
                 onClick={loadMore}
                 disabled={loadingMore}
-                className="w-full mt-4 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-sm font-medium text-zinc-400 transition disabled:opacity-50"
+                className="w-full mt-4 py-3 bg-white/10 hover:bg-white/15 rounded-full text-sm font-medium text-white/60 transition disabled:opacity-50"
               >
                 {loadingMore ? "Yükleniyor..." : "Daha Fazla Göster"}
               </button>

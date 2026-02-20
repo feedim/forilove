@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const MIN_PAYOUT = 100;
-const TOTAL_ALLOCATION = 35;
+const TOTAL_ALLOCATION = 30;
 const AUTO_PAYOUT_INTERVAL_DAYS = 7;
 
 async function verifyAffiliate(supabase: Awaited<ReturnType<typeof createClient>>) {

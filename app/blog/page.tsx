@@ -15,7 +15,7 @@ interface Props {
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const { page } = await searchParams
   const currentPage = Math.max(1, parseInt(page || '1', 10) || 1)
-  const allPosts = getAllPosts()
+  const allPosts = await getAllPosts()
   const totalPages = Math.ceil(allPosts.length / POSTS_PER_PAGE)
   const safePage = Math.min(currentPage, Math.max(totalPages, 1))
 
@@ -66,7 +66,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 
 export default async function BlogPage({ searchParams }: Props) {
   const { page } = await searchParams
-  const allPosts = getAllPosts()
+  const allPosts = await getAllPosts()
   const totalPages = Math.ceil(allPosts.length / POSTS_PER_PAGE)
   const currentPage = Math.min(Math.max(1, parseInt(page || '1', 10) || 1), Math.max(totalPages, 1))
 

@@ -1,9 +1,13 @@
 import Link from "next/link";
-import DOMPurify from "isomorphic-dompurify";
 import { Heart, Coins, Bookmark, Eye, Users } from "lucide-react";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { isDiscountActive } from "@/lib/discount";
 import { ShareSheet } from "@/components/ShareIconButton";
+
+interface TagInfo {
+  name: string;
+  slug: string;
+}
 
 interface TemplateCardProps {
   template: any;
@@ -19,6 +23,8 @@ interface TemplateCardProps {
   exploreViewCount?: number;
   /** If set, iframe uses src instead of srcDoc (for showing customized project preview) */
   previewUrl?: string;
+  /** Tags to display as pills on the card */
+  tags?: TagInfo[];
 }
 
 // CSS override: fl-anim elements start at opacity:0 waiting for IntersectionObserver.
@@ -42,11 +48,45 @@ export default function TemplateCard({
   exploreSlug,
   exploreViewCount = 0,
   previewUrl,
+  tags = [],
 }: TemplateCardProps) {
   const isPublished = template.projectStatus === 'published';
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const hasDiscount = isDiscountActive(template);
   const [shareOpen, setShareOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // Lazy render: only mount iframe when card enters viewport
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // Dynamic import: DOMPurify only loads on client when card is visible
+  const [sanitizedHtml, setSanitizedHtml] = useState("");
+  useEffect(() => {
+    if (!isVisible || !template.html_content) return;
+    import("isomorphic-dompurify").then(({ default: DOMPurify }) => {
+      const clean = DOMPurify.sanitize(template.html_content, {
+        WHOLE_DOCUMENT: true,
+        ADD_TAGS: ["style", "link"],
+        ADD_ATTR: ["data-editable", "data-type", "data-label", "data-locked"],
+      });
+      setSanitizedHtml(injectPreviewCSS(clean));
+    });
+  }, [template.html_content, isVisible]);
 
   // Deterministic fake social proof count (80–329 range) for templates with 0 purchases
   const socialProofCount = template.purchase_count > 0
@@ -64,12 +104,17 @@ export default function TemplateCard({
 
   return (
     <div
+      ref={cardRef}
       className="group relative aspect-[3/4] bg-zinc-900 overflow-hidden border border-white/10 hover:border-pink-500/30 transition-all cursor-pointer"
       style={{ borderRadius: '29px' }}
     >
       {/* Template Preview */}
       <div className="absolute inset-0 overflow-hidden bg-zinc-900">
-        {previewUrl ? (
+        {!isVisible ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Heart className="h-12 w-12 text-pink-500/20" aria-hidden="true" />
+          </div>
+        ) : previewUrl ? (
           <iframe
             ref={iframeRef}
             src={previewUrl}
@@ -78,10 +123,10 @@ export default function TemplateCard({
             sandbox="allow-same-origin"
             loading="lazy"
           />
-        ) : template.html_content ? (
+        ) : sanitizedHtml ? (
           <iframe
             ref={iframeRef}
-            srcDoc={injectPreviewCSS(DOMPurify.sanitize(template.html_content, { WHOLE_DOCUMENT: true, ADD_TAGS: ['style', 'link'], ADD_ATTR: ['data-editable', 'data-type', 'data-label', 'data-locked'] }))}
+            srcDoc={sanitizedHtml}
             className="w-full h-full pointer-events-none scale-[0.3] origin-top-left"
             style={{ width: '333%', height: '333%' }}
             sandbox="allow-same-origin"
@@ -168,9 +213,22 @@ export default function TemplateCard({
         <div>
           <h3 className="text-2xl font-bold mb-2 truncate">{template.name}</h3>
           {template.description && (
-            <p className="text-sm text-zinc-400 mb-4 line-clamp-2">
+            <p className="text-sm text-zinc-400 mb-2 line-clamp-2">
               {template.description}
             </p>
+          )}
+          {tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-3" onClick={(e) => e.stopPropagation()}>
+              {tags.map((tag) => (
+                <Link
+                  key={tag.slug}
+                  href={`/tag/${tag.slug}`}
+                  className="text-[11px] px-2.5 py-1 rounded-full bg-white/10 hover:bg-pink-500/30 text-zinc-300 hover:text-white transition-colors pointer-events-auto"
+                >
+                  {tag.name}
+                </Link>
+              ))}
+            </div>
           )}
 
           {exploreMode ? (

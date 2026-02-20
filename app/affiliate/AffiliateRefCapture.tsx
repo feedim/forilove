@@ -17,19 +17,19 @@ export default function AffiliateRefCapture() {
 
       // If user is logged in, persist to profile (only if not already set)
       const supabase = createClient();
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        if (user) {
+      supabase.auth.getSession().then(({ data: { session } }: any) => {
+        if (session?.user) {
           supabase
             .from("profiles")
             .select("affiliate_referral_code")
-            .eq("user_id", user.id)
+            .eq("user_id", session.user.id)
             .single()
-            .then(({ data: profile }) => {
+            .then(({ data: profile }: any) => {
               if (profile && !profile.affiliate_referral_code) {
                 supabase
                   .from("profiles")
                   .update({ affiliate_referral_code: code })
-                  .eq("user_id", user.id)
+                  .eq("user_id", session.user.id)
                   .then(() => {});
               }
             });

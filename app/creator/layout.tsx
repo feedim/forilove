@@ -16,12 +16,13 @@ export default function CreatorLayout({
 
   useEffect(() => {
     const checkCreatorAccess = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
 
-      if (!user) {
+      if (!session?.user) {
         router.push('/login');
         return;
       }
+      const user = session.user;
 
       const { data: profile } = await supabase
         .from('profiles')

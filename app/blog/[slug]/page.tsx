@@ -8,19 +8,16 @@ import PostMeta from '@/components/blog/PostMeta'
 import BlogJsonLd from '@/components/blog/BlogJsonLd'
 import { getAllPosts, getPostBySlug } from '@/lib/blog/posts'
 import { BLOG_BASE_URL, BLOG_SEO } from '@/lib/blog/constants'
+import BlogContentRenderer from '@/components/blog/BlogContentRenderer'
 import BlogShareButton from './BlogShareButton'
 
 interface Props {
   params: Promise<{ slug: string }>
 }
 
-export async function generateStaticParams() {
-  return getAllPosts().map((post) => ({ slug: post.slug }))
-}
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const post = getPostBySlug(slug)
+  const post = await getPostBySlug(slug)
   if (!post) return {}
 
   const url = `${BLOG_BASE_URL}/blog/${post.slug}`
@@ -59,10 +56,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function BlogPostPage({ params }: Props) {
   const { slug } = await params
-  const post = getPostBySlug(slug)
+  const post = await getPostBySlug(slug)
   if (!post) notFound()
 
-  const otherPosts = getAllPosts().filter((p) => p.slug !== slug).slice(0, 3)
+  const otherPosts = (await getAllPosts()).filter((p) => p.slug !== slug).slice(0, 3)
   const postUrl = `${BLOG_BASE_URL}/blog/${post.slug}`
 
   return (
@@ -80,10 +77,7 @@ export default async function BlogPostPage({ params }: Props) {
           <PostMeta date={post.date} readTime={post.readTime} />
         </header>
 
-        <article
-          className="prose-blog"
-          dangerouslySetInnerHTML={{ __html: post.content }}
-        />
+        <BlogContentRenderer content={post.content} />
 
         {otherPosts.length > 0 && (
           <section className="mt-16">

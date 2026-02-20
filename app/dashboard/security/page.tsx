@@ -58,8 +58,9 @@ export default function SecurityPage() {
 
   const loadData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/login"); return; }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) { router.push("/login"); return; }
+      const user = session.user;
 
       setUserEmail(user.email || "");
 

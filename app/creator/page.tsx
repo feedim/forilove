@@ -36,11 +36,12 @@ export default function CreatorDashboard() {
 
   const checkAccess = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
         router.push("/login");
         return;
       }
+      const user = session.user;
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -79,8 +80,9 @@ export default function CreatorDashboard() {
 
   const handleDelete = async (templateId: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const user = session.user;
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -101,7 +103,7 @@ export default function CreatorDashboard() {
 
       // 2. Delete R2 images and related data from projects
       if (projects && projects.length > 0) {
-        const projectIds = projects.map(p => p.id);
+        const projectIds = projects.map((p: any) => p.id);
 
         // Delete saved_projects references
         await supabase
@@ -157,8 +159,9 @@ export default function CreatorDashboard() {
   const loadMore = async () => {
     setLoadingMore(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session: s } } = await supabase.auth.getSession();
+      if (!s?.user) return;
+      const user = s.user;
 
       const { data: moreTemplates } = await supabase
         .from("templates")

@@ -1,6 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 
-const TOTAL_ALLOCATION = 35;
+const TOTAL_ALLOCATION = 30;
 const REFERRAL_COMMISSION_RATE = 0.05; // 5%
 
 /**

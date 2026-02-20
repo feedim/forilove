@@ -23,38 +23,32 @@ function RegisterForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [referralCode, setReferralCode] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
 
   // Zaten giriş yapmışsa dashboard'a yönlendir
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) router.replace("/dashboard");
+    supabase.auth.getSession().then(({ data: { session } }: any) => {
+      if (session?.user) router.replace("/dashboard");
     });
   }, [supabase, router]);
 
   useEffect(() => {
-    // Get referral code from URL (alphanumeric only, max 20 chars)
-    const refCode = searchParams.get('ref');
-    if (refCode && /^[a-zA-Z0-9]{1,20}$/.test(refCode)) {
-      setReferralCode(refCode);
-      toast.success(`Referans kodu uygulandı: ${refCode}`);
-    }
-
     // Get promo code from URL
     const promoCode = searchParams.get('promo');
     if (promoCode && /^[a-zA-Z0-9]{3,20}$/.test(promoCode)) {
       localStorage.setItem('forilove_pending_promo', promoCode);
+      // Clean ?promo= from URL after capturing
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("promo");
+        window.history.replaceState({}, "", url.pathname + (url.search || "") + url.hash);
+      } catch {}
     }
   }, [searchParams]);
 
   const handleOAuthLogin = async (provider: 'google') => {
-    if (referralCode) {
-      sessionStorage.setItem('forilove_pending_referral', referralCode);
-    }
-
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
@@ -118,30 +112,6 @@ function RegisterForm() {
           await supabase.from("profiles")
             .update({ affiliate_referral_code: storedAffRef })
             .eq("user_id", data.user.id);
-        }
-
-        // Process referral if code was provided
-        if (referralCode) {
-          try {
-            // Wait a bit more to ensure profile is fully created
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            const { data: referralData, error: referralError } = await supabase.rpc(
-              'process_referral_signup',
-              {
-                p_new_user_id: data.user.id,
-                p_referral_code: referralCode
-              }
-            );
-
-            if (referralError) {
-              // Referans hatası kayıt işlemini engellemesin
-            } else if (referralData?.success) {
-              toast.success("Referans bağlantısı kaydedildi! Sizi davet eden kişi, bakiye aldığınızda %5 bonus kazanacak.");
-            }
-          } catch (err: any) {
-            // Referans hatası kayıt işlemini engellemesin
-          }
         }
       }
 

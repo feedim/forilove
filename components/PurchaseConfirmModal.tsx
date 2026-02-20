@@ -121,11 +121,11 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
       (async () => {
         setCouponLoading(true);
         try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user) return;
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session?.user) return;
           const { data } = await supabase.rpc('validate_coupon', {
             p_code: storedPromo,
-            p_user_id: user.id,
+            p_user_id: session.user.id,
           });
           if (data?.valid) {
             setAppliedCoupon({ code: storedPromo, couponId: data.coupon_id, discountPercent: data.discount_percent });
@@ -142,15 +142,15 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
     setCouponLoading(true);
     setCouponError(null);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session: s } } = await supabase.auth.getSession();
+      if (!s?.user) {
         setCouponError("Oturum bulunamadı");
         return;
       }
 
       const { data, error } = await supabase.rpc('validate_coupon', {
         p_code: trimmed,
-        p_user_id: user.id,
+        p_user_id: s.user.id,
       });
 
       if (error) {

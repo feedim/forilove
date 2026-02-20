@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSearchParams, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -12,78 +12,92 @@ export default function PromoBanner() {
   const [promoInfo, setPromoInfo] = useState<{ code: string; discount: number } | null>(null);
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  const didInit = useRef(false);
 
+  // Capture ?promo=CODE from URL — only when searchParams change
   useEffect(() => {
-    const init = async () => {
-      // 1. ALWAYS capture ?promo=CODE from URL first (works for both logged-in and guest users)
-      const urlPromo = searchParams.get("promo");
-      if (urlPromo && /^[a-zA-Z0-9]{3,20}$/.test(urlPromo)) {
-        const normalizedCode = urlPromo.toUpperCase();
-        localStorage.setItem(PROMO_STORAGE_KEY, normalizedCode);
-        try {
-          const res = await fetch(`/api/promo/check?code=${normalizedCode}`);
-          const data = await res.json();
-          if (data.valid) {
-            localStorage.setItem(PROMO_INFO_KEY, JSON.stringify({ code: normalizedCode, discount: data.discount_percent }));
-          } else {
-            localStorage.removeItem(PROMO_STORAGE_KEY);
-            localStorage.removeItem(PROMO_INFO_KEY);
+    const urlPromo = searchParams.get("promo");
+    if (!urlPromo || !/^[a-zA-Z0-9]{3,20}$/.test(urlPromo)) return;
+    const normalizedCode = urlPromo.toUpperCase();
+    localStorage.setItem(PROMO_STORAGE_KEY, normalizedCode);
+
+    // Clean ?promo= from URL after capturing
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("promo");
+      window.history.replaceState({}, "", url.pathname + (url.search || "") + url.hash);
+    } catch {}
+
+    fetch(`/api/promo/check?code=${normalizedCode}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.valid) {
+          localStorage.setItem(PROMO_INFO_KEY, JSON.stringify({ code: normalizedCode, discount: data.discount_percent }));
+          // Don't show banner for 0% discount (tracking-only codes)
+          if (data.discount_percent > 0) {
+            setPromoInfo({ code: normalizedCode, discount: data.discount_percent });
           }
-        } catch {
-          // Network error - keep the code stored
-        }
-      }
-
-      // Don't show banner on dashboard, editor, or preview pages
-      if (pathname?.startsWith("/dashboard") || pathname?.startsWith("/editor") || pathname?.startsWith("/preview") || pathname?.startsWith("/p/")) {
-        setPromoInfo(null);
-        return;
-      }
-
-      // Banner only for guests — logged-in users get auto-apply via PurchaseConfirmModal
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        localStorage.removeItem(PROMO_INFO_KEY);
-        setPromoInfo(null);
-        return;
-      }
-
-      // Check if banner was dismissed within last 5 minutes
-      const dismissedAt = localStorage.getItem(PROMO_DISMISSED_KEY);
-      if (dismissedAt && Date.now() - parseInt(dismissedAt) < 5 * 60 * 1000) {
-        setPromoInfo(null);
-        return;
-      }
-
-      // Show banner from localStorage — re-validate against API
-      const stored = localStorage.getItem(PROMO_INFO_KEY);
-      if (stored) {
-        try {
-          const info = JSON.parse(stored);
-          if (info.code && info.discount) {
-            // Re-validate: promo silinmiş veya geçersiz olabilir
-            const res = await fetch(`/api/promo/check?code=${info.code}`);
-            const data = await res.json();
-            if (data.valid) {
-              setPromoInfo({ code: info.code, discount: data.discount_percent });
-              localStorage.setItem(PROMO_INFO_KEY, JSON.stringify({ code: info.code, discount: data.discount_percent }));
-            } else {
-              // Promo artık geçersiz — temizle
-              localStorage.removeItem(PROMO_STORAGE_KEY);
-              localStorage.removeItem(PROMO_INFO_KEY);
-              setPromoInfo(null);
-            }
-          }
-        } catch {
+        } else {
+          localStorage.removeItem(PROMO_STORAGE_KEY);
           localStorage.removeItem(PROMO_INFO_KEY);
         }
-      } else {
-        setPromoInfo(null);
+      })
+      .catch(() => {});
+  }, [searchParams]);
+
+  // Show/hide banner — runs once on mount, then only on pathname change (cheap checks only)
+  useEffect(() => {
+    // Don't show on dashboard, editor, or preview pages
+    if (pathname?.startsWith("/dashboard") || pathname?.startsWith("/editor") || pathname?.startsWith("/preview") || pathname?.startsWith("/p/")) {
+      setPromoInfo(null);
+      return;
+    }
+
+    // Check if dismissed recently
+    const dismissedAt = localStorage.getItem(PROMO_DISMISSED_KEY);
+    if (dismissedAt && Date.now() - parseInt(dismissedAt) < 5 * 60 * 1000) {
+      setPromoInfo(null);
+      return;
+    }
+
+    // Show from localStorage cache (no API call on every navigation)
+    const stored = localStorage.getItem(PROMO_INFO_KEY);
+    if (stored) {
+      try {
+        const info = JSON.parse(stored);
+        if (info.code && info.discount > 0) {
+          setPromoInfo({ code: info.code, discount: info.discount });
+
+          // Re-validate in background only once per session
+          if (!didInit.current) {
+            didInit.current = true;
+            const supabase = createClient();
+            supabase.auth.getSession().then(({ data: { session } }: { data: { session: any } }) => {
+              if (session?.user) {
+                localStorage.removeItem(PROMO_INFO_KEY);
+                setPromoInfo(null);
+                return;
+              }
+              fetch(`/api/promo/check?code=${info.code}`)
+                .then(r => r.json())
+                .then(data => {
+                  if (!data.valid) {
+                    localStorage.removeItem(PROMO_STORAGE_KEY);
+                    localStorage.removeItem(PROMO_INFO_KEY);
+                    setPromoInfo(null);
+                  }
+                })
+                .catch(() => {});
+            });
+          }
+        }
+      } catch {
+        localStorage.removeItem(PROMO_INFO_KEY);
       }
-    };
-    init();
-  }, [searchParams, pathname]);
+    } else {
+      setPromoInfo(null);
+    }
+  }, [pathname]);
 
   // Listen for promo cleared event (from dashboard after signup)
   useEffect(() => {

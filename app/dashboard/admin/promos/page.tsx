@@ -9,8 +9,8 @@ import toast from "react-hot-toast";
 import { isBlockedPromoCode } from "@/lib/promo-blocklist";
 
 const ITEMS_PER_PAGE = 10;
-const MAX_AFFILIATE_PROMOS = 4;
-const AFFILIATE_DISCOUNT_OPTIONS = [5, 10, 15, 20];
+const MAX_AFFILIATE_PROMOS = 5;
+const AFFILIATE_DISCOUNT_OPTIONS = [0, 5, 10, 15, 20];
 
 export default function AdminPromosPage() {
   const [loading, setLoading] = useState(true);
@@ -37,8 +37,9 @@ export default function AdminPromosPage() {
 
   const loadData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/login"); return; }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) { router.push("/login"); return; }
+      const user = session.user;
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -69,6 +70,9 @@ export default function AdminPromosPage() {
         if (res.ok) {
           const data = await res.json();
           setPromos(data.promos || []);
+          if (data.promos && data.promos.length > 0) {
+            setSelectedPromoCode(data.promos[0].code || "");
+          }
         }
       } else {
         const res = await fetch("/api/affiliate/promos");
@@ -270,7 +274,7 @@ export default function AdminPromosPage() {
                   {isAffiliate ? (
                     <div>
                       <label className="block text-xs text-zinc-400 mb-1.5">İndirim Oranı</label>
-                      <div className="grid grid-cols-4 gap-2">
+                      <div className="grid grid-cols-5 gap-2">
                         {AFFILIATE_DISCOUNT_OPTIONS.map((d) => {
                           const taken = usedDiscounts.has(d);
                           const selected = promoForm.discountPercent === d;
@@ -293,7 +297,7 @@ export default function AdminPromosPage() {
                           );
                         })}
                       </div>
-                      <p className="text-xs text-zinc-500 mt-2">Komisyonunuz: %{35 - promoForm.discountPercent} · Her indirim oranından 1 adet oluşturulabilir.</p>
+                      <p className="text-xs text-zinc-500 mt-2">Komisyonunuz: %{30 - promoForm.discountPercent} · Her indirim oranından 1 adet oluşturulabilir.</p>
                     </div>
                   ) : (
                     <>
@@ -399,7 +403,7 @@ export default function AdminPromosPage() {
                             </span>
                             {isAffiliate && (
                               <span className="text-xs bg-green-600/20 text-green-400 px-2 py-0.5 rounded-full">
-                                %{35 - promo.discount_percent} komisyon
+                                %{30 - promo.discount_percent} komisyon
                               </span>
                             )}
                           </div>
@@ -439,17 +443,17 @@ export default function AdminPromosPage() {
                 {visiblePromos < promos.length && (
                   <button
                     onClick={() => setVisiblePromos(prev => prev + ITEMS_PER_PAGE)}
-                    className="w-full py-2 text-sm text-pink-500 hover:text-pink-400 font-medium transition"
+                    className="w-full py-3 bg-white/10 hover:bg-white/15 rounded-full text-sm font-medium transition"
                   >
-                    Daha Fazla Göster ({promos.length - visiblePromos} kalan)
+                    Daha Fazla Göster
                   </button>
                 )}
               </div>
             )}
           </div>
 
-          {/* URL Generator — only for affiliates with promo codes */}
-          {isAffiliate && promos.length > 0 && (
+          {/* URL Generator */}
+          {promos.length > 0 && (
             <div className="bg-zinc-900 rounded-2xl p-6 mt-6">
               <div className="flex items-center gap-2 mb-4">
                 <Link2 className="h-5 w-5 text-pink-500" />
