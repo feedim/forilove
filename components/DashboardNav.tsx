@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Heart, ChevronDown, LogOut } from "lucide-react";
+import { Heart, ChevronDown, LogOut, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { CoinWallet } from "@/components/CoinWallet";
 
@@ -79,7 +79,12 @@ export default function DashboardNav() {
             </div>
           )}
         </div>
-        <CoinWallet />
+        <Link href="/dashboard/profile" className="md:hidden flex items-center justify-center w-9 h-9 rounded-full bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white transition" aria-label="Profil">
+          <User className="h-5 w-5" />
+        </Link>
+        <div className="hidden md:block">
+          <CoinWallet />
+        </div>
       </div>
     </nav>
   );

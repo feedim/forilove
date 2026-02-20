@@ -177,9 +177,6 @@ export default function Home() {
               <Link href="/templates" className="btn-secondary px-4 py-3 sm:px-8">
                 Şablonlar
               </Link>
-              <Link href="/paketler" className="btn-secondary px-4 py-3 sm:px-8">
-                Paketler
-              </Link>
               <Link href="/register" className="btn-primary px-4 py-3 sm:px-8">
                   Ücretsiz Başla
               </Link>
