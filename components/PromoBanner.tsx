@@ -48,7 +48,7 @@ export default function PromoBanner() {
   // Show/hide banner — runs once on mount, then only on pathname change (cheap checks only)
   useEffect(() => {
     // Don't show on dashboard, editor, or preview pages
-    if (pathname?.startsWith("/dashboard") || pathname?.startsWith("/editor") || pathname?.startsWith("/preview") || pathname?.startsWith("/p/")) {
+    if (pathname?.startsWith("/dashboard") || pathname?.startsWith("/editor") || pathname?.startsWith("/preview") || pathname?.startsWith("/p/") || pathname?.startsWith("/creator")) {
       setPromoInfo(null);
       return;
     }
