@@ -1,0 +1,472 @@
+"use client";
+
+import { useEffect, useState, useRef, useCallback } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Heart, Shield, CreditCard, Headphones, RefreshCcw, Smartphone, Star, ArrowRight, Image, Music, MessageSquare, Clock, Link2, ChevronDown, Check } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import PublicHeader from "@/components/PublicHeader";
+import PublicFooter from "@/components/PublicFooter";
+import CTASection from "@/components/CTASection";
+import TemplateCard from "@/components/TemplateCard";
+import { TemplateGridSkeleton } from "@/components/Skeletons";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
+
+// --- Counter Animation ---
+function useCountUp(target: number, duration = 1500, isVisible: boolean, decimals = 0) {
+  const [value, setValue] = useState(0);
+  const rafRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    const start = performance.now();
+    const animate = (now: number) => {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(parseFloat((eased * target).toFixed(decimals)));
+      if (progress < 1) {
+        rafRef.current = requestAnimationFrame(animate);
+      }
+    };
+    rafRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [isVisible, target, duration, decimals]);
+
+  return value;
+}
+
+// --- Trust Badges Data ---
+const trustBadges = [
+  { icon: Shield, label: "SSL Güvenli" },
+  { icon: CreditCard, label: "Güvenli Ödeme" },
+  { icon: Headphones, label: "7/24 Destek" },
+  { icon: RefreshCcw, label: "İade Garantisi" },
+  { icon: Smartphone, label: "Mobil Uyumlu" },
+];
+
+// --- Testimonials Data ---
+const testimonials = [
+  {
+    name: "Elif Y.",
+    context: "1. yıldönümü sayfası hazırladı",
+    text: "Sevgilime sürpriz olsun diye gece 2'de hazırladım, sabah linki açınca ağladı resmen. Fotoğrafları koydum, şarkımızı ekledim, 10 dakikada bitti.",
+  },
+  {
+    name: "Burak K.",
+    context: "Doğum günü sayfası hazırladı",
+    text: "Hediye olarak ne alsam beğenmiyor, bu seferki farklıydı. WhatsApp'tan linki attım, 5 dakika sonra arayıp teşekkür etti. Keşke daha önce keşfetseydim.",
+  },
+  {
+    name: "Zeynep A.",
+    context: "Evlilik teklifi sayfası hazırladı",
+    text: "Teklif için restoranda tabletten açtım sayfayı. Müziğimiz çalmaya başlayınca anladı ve gözleri doldu. Hayatımın en güzel anıydı.",
+  },
+];
+
+// --- Features Data ---
+const features = [
+  { icon: Image, title: "Fotoğraf & Galeri", desc: "Birlikte çektiğiniz fotoğrafları yükleyin, otomatik galeri oluşsun. Slayt gösterisi olarak izlenebilir." },
+  { icon: Music, title: "Müzik Ekleme", desc: "Şarkınızı ekleyin, sayfa açıldığında otomatik çalsın. Spotify veya dosya yükleme destekli." },
+  { icon: MessageSquare, title: "Özel Mesajlar", desc: "Kendi cümlelerinizi yazın, başlıkları düzenleyin. Her metin alanı tamamen size ait." },
+  { icon: Clock, title: "Geri Sayım", desc: "Özel tarihinize geri sayım ekleyin. Yıldönümü, doğum günü veya herhangi bir tarih için." },
+  { icon: Link2, title: "Özel Link", desc: "forilove.com/p/sizin-link şeklinde kendi özel adresinizi alın. WhatsApp'tan kolayca paylaşın." },
+  { icon: Smartphone, title: "Mobil Uyumlu", desc: "Tüm sayfalar telefon, tablet ve bilgisayardan kusursuz görünür. Ekstra ayar gerekmez." },
+];
+
+// --- Why Forilove Data ---
+const whyForilove = [
+  { title: "Kod bilgisi sıfır", desc: "Tıkla, yaz, yükle. Teknik bilgi gerektirmeden profesyonel sayfalar oluşturun." },
+  { title: "10 dakikada hazır", desc: "Şablon seç, özelleştir, paylaş. Tüm süreç ortalama 10 dakika.", icon: Clock },
+  { title: "Verileriniz güvende", desc: "SSL şifreleme, güvenli altyapı. Fotoğraflarınız ve bilgileriniz korunur.", icon: Shield },
+  { title: "Memnuniyet garantisi", desc: "Beğenmezseniz iade. Hiçbir risk almadan deneyin.", icon: RefreshCcw },
+];
+
+// --- FAQ Data ---
+const faqItems = [
+  { q: "Forilove nedir, ne işe yarar?", a: "Forilove, sevdikleriniz için kod bilgisi olmadan özel web sayfaları oluşturmanızı sağlayan bir platformdur. Fotoğraflarınızı, mesajlarınızı ve müziğinizi ekleyip tek bir link ile paylaşabilirsiniz." },
+  { q: "Ücretsiz deneyebilir miyim?", a: "Evet, ücretsiz şablonlar mevcuttur. Kayıt olup hemen deneyebilirsiniz, kredi kartı gerekmez." },
+  { q: "Sayfam ne kadar süre yayında kalır?", a: "Yayınladığınız sayfalar süresiz olarak aktif kalır. Dilediğiniz zaman düzenleyebilir veya kaldırabilirsiniz." },
+  { q: "İade yapabilir miyim?", a: "Evet, satın alma sonrası memnun kalmazsanız iade politikamız kapsamında iade talep edebilirsiniz." },
+];
+
+export default function Home() {
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const supabase = createClient();
+  const router = useRouter();
+
+  // Scroll reveal refs
+  const statsReveal = useScrollReveal();
+  const templateReveal = useScrollReveal();
+  const featuresReveal = useScrollReveal();
+  const trustReveal = useScrollReveal();
+  const whyReveal = useScrollReveal();
+  const testimonialReveal = useScrollReveal();
+  const faqReveal = useScrollReveal();
+
+  // Counter values
+  const usersCount = useCountUp(1000, 1500, statsReveal.isVisible);
+  const sharesCount = useCountUp(50000, 1800, statsReveal.isVisible);
+  const ratingCount = useCountUp(4.9, 1200, statsReveal.isVisible, 1);
+
+  // Fetch templates
+  useEffect(() => {
+    const loadTemplates = async () => {
+      try {
+        const { data } = await supabase
+          .from("templates")
+          .select("*")
+          .eq("is_active", true)
+          .eq("is_public", true)
+          .order("purchase_count", { ascending: false, nullsFirst: false })
+          .limit(12);
+
+        // Client-side: ucretsiz once, sonra populerlik
+        const sorted = (data || []).sort((a: any, b: any) => {
+          const aFree = a.coin_price === 0 ? 0 : 1;
+          const bFree = b.coin_price === 0 ? 0 : 1;
+          if (aFree !== bFree) return aFree - bFree;
+          return (b.purchase_count || 0) - (a.purchase_count || 0);
+        }).slice(0, 6);
+        setTemplates(sorted);
+      } catch (error) {
+        console.error("Error loading templates:", error);
+      } finally {
+        setLoadingTemplates(false);
+      }
+    };
+    loadTemplates();
+  }, []);
+
+  const formatCount = (n: number, suffix: string) => {
+    if (n >= 1000) return `${Math.floor(n / 1000)}K+`;
+    return `${n}${suffix}`;
+  };
+
+  return (
+    <div className="min-h-screen bg-black text-white">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "WebPage", name: "Forilove - Sevginizi Ölümsüzleştirin", description: "Kod bilgisi olmadan sevgilinize özel romantik web sayfaları oluşturun.", url: "https://forilove.com", isPartOf: { "@id": "https://forilove.com/#website" } }) }} />
+      <PublicHeader variant="home" />
+
+      {/* Hero Section */}
+      <section className="min-h-screen flex items-center justify-center py-20 -mt-20">
+        <div className="w-full px-4 sm:px-6 lg:px-10">
+          <div className="max-w-3xl mx-auto text-center">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-pink-500/10 border border-pink-500/20 mb-6 sm:mb-8">
+              <Heart className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-pink-500 fill-pink-500" aria-hidden="true" />
+              <span className="text-xs sm:text-sm text-zinc-300">Özel anlarınız için dijital sayfalar!</span>
+            </div>
+
+            {/* Main Title */}
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6" style={{ lineHeight: 1.1 }}>
+              Sevginizi dijitalde
+              <span className="block text-pink-500 mt-3">ölümsüzleştirin</span>
+            </h1>
+
+            {/* Description */}
+            <p className="text-base sm:text-lg md:text-xl text-zinc-400 mb-10 max-w-2xl mx-auto px-2">
+              Özel tasarlanmış şablonlar ile sevdikleriniz için unutulmaz anı sayfaları oluşturun.
+            </p>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-row items-center justify-center gap-3">
+              <Link href="/templates" className="btn-secondary px-4 py-3 sm:px-8">
+                Şablonlar
+              </Link>
+              <Link href="/register" className="btn-primary px-4 py-3 sm:px-8">
+                  Ücretsiz Başla
+              </Link>
+            </div>
+
+            {/* Stats with Counter Animation */}
+            <div ref={statsReveal.ref} className="mt-16 sm:mt-20 grid grid-cols-3 gap-6 sm:gap-8 max-w-xl mx-auto sm:pt-8 sm:border-t border-white/10">
+              <div>
+                <div className="text-2xl md:text-3xl font-bold text-white">
+                  {statsReveal.isVisible ? formatCount(usersCount, "") : "0"}
+                </div>
+                <div className="text-sm text-zinc-500 mt-1">Kullanıcı</div>
+              </div>
+              <div>
+                <div className="text-2xl md:text-3xl font-bold text-white">
+                  {statsReveal.isVisible ? formatCount(sharesCount, "") : "0"}
+                </div>
+                <div className="text-sm text-zinc-500 mt-1">Paylaşım</div>
+              </div>
+              <div>
+                <div className="text-2xl md:text-3xl font-bold text-white">
+                  {statsReveal.isVisible ? `${ratingCount}★` : "0★"}
+                </div>
+                <div className="text-sm text-zinc-500 mt-1">Puan</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Template Showcase */}
+      <section className="border-t border-white/10 pt-24 pb-8">
+        <div className="w-full px-4 sm:px-6 lg:px-10">
+          <div className="max-w-6xl mx-auto">
+            <div ref={templateReveal.ref} className={`text-center mb-12 ${templateReveal.isVisible ? 'animate-fade-up' : 'opacity-0'}`}>
+              <h2 className="text-2xl md:text-3xl font-bold mb-4">En Popüler Şablonlar</h2>
+              <p className="text-zinc-400 text-lg">Binlerce kişi tarafından tercih edilen şablonlar</p>
+            </div>
+
+            {loadingTemplates ? (
+              <TemplateGridSkeleton count={6} />
+            ) : templates.length > 0 ? (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {templates.map((template, index) => (
+                  <div
+                    key={template.id}
+                    className={templateReveal.isVisible ? 'animate-fade-up-scale' : 'opacity-0'}
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    <TemplateCard
+                      template={template}
+                      isPurchased={false}
+                      isSaved={false}
+                      showSaveButton={true}
+                      showPrice={true}
+                      onClick={() => { router.push(`/editor/${template.id}`); }}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {!loadingTemplates && templates.length > 0 && (
+              <div className={`text-center mt-10 ${templateReveal.isVisible ? 'animate-fade-up' : 'opacity-0'}`} style={{ animationDelay: '600ms' }}>
+                <Link href="/templates" className="btn-secondary px-8 py-3">
+                  Tüm Şablonları Gör
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Sayfanıza Neler Ekleyebilirsiniz? */}
+      <section className="border-t border-white/10 py-24">
+        <div className="w-full px-4 sm:px-6 lg:px-10">
+          <div className="max-w-5xl mx-auto">
+            <div ref={featuresReveal.ref} className={`text-center mb-16 ${featuresReveal.isVisible ? 'animate-fade-up' : 'opacity-0'}`}>
+              <h2 className="text-2xl md:text-3xl font-bold mb-4">Sayfanıza Neler Ekleyebilirsiniz?</h2>
+              <p className="text-zinc-400 text-lg">Her şablonda kullanabileceğiniz özellikler</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {features.map((f, i) => (
+                <div
+                  key={f.title}
+                  className={`border border-white/5 rounded-2xl p-6 ${featuresReveal.isVisible ? 'animate-fade-up' : 'opacity-0'}`}
+                  style={{ animationDelay: `${i * 50}ms` }}
+                >
+                  <f.icon className="h-8 w-8 text-pink-500 mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">{f.title}</h3>
+                  <p className="text-sm text-zinc-400 leading-relaxed">{f.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust Badges */}
+      <section className="py-8">
+        <div ref={trustReveal.ref} className={`w-full px-4 sm:px-6 lg:px-10 ${trustReveal.isVisible ? 'animate-fade-up' : 'opacity-0'}`}>
+          <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-center gap-6 sm:gap-10">
+            {trustBadges.map((badge) => (
+              <div key={badge.label} className="flex items-center gap-2">
+                <badge.icon className="h-5 w-5 text-pink-500" />
+                <span className="text-sm text-zinc-400">{badge.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section id="features" className="border-t border-white/10 py-24">
+        <div className="w-full px-6 lg:px-10">
+          <div className="max-w-4xl mx-auto">
+            {/* Section Header */}
+            <div className="text-center mb-16">
+              <h2 className="text-2xl md:text-3xl font-bold mb-4">Nasıl Çalışır?</h2>
+              <p className="text-zinc-400 text-lg">3 basit adımda anı sayfanızı oluşturun</p>
+            </div>
+
+            {/* Steps */}
+            <div className="space-y-0">
+              {/* Step 1 */}
+              <div className="flex gap-6 items-stretch">
+                <div className="flex-shrink-0 flex flex-col items-center">
+                  <div className="w-12 h-12 rounded-full bg-pink-500 flex items-center justify-center text-black font-bold text-xl shrink-0">
+                    1
+                  </div>
+                  <div className="w-px flex-1 bg-white/10" />
+                </div>
+                <div className="flex-1 pt-1 pb-12">
+                  <h3 className="text-xl font-bold mb-3">Şablon Seçin</h3>
+                  <p className="text-zinc-400 text-lg leading-relaxed mb-4">
+                    Özel günleriniz için tasarlanmış profesyonel şablonlar arasından beğendiğinizi seçin. Her biri farklı tema ve stilde.
+                  </p>
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-900 border border-white/5">
+                    <Heart className="h-5 w-5 sm:h-4 sm:w-4 text-pink-500 shrink-0" aria-hidden="true" />
+                    <span className="text-sm text-zinc-400">Yıldönümü, Doğum Günü, Evlilik Teklifi ve daha fazlası</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="flex gap-6 items-stretch">
+                <div className="flex-shrink-0 flex flex-col items-center">
+                  <div className="w-12 h-12 rounded-full bg-pink-500 flex items-center justify-center text-black font-bold text-xl shrink-0">
+                    2
+                  </div>
+                  <div className="w-px flex-1 bg-white/10" />
+                </div>
+                <div className="flex-1 pt-1 pb-12">
+                  <h3 className="text-xl font-bold mb-3">Özelleştirin</h3>
+                  <p className="text-zinc-400 text-lg leading-relaxed mb-4">
+                    Fotoğraflarınızı ekleyin, metinleri düzenleyin, renkleri değiştirin. Basit editörümüz ile her şeyi kolayca özelleştirin.
+                  </p>
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-900 border border-white/5">
+                    <svg className="h-5 w-5 sm:h-4 sm:w-4 text-pink-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                    <span className="text-sm text-zinc-400">Kod bilgisi gerektirmez, tıklayın ve düzenleyin</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="flex gap-6 items-start">
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-pink-500 flex items-center justify-center text-black font-bold text-xl">
+                    3
+                  </div>
+                </div>
+                <div className="flex-1 pt-1">
+                  <h3 className="text-xl font-bold mb-3">Paylaşın</h3>
+                  <p className="text-zinc-400 text-lg leading-relaxed mb-4">
+                    Özel linkinizi alın ve sevdiklerinizle paylaşın. WhatsApp, Instagram veya dilediğiniz platformda anında erişilebilir.
+                  </p>
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-900 border border-white/5">
+                    <svg className="h-5 w-5 sm:h-4 sm:w-4 text-pink-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                    </svg>
+                    <span className="text-sm text-zinc-400">Her cihazdan erişilebilir, mobil uyumlu</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* Neden Forilove? */}
+      <section className="border-t border-white/10 py-24">
+        <div className="w-full px-4 sm:px-6 lg:px-10">
+          <div className="max-w-4xl mx-auto">
+            <div ref={whyReveal.ref} className={`text-center mb-16 ${whyReveal.isVisible ? 'animate-fade-up' : 'opacity-0'}`}>
+              <h2 className="text-2xl md:text-3xl font-bold mb-4">Neden Forilove?</h2>
+              <p className="text-zinc-400 text-lg">Sadece bir şablon değil, bir deneyim</p>
+            </div>
+
+            <div className={`grid grid-cols-1 sm:grid-cols-2 gap-8 ${whyReveal.isVisible ? 'animate-fade-up' : 'opacity-0'}`} style={{ animationDelay: '100ms' }}>
+              {whyForilove.map((item, i) => (
+                <div key={item.title} className="flex gap-4">
+                  <div className="shrink-0 w-10 h-10 rounded-full border border-pink-500/30 flex items-center justify-center">
+                    {item.icon ? (
+                      <item.icon className="h-5 w-5 text-pink-500" />
+                    ) : (
+                      <Check className="h-5 w-5 text-pink-500" />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-1">{item.title}</h3>
+                    <p className="text-sm text-zinc-400">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="border-t border-white/10 py-24">
+        <div className="w-full px-4 sm:px-6 lg:px-10">
+          <div className="max-w-5xl mx-auto">
+            <div ref={testimonialReveal.ref} className={`text-center mb-12 ${testimonialReveal.isVisible ? 'animate-fade-up' : 'opacity-0'}`}>
+              <h2 className="text-xl md:text-2xl font-bold mb-4">Kullanıcılarımız Ne Diyor?</h2>
+              <p className="text-zinc-400 text-lg">Gerçek kullanıcılardan gerçek hikayeler</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {testimonials.map((t, index) => (
+                <div
+                  key={t.name}
+                  className={`bg-zinc-900 border border-white/10 rounded-2xl p-6 ${testimonialReveal.isVisible ? 'animate-fade-up-scale' : 'opacity-0'}`}
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
+                  <div className="flex gap-0.5 mb-4">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} className="h-4 w-4 text-pink-500 fill-pink-500" />
+                    ))}
+                  </div>
+                  <p className="text-zinc-300 mb-4 leading-relaxed">&ldquo;{t.text}&rdquo;</p>
+                  <p className="text-sm font-semibold text-white">{t.name}</p>
+                  <p className="text-xs text-zinc-500 mt-0.5">{t.context}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Sıkça Sorulan Sorular */}
+      <section className="border-t border-white/10 py-24">
+        <div className="w-full px-4 sm:px-6 lg:px-10">
+          <div className="max-w-3xl mx-auto">
+            <div ref={faqReveal.ref} className={`text-center mb-12 ${faqReveal.isVisible ? 'animate-fade-up' : 'opacity-0'}`}>
+              <h2 className="text-2xl md:text-3xl font-bold mb-4">Sıkça Sorulan Sorular</h2>
+            </div>
+
+            <div className={`space-y-3 ${faqReveal.isVisible ? 'animate-fade-up' : 'opacity-0'}`} style={{ animationDelay: '100ms' }}>
+              {faqItems.map((faq, i) => (
+                <div key={i} className="border border-white/5 rounded-xl overflow-hidden">
+                  <button
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    className="w-full flex items-center justify-between px-6 py-4 text-left cursor-pointer"
+                  >
+                    <span className="font-medium">{faq.q}</span>
+                    <ChevronDown
+                      className={`h-5 w-5 text-zinc-500 shrink-0 ml-4 transition-transform duration-200 ${openFaq === i ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                  <div
+                    className="overflow-hidden transition-all duration-200"
+                    style={{ maxHeight: openFaq === i ? '200px' : '0px', opacity: openFaq === i ? 1 : 0 }}
+                  >
+                    <p className="px-6 pb-4 text-sm text-zinc-400 leading-relaxed">{faq.a}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <CTASection />
+
+      <PublicFooter />
+    </div>
+  );
+}
