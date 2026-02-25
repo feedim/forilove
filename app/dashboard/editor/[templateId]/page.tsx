@@ -13,6 +13,7 @@ import { usePurchaseConfirm } from '@/components/PurchaseConfirmModal';
 import { isDiscountActive } from '@/lib/discount';
 import { AI_COST, TEMPLATE_UNLOCK_COST } from '@/lib/constants';
 import type { CouponInfo } from '@/components/PurchaseConfirmModal';
+import { trackEvent } from '@/lib/pixels';
 import MusicPickerModal from '@/components/MusicPickerModal';
 import { useAuthModal } from '@/components/AuthModal';
 import EditorTour from '@/components/EditorTour';
@@ -1527,7 +1528,7 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
       }
 
       if (coinPrice > 0) toast.success("Satın alındı!");
-      try { (window as any).ttq?.track('PlaceAnOrder', { content_type: 'product', content_id: template.id, content_name: template.name }); } catch {}
+      trackEvent('PlaceAnOrder', { content_type: 'product', content_id: template.id, content_name: template.name });
       setIsPurchased(true);
 
       // Proje oluştur (yoksa)
@@ -1647,7 +1648,7 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
       // 4) Ücretsiz şablon → kaydet ve profile yönlendir (details modal'ı atla)
       if (effectivePrice === 0) {
         localStorage.removeItem(`forilove_editor_draft_${resolvedParams.templateId}`);
-        try { (window as any).ttq?.track('PlaceAnOrder', { content_type: 'product', content_id: template.id, content_name: template.name }); } catch {}
+        trackEvent('PlaceAnOrder', { content_type: 'product', content_id: template.id, content_name: template.name });
         setPurchasing(false);
         toast.success("Projen kaydedildi! Profilinden düzenleyebilirsin.");
         router.push("/dashboard/profile");
@@ -1661,7 +1662,7 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
       setGuestMode(false);
       setIsPurchased(true);
       setPurchasing(false);
-      try { (window as any).ttq?.track('PlaceAnOrder', { content_type: 'product', content_id: template.id, content_name: template.name }); } catch {}
+      trackEvent('PlaceAnOrder', { content_type: 'product', content_id: template.id, content_name: template.name });
 
       setDraftTitle(currentProject?.title || template?.name || "");
       setDraftSlug(currentProject?.slug?.replace(/-[a-z0-9]{6,}$/, "") || "");
@@ -1792,7 +1793,7 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
 
       await minDelay;
       toast.success("Değişiklikler kaydedildi!");
-      try { (window as any).ttq?.track('Subscribe', { content_type: 'product', content_id: resolvedParams.templateId }); } catch {}
+      trackEvent('Subscribe', { content_type: 'product', content_id: resolvedParams.templateId });
       setProject({ ...project, ...updateData });
       setShowShareModal(true);
     } catch (error: any) {

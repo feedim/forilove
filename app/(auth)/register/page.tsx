@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import AuthLayout from "@/components/AuthLayout";
 import PasswordInput from "@/components/PasswordInput";
+import { trackEvent } from "@/lib/pixels";
 
 export default function RegisterPage() {
   return (
@@ -117,12 +118,12 @@ function RegisterForm() {
 
       // Check if email confirmation is required
       if (data.user && !data.session) {
-        try { (window as any).ttq?.track('CompleteRegistration'); } catch {}
+        trackEvent('CompleteRegistration');
         toast.success("Kayıt başarılı! Lütfen e-postanızı kontrol edin ve doğrulayın.");
         router.push("/login");
       } else if (data.session) {
         // User is automatically logged in with session
-        try { (window as any).ttq?.track('CompleteRegistration'); } catch {}
+        trackEvent('CompleteRegistration');
         toast.success("Kayıt başarılı! Hoş geldiniz!");
 
         // Wait a bit for session to be fully set

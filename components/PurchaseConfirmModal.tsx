@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase/client";
+import { trackEvent } from "@/lib/pixels";
 
 /* ─── Types ─── */
 
@@ -198,6 +199,7 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
     try {
       const result = await options.onConfirm(appliedCoupon || undefined);
       if (result.success && result.newBalance !== undefined) {
+        trackEvent('Purchase', { content_type: 'product', content_name: options.itemName, value: effectiveCost, currency: 'FL' });
         onResult({ success: true, newBalance: result.newBalance });
       } else {
         setError(result.error || "İşlem başarısız oldu");

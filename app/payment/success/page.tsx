@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle, Coins, Heart, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { trackEvent } from "@/lib/pixels";
 
 export default function PaymentSuccessPage() {
   const [authorized, setAuthorized] = useState(false);
@@ -53,7 +54,7 @@ export default function PaymentSuccessPage() {
             setVerified(true);
             setCoinBalance(body.coin_balance);
             setCoinsAdded(body.coins_added);
-            try { (window as any).ttq?.track('CompletePayment', { content_type: 'product', value: body.coins_added, currency: 'TRY' }); } catch {}
+            trackEvent('Purchase', { content_type: 'product', value: body.coins_added, currency: 'TRY' });
             setVerifying(false);
             return;
           }

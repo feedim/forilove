@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import TransactionCard from "@/components/TransactionCard";
 import { CoinPageSkeleton } from "@/components/Skeletons";
+import { trackEvent } from "@/lib/pixels";
 
 interface CoinPackage {
   id: string;
@@ -110,7 +111,7 @@ export default function CoinsPage() {
       bonus_coins: pkg.bonus_coins,
     }));
 
-    try { (window as any).ttq?.track('InitiateCheckout', { content_type: 'product', value: pkg.price_try, currency: 'TRY' }); } catch {}
+    trackEvent('InitiateCheckout', { content_type: 'product', value: pkg.price_try, currency: 'TRY' });
     router.push('/dashboard/payment');
   };
 

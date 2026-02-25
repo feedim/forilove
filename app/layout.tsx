@@ -123,13 +123,13 @@ export default function RootLayout({
             t.src=v;s=b.getElementsByTagName(e)[0];
             s.parentNode.insertBefore(t,s)}(window, document,'script',
             'https://connect.facebook.net/en_US/fbevents.js');
-            fbq('init', '1253812686725971');
+            fbq('init', '848665894877886');
             fbq('track', 'PageView');
           `}
         </Script>
         <noscript>
           <img height="1" width="1" style={{ display: 'none' }}
-            src="https://www.facebook.com/tr?id=1253812686725971&ev=PageView&noscript=1"
+            src="https://www.facebook.com/tr?id=848665894877886&ev=PageView&noscript=1"
           />
         </noscript>
         <Script id="tiktok-pixel" strategy="beforeInteractive">
