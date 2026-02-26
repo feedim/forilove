@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Wallet, Check, Clock, CheckCircle, XCircle, Send, Calendar, Shield } from "lucide-react";
+import { ArrowLeft, Wallet, Check, Clock, CheckCircle, XCircle, Send, Calendar, Shield, Upload, FileText, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 
@@ -28,6 +28,11 @@ export default function AffiliatePaymentPage() {
   const [currency, setCurrency] = useState<Currency>("TRY");
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
   const [rateLoading, setRateLoading] = useState(false);
+  const [tcKimlik, setTcKimlik] = useState("");
+  const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
+  const [invoiceUploading, setInvoiceUploading] = useState(false);
+  const [invoiceFileName, setInvoiceFileName] = useState<string | null>(null);
+  const [address, setAddress] = useState("");
   const router = useRouter();
   const supabase = createClient();
 
@@ -86,6 +91,12 @@ export default function AffiliatePaymentPage() {
           setHolderName(data.paymentInfo.holderName || "");
           if (data.paymentInfo.payoutCurrency === "USD" || data.paymentInfo.payoutCurrency === "TRY") {
             setCurrency(data.paymentInfo.payoutCurrency);
+          }
+          if (data.paymentInfo.tcKimlik) {
+            setTcKimlik(data.paymentInfo.tcKimlik);
+          }
+          if (data.paymentInfo.address) {
+            setAddress(data.paymentInfo.address);
           }
         }
         if (data.balance) {
@@ -152,7 +163,7 @@ export default function AffiliatePaymentPage() {
       const res = await fetch("/api/affiliate/promos", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ iban, holderName, payoutCurrency: currency }),
+        body: JSON.stringify({ iban, holderName, payoutCurrency: currency, tcKimlik: tcKimlik.trim() || undefined, address: address.trim() || undefined }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -169,9 +180,48 @@ export default function AffiliatePaymentPage() {
     }
   };
 
+  const handleInvoiceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== "application/pdf") {
+      toast.error("Sadece PDF dosyası yüklenebilir");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Dosya çok büyük. Maksimum 5MB.");
+      return;
+    }
+    setInvoiceUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload/invoice", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Fatura yüklenemedi");
+        return;
+      }
+      setInvoiceUrl(data.url);
+      setInvoiceFileName(file.name);
+      toast.success("Fatura yüklendi");
+    } catch {
+      toast.error("Fatura yüklenirken hata oluştu");
+    } finally {
+      setInvoiceUploading(false);
+    }
+  };
+
   const handleRequestPayout = async () => {
     if (!iban.trim() || !holderName.trim()) {
       toast.error("Önce IBAN bilgilerinizi kaydedin");
+      return;
+    }
+    if (!tcKimlik || tcKimlik.length !== 11) {
+      toast.error("TC Kimlik No zorunludur. Lütfen kaydedin.");
+      return;
+    }
+    if (!invoiceUrl) {
+      toast.error("Fatura PDF yüklemeniz gerekiyor");
       return;
     }
     setRequesting(true);
@@ -179,7 +229,7 @@ export default function AffiliatePaymentPage() {
       const res = await fetch("/api/affiliate/payouts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currency }),
+        body: JSON.stringify({ currency, invoiceUrl }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -187,6 +237,8 @@ export default function AffiliatePaymentPage() {
         return;
       }
       toast.success("Ödeme talebi oluşturuldu!");
+      setInvoiceUrl(null);
+      setInvoiceFileName(null);
       loadData();
     } catch {
       toast.error("Bir hata oluştu");
@@ -325,8 +377,9 @@ export default function AffiliatePaymentPage() {
                   </div>
                   <button
                     onClick={handleRequestPayout}
-                    disabled={requesting || !balance.canRequestPayout}
+                    disabled={requesting || !balance.canRequestPayout || !tcKimlik || tcKimlik.length !== 11 || !invoiceUrl}
                     className="px-5 py-2.5 bg-pink-600 hover:bg-pink-500 disabled:bg-zinc-700 disabled:text-zinc-500 rounded-xl text-sm font-bold transition flex items-center gap-2 shrink-0"
+                    title={!tcKimlik || tcKimlik.length !== 11 ? "TC Kimlik No gerekli" : !invoiceUrl ? "Fatura PDF gerekli" : ""}
                   >
                     <Send className="h-4 w-4" />
                     {requesting ? "..." : "Çek"}
@@ -381,9 +434,9 @@ export default function AffiliatePaymentPage() {
             <div className={`bg-zinc-900 rounded-2xl p-6 mb-6 ${userRole === "affiliate" && !mfaEnabled ? "opacity-50 pointer-events-none" : ""}`}>
               <div className="flex items-center gap-2 mb-2">
                 <Wallet className="h-5 w-5 text-pink-500" />
-                <h2 className="font-semibold text-lg">IBAN Bilgileri</h2>
+                <h2 className="font-semibold text-lg">Ödeme Bilgileri</h2>
               </div>
-              <p className="text-xs text-zinc-500 mb-6">Kazançlarınız bu hesaba aktarılacaktır.</p>
+              <p className="text-xs text-zinc-500 mb-6">Kazançlarınız bu hesaba aktarılacaktır. TC Kimlik ve adres bilgileri gider pusulası ve fatura için zorunludur.</p>
 
               <div className="space-y-4">
                 <div>
@@ -409,6 +462,34 @@ export default function AffiliatePaymentPage() {
                     className="input-modern w-full"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm text-zinc-400 mb-2">TC Kimlik No <span className="text-pink-500">*</span></label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={tcKimlik}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 11);
+                      setTcKimlik(val);
+                    }}
+                    placeholder="11 haneli TC Kimlik No"
+                    maxLength={11}
+                    className="input-modern w-full font-mono tracking-wider"
+                  />
+                  <p className="text-[10px] text-zinc-500 mt-1">Gider pusulası için zorunludur.</p>
+                </div>
+                <div>
+                  <label className="block text-sm text-zinc-400 mb-2">Adres</label>
+                  <textarea
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value.replace(/<[^>]*>/g, "").slice(0, 300))}
+                    placeholder="Fatura adresi (il, ilçe, mahalle, sokak, no)"
+                    maxLength={300}
+                    rows={2}
+                    className="input-modern w-full text-sm resize-none"
+                  />
+                  <p className="text-[10px] text-zinc-500 mt-1">Fatura ve gider pusulası düzenlenmesi için gereklidir.</p>
+                </div>
                 <button
                   onClick={handleSave}
                   disabled={saving || !iban.trim() || !holderName.trim()}
@@ -419,9 +500,54 @@ export default function AffiliatePaymentPage() {
                       <Check className="h-5 w-5" />
                       Kaydedildi
                     </>
-                  ) : saving ? "Kaydediliyor..." : "IBAN Kaydet"}
+                  ) : saving ? "Kaydediliyor..." : "Bilgileri Kaydet"}
                 </button>
               </div>
+            </div>
+
+            {/* TC Kimlik Uyarısı */}
+            {(!tcKimlik || tcKimlik.length !== 11) && (
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-4 mb-6 flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-yellow-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm text-yellow-400 font-medium">TC Kimlik No eksik</p>
+                  <p className="text-xs text-zinc-400 mt-1">Ödeme talebi oluşturabilmek için TC Kimlik numaranızı yukarıdaki bölümden kaydetmeniz gerekmektedir.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Fatura PDF Upload */}
+            <div className={`bg-zinc-900 rounded-2xl p-6 mb-6 ${userRole === "affiliate" && !mfaEnabled ? "opacity-50 pointer-events-none" : ""}`}>
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="h-5 w-5 text-pink-500" />
+                <h2 className="font-semibold text-lg">Fatura</h2>
+              </div>
+              <p className="text-xs text-zinc-500 mb-4">Ödeme talebi oluşturmadan önce Forilove&apos;a kestiğiniz faturanın PDF&apos;ini yükleyin.</p>
+
+              {invoiceUrl ? (
+                <div className="bg-pink-500/10 border border-pink-500/20 rounded-xl p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <FileText className="h-5 w-5 text-pink-500 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-pink-400 truncate">{invoiceFileName || "Fatura.pdf"}</p>
+                      <p className="text-xs text-zinc-500">Yüklendi</p>
+                    </div>
+                  </div>
+                  <label className="px-3 py-1.5 bg-white/10 hover:bg-white/15 rounded-lg text-xs font-medium cursor-pointer transition shrink-0">
+                    Değiştir
+                    <input type="file" accept="application/pdf" onChange={handleInvoiceUpload} className="hidden" />
+                  </label>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center border-2 border-dashed border-zinc-700 hover:border-pink-500/50 rounded-xl p-6 cursor-pointer transition group">
+                  <Upload className="h-8 w-8 text-zinc-500 group-hover:text-pink-500 transition mb-2" />
+                  <p className="text-sm text-zinc-400 group-hover:text-white transition">
+                    {invoiceUploading ? "Yükleniyor..." : "PDF Fatura Yükle"}
+                  </p>
+                  <p className="text-xs text-zinc-600 mt-1">Maksimum 5MB</p>
+                  <input type="file" accept="application/pdf" onChange={handleInvoiceUpload} disabled={invoiceUploading} className="hidden" />
+                </label>
+              )}
             </div>
 
             {/* Ödeme Geçmişi - Tarih Filtreli */}
@@ -519,11 +645,12 @@ export default function AffiliatePaymentPage() {
             <div className="bg-zinc-900 rounded-2xl p-6">
               <h3 className="font-semibold mb-3">Ödeme Bilgilendirmesi</h3>
               <ul className="space-y-2 text-sm text-zinc-400">
-                <li>• İlk 24 saat içindeki satışlardan elde edilen kazançlar peşin olarak ödenir.</li>
-                <li>• Sonrasında ödemeler haftada bir (7 günde bir) yapılır.</li>
-                <li>• Minimum ödeme tutarı 100 TRY&apos;dir.</li>
+                <li>• Minimum ödeme tutarı 200 TRY&apos;dir.</li>
+                <li>• Ödemeler 7-30 gün içinde sağlanır.</li>
+                <li>• TC Kimlik No gider pusulası düzenlenmesi için zorunludur.</li>
+                <li>• Adres bilgisi fatura ve muhasebe işlemleri için gereklidir.</li>
+                <li>• Her ödeme talebi için Forilove&apos;a kesilen fatura PDF olarak yüklenmelidir.</li>
                 <li>• IBAN bilginizin doğru olduğundan emin olun.</li>
-                <li>• Ödeme bilgilerinizi istediğiniz zaman güncelleyebilirsiniz.</li>
                 <li>• USD seçildiğinde tutar anlık kur ile çevrilir.</li>
                 <li>• Sorularınız için: <a href="mailto:affiliate@forilove.com" className="text-pink-500 hover:text-pink-400">affiliate@forilove.com</a></li>
               </ul>

@@ -201,7 +201,7 @@ export async function GET() {
 
     // Get affiliate payment info + payout data + referral earnings
     const [paymentInfoRes, payoutsRes, referralEarningsRes] = await Promise.all([
-      admin.from("profiles").select("affiliate_iban, affiliate_holder_name").eq("user_id", user.id).single(),
+      admin.from("profiles").select("affiliate_iban, affiliate_holder_name, tc_kimlik_no, address").eq("user_id", user.id).single(),
       admin.from("affiliate_payouts").select("amount, status").eq("affiliate_user_id", user.id),
       admin.from("affiliate_commissions").select("referrer_earning, created_at").eq("referrer_id", user.id).gt("referrer_earning", 0),
     ]);
@@ -260,7 +260,7 @@ export async function GET() {
         totalPaidOut: Math.round(totalPaidOut * 100) / 100,
         totalPending: Math.round(totalPending * 100) / 100,
         available: Math.max(0, availableBalance),
-        canRequestPayout: availableBalance >= 100 && !payoutsList.some((p: any) => p.status === "pending"),
+        canRequestPayout: availableBalance >= 200 && !payoutsList.some((p: any) => p.status === "pending"),
         hasPendingPayout: payoutsList.some((p: any) => p.status === "pending"),
       },
       recentUsers,
@@ -268,6 +268,8 @@ export async function GET() {
         iban: paymentInfo.affiliate_iban || null,
         holderName: paymentInfo.affiliate_holder_name || null,
         payoutCurrency: payoutCurrency,
+        tcKimlik: paymentInfo.tc_kimlik_no || null,
+        address: paymentInfo.address || null,
       } : null,
     });
   } catch (error) {
@@ -431,10 +433,10 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { iban, holderName, payoutCurrency } = body;
+    const { iban, holderName, payoutCurrency, tcKimlik, address } = body;
 
     // Allow updating only payoutCurrency without IBAN
-    if (payoutCurrency && !iban) {
+    if (payoutCurrency && !iban && !tcKimlik && !address) {
       if (payoutCurrency !== "TRY" && payoutCurrency !== "USD") {
         return NextResponse.json({ error: "Geçersiz para birimi" }, { status: 400 });
       }
@@ -446,6 +448,14 @@ export async function PUT(request: NextRequest) {
           .eq("user_id", user.id);
       } catch { /* column may not exist yet */ }
       return NextResponse.json({ success: true });
+    }
+
+    // Validate TC Kimlik if provided
+    if (tcKimlik !== undefined && tcKimlik !== null && tcKimlik !== "") {
+      const cleanTc = String(tcKimlik).replace(/\D/g, "");
+      if (cleanTc.length !== 11) {
+        return NextResponse.json({ error: "TC Kimlik No 11 haneli olmalıdır" }, { status: 400 });
+      }
     }
 
     if (!iban || typeof iban !== "string" || !holderName || typeof holderName !== "string") {
@@ -481,13 +491,20 @@ export async function PUT(request: NextRequest) {
 
     const admin = createAdminClient();
 
-    // Save IBAN info
+    // Save IBAN info + TC Kimlik
+    const updateData: Record<string, any> = {
+      affiliate_iban: cleanIban,
+      affiliate_holder_name: cleanHolder,
+    };
+    if (tcKimlik !== undefined && tcKimlik !== null && tcKimlik !== "") {
+      updateData.tc_kimlik_no = String(tcKimlik).replace(/\D/g, "");
+    }
+    if (address !== undefined && address !== null) {
+      updateData.address = String(address).replace(/<[^>]*>/g, "").trim().slice(0, 300);
+    }
     const { error } = await admin
       .from("profiles")
-      .update({
-        affiliate_iban: cleanIban,
-        affiliate_holder_name: cleanHolder,
-      })
+      .update(updateData)
       .eq("user_id", user.id);
 
     if (error) throw error;

@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { socialMedia, followers, description, referralCode } = body;
+    const { socialMedia, followers, description, referralCode, tcKimlik, address } = body;
 
     // Validate social media URL
     if (!socialMedia || typeof socialMedia !== "string" || !socialMedia.trim()) {
@@ -155,11 +155,27 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    // Save referral code to profile
+    // Save referral code and TC Kimlik to profile
+    const profileUpdate: Record<string, any> = {};
     if (cleanReferralCode) {
+      profileUpdate.affiliate_referral_code = cleanReferralCode;
+    }
+    if (tcKimlik) {
+      const cleanTc = String(tcKimlik).replace(/\D/g, "");
+      if (cleanTc.length === 11) {
+        profileUpdate.tc_kimlik_no = cleanTc;
+      }
+    }
+    if (address && typeof address === "string") {
+      const cleanAddress = sanitizeText(address).slice(0, 300);
+      if (cleanAddress.length > 0) {
+        profileUpdate.address = cleanAddress;
+      }
+    }
+    if (Object.keys(profileUpdate).length > 0) {
       await admin
         .from("profiles")
-        .update({ affiliate_referral_code: cleanReferralCode })
+        .update(profileUpdate)
         .eq("user_id", user.id);
     }
 

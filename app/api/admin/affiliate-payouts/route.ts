@@ -46,7 +46,7 @@ export async function GET() {
     if (affiliateIds.length > 0) {
       const { data: profiles } = await admin
         .from("profiles")
-        .select("user_id, name, surname, affiliate_iban, affiliate_holder_name")
+        .select("user_id, name, surname, affiliate_iban, affiliate_holder_name, tc_kimlik_no, address")
         .in("user_id", affiliateIds);
 
       if (profiles) {
@@ -71,6 +71,8 @@ export async function GET() {
         affiliate_email: emailMap.get(payout.affiliate_user_id) || "—",
         affiliate_iban: profile?.affiliate_iban || null,
         affiliate_holder_name: profile?.affiliate_holder_name || null,
+        affiliate_tc_kimlik: profile?.tc_kimlik_no || null,
+        affiliate_address: profile?.address || null,
       };
     });
 

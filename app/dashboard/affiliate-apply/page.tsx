@@ -35,7 +35,7 @@ export default function AffiliateApplyPage() {
   const [submitting, setSubmitting] = useState(false);
   const [existingApplication, setExistingApplication] = useState<any>(null);
   const [emailVerified, setEmailVerified] = useState(false);
-  const [form, setForm] = useState({ socialMedia: "", followers: "", description: "", referralCode: "" });
+  const [form, setForm] = useState({ socialMedia: "", followers: "", description: "", referralCode: "", tcKimlik: "", address: "" });
   const router = useRouter();
   const supabase = createClient();
 
@@ -118,6 +118,8 @@ export default function AffiliateApplyPage() {
           followers: form.followers.trim(),
           description: form.description.trim(),
           referralCode: form.referralCode.trim() || null,
+          tcKimlik: form.tcKimlik.trim() || null,
+          address: form.address.trim() || null,
         }),
       });
       const data = await res.json();
@@ -230,8 +232,8 @@ export default function AffiliateApplyPage() {
                 <TrendingUp className="h-6 w-6 text-pink-500" />
               </div>
               <div>
-                <h2 className="text-xl font-bold">Affiliate Programına Başvur</h2>
-                <p className="text-sm text-zinc-500">Takipçilerinize özel indirim linkleri oluşturun, her satıştan %10-%30 komisyon kazanın.</p>
+                <h2 className="text-xl font-bold">Satış Ortaklığı Başvurusu</h2>
+                <p className="text-sm text-zinc-500">Takipçilerinize özel indirim kodları oluşturun, her satıştan komisyon kazanın.</p>
               </div>
             </div>
 
@@ -308,6 +310,37 @@ export default function AffiliateApplyPage() {
                   maxLength={300}
                 />
                 <p className="text-[10px] text-zinc-600 text-right mt-0.5">{form.description.length}/300</p>
+              </div>
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1">TC Kimlik No <span className="text-zinc-600">(opsiyonel)</span></label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={form.tcKimlik}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "").slice(0, 11);
+                    setForm({ ...form, tcKimlik: val });
+                  }}
+                  placeholder="11 haneli TC Kimlik No"
+                  className="input-modern w-full text-sm"
+                  maxLength={11}
+                />
+                <p className="text-[10px] text-zinc-600 mt-0.5">Gider pusulası için gereklidir. Sonradan da eklenebilir.</p>
+              </div>
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1">Adres <span className="text-zinc-600">(opsiyonel)</span></label>
+                <textarea
+                  value={form.address}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/<[^>]*>/g, "").slice(0, 300);
+                    setForm({ ...form, address: val });
+                  }}
+                  placeholder="Fatura adresi (il, ilçe, mahalle, sokak, no)"
+                  className="input-modern w-full text-sm resize-none"
+                  rows={2}
+                  maxLength={300}
+                />
+                <p className="text-[10px] text-zinc-600 mt-0.5">Fatura ve gider pusulası düzenlenmesi için gereklidir. Sonradan da eklenebilir.</p>
               </div>
               <div>
                 <label className="block text-xs text-zinc-400 mb-1">Referans Kodu <span className="text-zinc-600">(opsiyonel)</span></label>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Wallet, CheckCircle, XCircle, Clock, DollarSign } from "lucide-react";
+import { ArrowLeft, Wallet, CheckCircle, XCircle, Clock, DollarSign, FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 
@@ -196,7 +196,22 @@ export default function AdminAffiliatePayoutsPage() {
                         <p className="text-sm"><span className="text-zinc-400">E-posta:</span> {payout.affiliate_email}</p>
                         <p className="text-sm font-mono"><span className="text-zinc-400">IBAN:</span> {formatIban(payout.affiliate_iban)}</p>
                         <p className="text-sm"><span className="text-zinc-400">Hesap Sahibi:</span> {payout.affiliate_holder_name || "—"}</p>
+                        <p className="text-sm"><span className="text-zinc-400">TC Kimlik:</span> {payout.affiliate_tc_kimlik || <span className="text-yellow-500">Eksik</span>}</p>
+                        <p className="text-sm"><span className="text-zinc-400">Adres:</span> {payout.affiliate_address || <span className="text-yellow-500">Eksik</span>}</p>
                       </div>
+
+                      {/* Fatura PDF */}
+                      {payout.invoice_url && (
+                        <a
+                          href={payout.invoice_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 bg-pink-500/10 border border-pink-500/20 rounded-xl px-3 py-2 mb-3 text-sm text-pink-400 hover:text-pink-300 transition"
+                        >
+                          <FileText className="h-4 w-4" />
+                          Fatura PDF
+                        </a>
+                      )}
 
                       {/* İşlenmiş ise not göster */}
                       {payout.status !== "pending" && payout.processed_at && (

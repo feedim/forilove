@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const MIN_PAYOUT = 100;
+const MIN_PAYOUT = 200;
 const TOTAL_ALLOCATION = 30;
 const AUTO_PAYOUT_INTERVAL_DAYS = 7;
 
@@ -207,15 +207,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Minimum ödeme tutarı ${MIN_PAYOUT} TRY'dir. Mevcut bakiye: ${available.toFixed(2)} TRY` }, { status: 400 });
     }
 
-    // Check IBAN exists
+    // Check IBAN + TC Kimlik exists
     const { data: profile } = await admin
       .from("profiles")
-      .select("affiliate_iban, affiliate_holder_name")
+      .select("affiliate_iban, affiliate_holder_name, tc_kimlik_no")
       .eq("user_id", user.id)
       .single();
 
     if (!profile?.affiliate_iban || !profile?.affiliate_holder_name) {
       return NextResponse.json({ error: "Önce ödeme bilgilerinizi (IBAN) kaydedin" }, { status: 400 });
+    }
+
+    if (!profile?.tc_kimlik_no) {
+      return NextResponse.json({ error: "TC Kimlik No zorunludur. Ödeme bilgileri bölümünden TC Kimlik numaranızı kaydedin." }, { status: 400 });
+    }
+
+    // Validate invoice URL
+    const invoiceUrl = body?.invoiceUrl;
+    if (!invoiceUrl || typeof invoiceUrl !== "string") {
+      return NextResponse.json({ error: "Fatura PDF yüklemeniz gerekiyor" }, { status: 400 });
     }
 
     // Fetch exchange rate if USD requested
@@ -249,6 +259,7 @@ export async function POST(request: NextRequest) {
       amount: payoutAmount,
       status: "pending",
       admin_note: isAuto ? "Otomatik talep (7 gün)" : null,
+      invoice_url: invoiceUrl,
     };
 
     // Try with currency fields first, fall back without them
