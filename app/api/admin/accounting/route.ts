@@ -36,16 +36,29 @@ export async function GET(request: NextRequest) {
     const admin = createAdminClient();
 
     // 1. Satışlar (coin_payments)
-    const { data: sales } = await admin
-      .from("coin_payments")
-      .select("id, user_id, price_paid, coins_purchased, status, created_at, invoice_sent, package_id")
-      .eq("status", "completed")
-      .gte("created_at", startDate)
-      .lte("created_at", endDate)
-      .order("created_at", { ascending: false })
-      .limit(5000);
-
-    const salesList = sales || [];
+    let salesList: any[] = [];
+    try {
+      const { data } = await admin
+        .from("coin_payments")
+        .select("id, user_id, price_paid, coins_purchased, status, created_at, invoice_sent, package_id")
+        .eq("status", "completed")
+        .gte("created_at", startDate)
+        .lte("created_at", endDate)
+        .order("created_at", { ascending: false })
+        .limit(5000);
+      salesList = data || [];
+    } catch {
+      // invoice_sent column may not exist yet, retry without it
+      const { data } = await admin
+        .from("coin_payments")
+        .select("id, user_id, price_paid, coins_purchased, status, created_at, package_id")
+        .eq("status", "completed")
+        .gte("created_at", startDate)
+        .lte("created_at", endDate)
+        .order("created_at", { ascending: false })
+        .limit(5000);
+      salesList = (data || []).map((s: any) => ({ ...s, invoice_sent: false }));
+    }
 
     // Fetch user profiles for sales
     const saleUserIds = [...new Set(salesList.map(s => s.user_id))];
@@ -84,16 +97,28 @@ export async function GET(request: NextRequest) {
     });
 
     // 2. Affiliate Ödemeleri
-    const { data: payouts } = await admin
-      .from("affiliate_payouts")
-      .select("id, affiliate_user_id, amount, status, requested_at, processed_at, invoice_url, currency")
-      .eq("status", "approved")
-      .gte("requested_at", startDate)
-      .lte("requested_at", endDate)
-      .order("requested_at", { ascending: false })
-      .limit(5000);
-
-    const payoutList = payouts || [];
+    let payoutList: any[] = [];
+    try {
+      const { data } = await admin
+        .from("affiliate_payouts")
+        .select("id, affiliate_user_id, amount, status, requested_at, processed_at, invoice_url, currency")
+        .eq("status", "approved")
+        .gte("requested_at", startDate)
+        .lte("requested_at", endDate)
+        .order("requested_at", { ascending: false })
+        .limit(5000);
+      payoutList = data || [];
+    } catch {
+      const { data } = await admin
+        .from("affiliate_payouts")
+        .select("id, affiliate_user_id, amount, status, requested_at, processed_at, currency")
+        .eq("status", "approved")
+        .gte("requested_at", startDate)
+        .lte("requested_at", endDate)
+        .order("requested_at", { ascending: false })
+        .limit(5000);
+      payoutList = (data || []).map((p: any) => ({ ...p, invoice_url: null }));
+    }
 
     // Fetch affiliate profiles
     const affiliateIds = [...new Set(payoutList.map(p => p.affiliate_user_id))];
@@ -102,12 +127,29 @@ export async function GET(request: NextRequest) {
     if (affiliateIds.length > 0) {
       const { data: profiles } = await admin
         .from("profiles")
-        .select("user_id, name, surname, tc_kimlik_no, affiliate_iban, address")
+        .select("user_id, name, surname, affiliate_iban")
         .in("user_id", affiliateIds);
 
       if (profiles) {
         affiliateProfileMap = new Map(profiles.map(p => [p.user_id, p]));
       }
+
+      // Fetch extra columns (may not exist yet)
+      try {
+        const { data: extraProfiles } = await admin
+          .from("profiles")
+          .select("user_id, tc_kimlik_no, address")
+          .in("user_id", affiliateIds);
+        if (extraProfiles) {
+          for (const ep of extraProfiles) {
+            const existing = affiliateProfileMap.get(ep.user_id);
+            if (existing) {
+              existing.tc_kimlik_no = ep.tc_kimlik_no;
+              existing.address = ep.address;
+            }
+          }
+        }
+      } catch { /* columns may not exist yet */ }
     }
 
     const enrichedPayouts = payoutList.map(payout => {

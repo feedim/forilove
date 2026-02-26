@@ -46,12 +46,29 @@ export async function GET() {
     if (affiliateIds.length > 0) {
       const { data: profiles } = await admin
         .from("profiles")
-        .select("user_id, name, surname, affiliate_iban, affiliate_holder_name, tc_kimlik_no, address")
+        .select("user_id, name, surname, affiliate_iban, affiliate_holder_name")
         .in("user_id", affiliateIds);
 
       if (profiles) {
         profileMap = new Map(profiles.map(p => [p.user_id, p]));
       }
+
+      // Fetch extra columns (tc_kimlik_no, address) - may not exist yet
+      try {
+        const { data: extraProfiles } = await admin
+          .from("profiles")
+          .select("user_id, tc_kimlik_no, address")
+          .in("user_id", affiliateIds);
+        if (extraProfiles) {
+          for (const ep of extraProfiles) {
+            const existing = profileMap.get(ep.user_id);
+            if (existing) {
+              existing.tc_kimlik_no = ep.tc_kimlik_no;
+              existing.address = ep.address;
+            }
+          }
+        }
+      } catch { /* columns may not exist yet */ }
     }
 
     // Batch fetch emails

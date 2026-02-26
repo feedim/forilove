@@ -207,10 +207,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Minimum ödeme tutarı ${MIN_PAYOUT} TRY'dir. Mevcut bakiye: ${available.toFixed(2)} TRY` }, { status: 400 });
     }
 
-    // Check IBAN + TC Kimlik exists
+    // Check IBAN exists
     const { data: profile } = await admin
       .from("profiles")
-      .select("affiliate_iban, affiliate_holder_name, tc_kimlik_no")
+      .select("affiliate_iban, affiliate_holder_name")
       .eq("user_id", user.id)
       .single();
 
@@ -218,7 +218,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Önce ödeme bilgilerinizi (IBAN) kaydedin" }, { status: 400 });
     }
 
-    if (!profile?.tc_kimlik_no) {
+    // Check TC Kimlik (column may not exist yet)
+    let hasTcKimlik = false;
+    try {
+      const { data: tcData } = await admin
+        .from("profiles")
+        .select("tc_kimlik_no")
+        .eq("user_id", user.id)
+        .single();
+      hasTcKimlik = !!tcData?.tc_kimlik_no;
+    } catch { /* column may not exist yet */ }
+
+    if (!hasTcKimlik) {
       return NextResponse.json({ error: "TC Kimlik No zorunludur. Ödeme bilgileri bölümünden TC Kimlik numaranızı kaydedin." }, { status: 400 });
     }
 

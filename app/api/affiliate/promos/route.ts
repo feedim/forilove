@@ -201,21 +201,25 @@ export async function GET() {
 
     // Get affiliate payment info + payout data + referral earnings
     const [paymentInfoRes, payoutsRes, referralEarningsRes] = await Promise.all([
-      admin.from("profiles").select("affiliate_iban, affiliate_holder_name, tc_kimlik_no, address").eq("user_id", user.id).single(),
+      admin.from("profiles").select("affiliate_iban, affiliate_holder_name").eq("user_id", user.id).single(),
       admin.from("affiliate_payouts").select("amount, status").eq("affiliate_user_id", user.id),
       admin.from("affiliate_commissions").select("referrer_earning, created_at").eq("referrer_id", user.id).gt("referrer_earning", 0),
     ]);
 
-    // Fetch payout_currency separately (column may not exist yet if migration is pending)
+    // Fetch columns that may not exist yet (tc_kimlik_no, address, payout_currency)
     let payoutCurrency = "TRY";
+    let tcKimlikNo: string | null = null;
+    let profileAddress: string | null = null;
     try {
-      const { data: currencyData } = await admin
+      const { data: extraData } = await admin
         .from("profiles")
-        .select("payout_currency")
+        .select("payout_currency, tc_kimlik_no, address")
         .eq("user_id", user.id)
         .single();
-      if (currencyData?.payout_currency) payoutCurrency = currencyData.payout_currency;
-    } catch { /* column may not exist yet */ }
+      if (extraData?.payout_currency) payoutCurrency = extraData.payout_currency;
+      if (extraData?.tc_kimlik_no) tcKimlikNo = extraData.tc_kimlik_no;
+      if (extraData?.address) profileAddress = extraData.address;
+    } catch { /* columns may not exist yet */ }
 
     const paymentInfo = paymentInfoRes.data;
     const payoutsList = payoutsRes.data || [];
@@ -268,8 +272,8 @@ export async function GET() {
         iban: paymentInfo.affiliate_iban || null,
         holderName: paymentInfo.affiliate_holder_name || null,
         payoutCurrency: payoutCurrency,
-        tcKimlik: paymentInfo.tc_kimlik_no || null,
-        address: paymentInfo.address || null,
+        tcKimlik: tcKimlikNo,
+        address: profileAddress,
       } : null,
     });
   } catch (error) {
