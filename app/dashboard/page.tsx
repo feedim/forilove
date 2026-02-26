@@ -11,6 +11,7 @@ import TemplateCard from "@/components/TemplateCard";
 import { EmptyState } from "@/components/ErrorState";
 import WelcomeCouponModal from "@/components/WelcomeCouponModal";
 import DashboardNav from "@/components/DashboardNav";
+import AffiliateBanner from "@/components/AffiliateBanner";
 
 const ITEMS_PER_PAGE = 6;
 
@@ -24,6 +25,7 @@ export default function DashboardPage() {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
   const [welcomeCoupon, setWelcomeCoupon] = useState<{ code: string; discountPercent: number; expiresAt: string | null } | null>(null);
+  const [affiliateFreeActive, setAffiliateFreeActive] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -118,7 +120,7 @@ export default function DashboardPage() {
       // Load user profile
       const { data: profile } = await supabase
         .from('profiles')
-        .select('coin_balance, name, surname')
+        .select('coin_balance, name, surname, role')
         .eq('user_id', user.id)
         .single();
 
@@ -154,6 +156,11 @@ export default function DashboardPage() {
       const purchasedTemplateIds = purchasesResult.data?.map((p: any) => p.template_id) || [];
       setPurchases(purchasedTemplateIds);
       setSavedTemplates(savedResult.data?.map((s: any) => s.template_id) || []);
+
+      // Check affiliate one-time free discount
+      if (profile?.role === "affiliate" && purchasedTemplateIds.length === 0) {
+        setAffiliateFreeActive(true);
+      }
 
       // Load templates excluding purchased ones
       let templatesQuery = supabase
@@ -305,6 +312,8 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-black text-white max-w-none w-screen relative left-1/2 -translate-x-1/2">
+      {/* Affiliate Banner */}
+      {affiliateFreeActive && <AffiliateBanner />}
       {/* Header */}
       <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-xl">
         <DashboardNav />
@@ -341,7 +350,7 @@ export default function DashboardPage() {
                 return (
                   <TemplateCard
                     key={template.id}
-                    template={template}
+                    template={affiliateFreeActive ? { ...template, coin_price: 0, discount_price: null } : template}
                     isSaved={isSaved}
                     isPurchased={isPurchased}
                     showPrice={true}
