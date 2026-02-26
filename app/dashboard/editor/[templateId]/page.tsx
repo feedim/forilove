@@ -11,7 +11,6 @@ import ImageCropModal from '@/components/ImageCropModal';
 import { ShareSheet } from '@/components/ShareIconButton';
 import { usePurchaseConfirm } from '@/components/PurchaseConfirmModal';
 import { isDiscountActive } from '@/lib/discount';
-import AffiliateBanner from '@/components/AffiliateBanner';
 import { AI_COST, TEMPLATE_UNLOCK_COST } from '@/lib/constants';
 import type { CouponInfo } from '@/components/PurchaseConfirmModal';
 import { trackEvent } from '@/lib/pixels';

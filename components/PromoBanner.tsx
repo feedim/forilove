@@ -108,6 +108,11 @@ export default function PromoBanner() {
 
   if (!promoInfo) return null;
 
+  // Editor, preview ve dashboard sayfalarında asla gösterme
+  if (pathname?.startsWith("/dashboard") || pathname?.startsWith("/editor") || pathname?.startsWith("/preview") || pathname?.startsWith("/p/") || pathname?.startsWith("/creator")) {
+    return null;
+  }
+
   const handleDismiss = () => {
     localStorage.setItem(PROMO_DISMISSED_KEY, Date.now().toString());
     setPromoInfo(null);
