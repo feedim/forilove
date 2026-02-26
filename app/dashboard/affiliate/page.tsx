@@ -226,7 +226,7 @@ export default function AffiliateDashboardPage() {
               </div>
               {promoCode ? (
                 <>
-                  <p className="text-xs text-zinc-500 mb-3">Herhangi bir Forilove URL&apos;sini yapıştırın, promo kodunuz otomatik eklenir.</p>
+                  <p className="text-xs text-zinc-500 mb-3">Satmak istediğiniz ürünün linkini girin, satış linkinizi hazırlayalım.</p>
                   {allPromoCodes.length > 1 && (
                     <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1">
                       {allPromoCodes.map((code) => (
@@ -261,13 +261,23 @@ export default function AffiliateDashboardPage() {
                           } else if (trimmed.startsWith('forilove.com') || trimmed.startsWith('www.forilove.com')) {
                             url = new URL('https://' + trimmed);
                           } else {
-                            url = new URL('https://forilove.com' + (trimmed.startsWith('/') ? '' : '/') + trimmed);
-                          }
-                          if (!url.hostname.includes('forilove.com') && !url.hostname.includes('localhost')) {
                             setGeneratedUrl(""); return;
                           }
-                          url.searchParams.set('promo', promoCode);
-                          setGeneratedUrl(url.toString());
+                          if (!url.hostname.includes('forilove.com')) {
+                            setGeneratedUrl(""); return;
+                          }
+                          // Clean dashboard URLs: /dashboard/editor/UUID → /editor/UUID
+                          if (url.pathname.startsWith('/dashboard/editor/')) {
+                            url.pathname = url.pathname.replace('/dashboard/editor/', '/editor/');
+                          }
+                          // Build URL manually to avoid encoding Turkish chars in promo
+                          const cleanUrl = url.origin + url.pathname;
+                          const existingParams = url.searchParams;
+                          existingParams.delete('promo');
+                          const paramParts: string[] = [];
+                          existingParams.forEach((v, k) => paramParts.push(`${k}=${v}`));
+                          paramParts.push(`promo=${promoCode}`);
+                          setGeneratedUrl(`${cleanUrl}?${paramParts.join('&')}`);
                           setUrlCopied(false);
                         } catch {
                           setGeneratedUrl("");
@@ -275,7 +285,7 @@ export default function AffiliateDashboardPage() {
                       }}
                       className="btn-primary px-4 py-2.5 text-xs font-bold shrink-0"
                     >
-                      Üret
+                      Oluştur
                     </button>
                   </div>
                   {generatedUrl && (

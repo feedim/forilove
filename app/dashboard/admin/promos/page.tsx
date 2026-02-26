@@ -180,7 +180,7 @@ export default function AdminPromosPage() {
   };
 
   const copyPromoLink = async (code: string) => {
-    const url = `${window.location.origin}/?promo=${code}`;
+    const url = `https://www.forilove.com/?promo=${code}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopiedPromo(code);
@@ -459,7 +459,7 @@ export default function AdminPromosPage() {
                 <Link2 className="h-5 w-5 text-pink-500" />
                 <h3 className="font-semibold">İndirimli Link Oluştur</h3>
               </div>
-              <p className="text-xs text-zinc-500 mb-3">Herhangi bir Forilove URL&apos;sini yapıştırın, promo kodunuz otomatik eklenir.</p>
+              <p className="text-xs text-zinc-500 mb-3">Satmak istediğiniz ürünün linkini girin, satış linkinizi hazırlayalım.</p>
               {promos.length > 1 && (
                 <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1">
                   {promos.map((p) => (
@@ -494,21 +494,34 @@ export default function AdminPromosPage() {
                       } else if (trimmed.startsWith('forilove.com') || trimmed.startsWith('www.forilove.com')) {
                         url = new URL('https://' + trimmed);
                       } else {
-                        url = new URL('https://forilove.com' + (trimmed.startsWith('/') ? '' : '/') + trimmed);
-                      }
-                      if (!url.hostname.includes('forilove.com') && !url.hostname.includes('localhost')) {
+                        toast.error("Lütfen geçerli bir forilove.com linki girin");
                         setGeneratedUrl(""); return;
                       }
-                      url.searchParams.set('promo', selectedPromoCode);
-                      setGeneratedUrl(url.toString());
+                      if (!url.hostname.includes('forilove.com')) {
+                        toast.error("Lütfen geçerli bir forilove.com linki girin");
+                        setGeneratedUrl(""); return;
+                      }
+                      // Clean dashboard URLs: /dashboard/editor/UUID → /editor/UUID
+                      if (url.pathname.startsWith('/dashboard/editor/')) {
+                        url.pathname = url.pathname.replace('/dashboard/editor/', '/editor/');
+                      }
+                      // Build URL manually to avoid encoding Turkish chars in promo
+                      const cleanUrl = url.origin + url.pathname;
+                      const existingParams = url.searchParams;
+                      existingParams.delete('promo');
+                      const paramParts: string[] = [];
+                      existingParams.forEach((v, k) => paramParts.push(`${k}=${v}`));
+                      paramParts.push(`promo=${selectedPromoCode}`);
+                      setGeneratedUrl(`${cleanUrl}?${paramParts.join('&')}`);
                       setUrlCopied(false);
                     } catch {
+                      toast.error("Lütfen geçerli bir forilove.com linki girin");
                       setGeneratedUrl("");
                     }
                   }}
                   className="btn-primary px-4 py-2.5 text-xs font-bold shrink-0"
                 >
-                  Üret
+                  Oluştur
                 </button>
               </div>
               {generatedUrl && (
