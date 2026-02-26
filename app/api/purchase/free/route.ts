@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getActivePrice } from "@/lib/discount";
+import { checkAffiliateDiscount } from "@/lib/affiliate-discount";
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,7 +38,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (getActivePrice(template) !== 0) {
+    // Allow affiliate free discount even if template is not free
+    const { affiliateFreeActive } = await checkAffiliateDiscount(admin, user.id);
+    if (getActivePrice(template) !== 0 && !affiliateFreeActive) {
       return NextResponse.json(
         { error: "Bu şablon ücretsiz değil" },
         { status: 400 }

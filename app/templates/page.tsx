@@ -8,6 +8,7 @@ import PublicHeader from "@/components/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 import CTASection from "@/components/CTASection";
 import TemplateCard from "@/components/TemplateCard";
+import AffiliateBanner from "@/components/AffiliateBanner";
 
 const ITEMS_PER_PAGE = 6;
 
@@ -18,11 +19,13 @@ export default function TemplatesPage() {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
   const [tags, setTags] = useState<{ id: string; name: string; slug: string }[]>([]);
+  const [affiliateFreeActive, setAffiliateFreeActive] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
     loadTemplates();
     loadTags();
+    checkAffiliateStatus();
   }, []);
 
   useEffect(() => {
@@ -61,6 +64,32 @@ export default function TemplatesPage() {
       setTags(data || []);
     } catch (error) {
       console.error("Error loading tags:", error);
+    }
+  };
+
+  const checkAffiliateStatus = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const userId = session.user.id;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("user_id", userId)
+        .single();
+
+      if (profile?.role !== "affiliate") return;
+
+      const { count } = await supabase
+        .from("purchases")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("payment_status", "completed");
+
+      setAffiliateFreeActive((count ?? 0) === 0);
+    } catch {
+      // silent
     }
   };
 
@@ -139,6 +168,7 @@ export default function TemplatesPage() {
 
       <div className="min-h-screen bg-black text-white">
         <PublicHeader variant="home" />
+        {affiliateFreeActive && <AffiliateBanner />}
 
         {/* Hero Section */}
         <section className="pt-20 pb-12 border-b border-white/10">
@@ -188,7 +218,7 @@ export default function TemplatesPage() {
                 {templates.map((template) => (
                   <div key={template.id}>
                     <TemplateCard
-                      template={template}
+                      template={affiliateFreeActive ? { ...template, coin_price: 0, discount_price: null } : template}
                       isPurchased={false}
                       isSaved={false}
                       showSaveButton={true}

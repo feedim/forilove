@@ -11,6 +11,7 @@ import ImageCropModal from '@/components/ImageCropModal';
 import { ShareSheet } from '@/components/ShareIconButton';
 import { usePurchaseConfirm } from '@/components/PurchaseConfirmModal';
 import { isDiscountActive } from '@/lib/discount';
+import AffiliateBanner from '@/components/AffiliateBanner';
 import { AI_COST, TEMPLATE_UNLOCK_COST } from '@/lib/constants';
 import type { CouponInfo } from '@/components/PurchaseConfirmModal';
 import { trackEvent } from '@/lib/pixels';
@@ -93,6 +94,7 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
   const [aiPrompt, setAIPrompt] = useState('');
   const [aiLoading, setAILoading] = useState(false);
   const [showTour, setShowTour] = useState(false);
+  const [affiliateFreeActive, setAffiliateFreeActive] = useState(false);
   const [unlockedFields, setUnlockedFields] = useState<Set<string>>(new Set());
   const [selectedVisibility, setSelectedVisibility] = useState<boolean | null>(null);
   const router = useRouter();
@@ -710,11 +712,12 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
       }
       const user = session.user;
 
-      // Load profile, purchase, and template in parallel
-      const [profileRes, purchaseRes, templateRes] = await Promise.all([
-        supabase.from('profiles').select('coin_balance').eq('user_id', user.id).single(),
+      // Load profile, purchase, template, and total purchases in parallel
+      const [profileRes, purchaseRes, templateRes, totalPurchasesRes] = await Promise.all([
+        supabase.from('profiles').select('coin_balance, role').eq('user_id', user.id).single(),
         supabase.from("purchases").select("id, template_id, payment_status").eq("user_id", user.id).eq("template_id", resolvedParams.templateId).eq("payment_status", "completed").maybeSingle(),
         supabase.from("templates").select("id, name, slug, coin_price, discount_price, discount_label, discount_expires_at, html_content, created_by, purchase_count").eq("id", resolvedParams.templateId).single(),
+        supabase.from("purchases").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("payment_status", "completed"),
       ]);
 
       if (!profileRes.data || !templateRes.data) {
@@ -726,6 +729,11 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
       }
 
       setCoinBalance(profileRes.data?.coin_balance || 0);
+
+      // Check affiliate one-time free discount
+      if (profileRes.data?.role === "affiliate" && (totalPurchasesRes.count ?? 0) === 0) {
+        setAffiliateFreeActive(true);
+      }
 
       let purchaseData = purchaseRes.data;
       const templateData = templateRes.data;
@@ -1475,7 +1483,8 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
       if (!session?.user) { router.push("/login"); return; }
       const user = session.user;
 
-      const coinPrice = isDiscountActive(template) ? template.discount_price! : template.coin_price;
+      let coinPrice = isDiscountActive(template) ? template.discount_price! : template.coin_price;
+      if (affiliateFreeActive) coinPrice = 0;
 
       if (coinPrice === 0) {
         // Free template — auto-purchase (server-side)
@@ -1554,7 +1563,8 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
       if (!user) { setPurchasing(false); return; }
 
       // Ücretsiz/ücretli akış ayrımı için efektif fiyatı hesapla
-      const effectivePrice = isDiscountActive(template) ? template.discount_price! : template.coin_price;
+      let effectivePrice = isDiscountActive(template) ? template.discount_price! : template.coin_price;
+      if (affiliateFreeActive) effectivePrice = 0;
 
       // 1) Bu şablonla yayınlanmış projesi var mı?
       const { data: existingProject } = await supabase
@@ -1581,7 +1591,8 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
         .maybeSingle();
 
       if (!existingPurchase) {
-        const coinPrice = isDiscountActive(template) ? template.discount_price! : template.coin_price;
+        let coinPrice = isDiscountActive(template) ? template.discount_price! : template.coin_price;
+        if (affiliateFreeActive) coinPrice = 0;
 
         if (coinPrice === 0) {
           // Free template — server-side purchase
@@ -2145,6 +2156,8 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
 
   return (
     <div className="h-[100dvh] bg-black text-white flex flex-col overflow-hidden max-w-none w-screen relative left-1/2 -translate-x-1/2" style={{ overscrollBehavior: 'none' }}>
+      {/* Affiliate Banner */}
+      {affiliateFreeActive && <AffiliateBanner compact />}
       {/* Header */}
       <header className="shrink-0 z-50 bg-[#161616]/85 backdrop-blur-2xl min-h-[73px]">
         <nav className="w-full px-3 sm:px-6 flex items-center justify-between min-h-[73px]">
@@ -2176,9 +2189,9 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
                 data-tour="publish-mobile"
               >
                 {saving || purchasing
-                  ? (project?.is_published ? "Güncelleniyor..." : !isPurchased && !guestMode && (isDiscountActive(template) ? template.discount_price! : template.coin_price) > 0 ? "Satın Alınıyor..." : "Paylaşılıyor...")
+                  ? (project?.is_published ? "Güncelleniyor..." : !isPurchased && !guestMode && !affiliateFreeActive && (isDiscountActive(template) ? template.discount_price! : template.coin_price) > 0 ? "Satın Alınıyor..." : "Paylaşılıyor...")
                   : project?.is_published ? "Güncelle"
-                  : !isPurchased && !guestMode && (isDiscountActive(template) ? template.discount_price! : template.coin_price) > 0
+                  : !isPurchased && !guestMode && !affiliateFreeActive && (isDiscountActive(template) ? template.discount_price! : template.coin_price) > 0
                     ? <><Coins className="h-4 w-4 text-yellow-400" />{isDiscountActive(template) ? template.discount_price! : template.coin_price} FL</>
                     : "Paylaş"
                 }
@@ -2346,9 +2359,9 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
                       data-tour="publish"
                     >
                       {saving || purchasing
-                        ? (project?.is_published ? "Güncelleniyor..." : !isPurchased && !guestMode && (isDiscountActive(template) ? template.discount_price! : template.coin_price) > 0 ? "Satın Alınıyor..." : "Paylaşılıyor...")
+                        ? (project?.is_published ? "Güncelleniyor..." : !isPurchased && !guestMode && !affiliateFreeActive && (isDiscountActive(template) ? template.discount_price! : template.coin_price) > 0 ? "Satın Alınıyor..." : "Paylaşılıyor...")
                         : project?.is_published ? "Güncelle"
-                        : !isPurchased && !guestMode && (isDiscountActive(template) ? template.discount_price! : template.coin_price) > 0
+                        : !isPurchased && !guestMode && !affiliateFreeActive && (isDiscountActive(template) ? template.discount_price! : template.coin_price) > 0
                           ? <><Coins className="h-4 w-4 text-yellow-400" />{isDiscountActive(template) ? template.discount_price! : template.coin_price} FL</>
                           : "Paylaş"
                       }
