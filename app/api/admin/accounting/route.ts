@@ -33,6 +33,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "startDate ve endDate gerekli" }, { status: 400 });
     }
 
+    // Validate date format to prevent injection
+    if (isNaN(new Date(startDate).getTime()) || isNaN(new Date(endDate).getTime())) {
+      return NextResponse.json({ error: "Gecersiz tarih formati" }, { status: 400 });
+    }
+
+    // Validate format param
+    if (format && format !== "csv") {
+      return NextResponse.json({ error: "Gecersiz format" }, { status: 400 });
+    }
+
     const admin = createAdminClient();
 
     // 1. Satışlar (coin_payments)
@@ -123,11 +133,12 @@ export async function GET(request: NextRequest) {
     // Fetch affiliate profiles
     const affiliateIds = [...new Set(payoutList.map(p => p.affiliate_user_id))];
     let affiliateProfileMap = new Map<string, any>();
+    let affiliateEmailMap = new Map<string, string>();
 
     if (affiliateIds.length > 0) {
       const { data: profiles } = await admin
         .from("profiles")
-        .select("user_id, name, surname, affiliate_iban")
+        .select("user_id, name, surname, affiliate_iban, affiliate_holder_name")
         .in("user_id", affiliateIds);
 
       if (profiles) {
@@ -150,6 +161,14 @@ export async function GET(request: NextRequest) {
           }
         }
       } catch { /* columns may not exist yet */ }
+
+      // Fetch affiliate emails
+      for (const id of affiliateIds) {
+        try {
+          const { data: authUser } = await admin.auth.admin.getUserById(id);
+          if (authUser?.user?.email) affiliateEmailMap.set(id, authUser.user.email);
+        } catch { /* skip */ }
+      }
     }
 
     const enrichedPayouts = payoutList.map(payout => {
@@ -158,6 +177,8 @@ export async function GET(request: NextRequest) {
         id: payout.id,
         date: payout.requested_at,
         affiliateName: profile ? `${profile.name || ""} ${profile.surname || ""}`.trim() || "—" : "—",
+        affiliateEmail: affiliateEmailMap.get(payout.affiliate_user_id) || "—",
+        affiliateHolderName: profile?.affiliate_holder_name || null,
         tcKimlik: profile?.tc_kimlik_no || null,
         iban: profile?.affiliate_iban || null,
         address: profile?.address || null,
@@ -184,19 +205,29 @@ export async function GET(request: NextRequest) {
     // CSV export
     if (format === "csv") {
       const BOM = "\uFEFF";
-      let csv = BOM + "TIP;TARIH;AD;EMAIL/TC;TUTAR;PAKET/IBAN;FATURA\n";
-
+      // Satışlar bölümü
+      let csv = BOM + "=== SATISLAR ===\n";
+      csv += "TARIH;MUSTERI AD SOYAD;EMAIL;TUTAR (TRY);PAKET;FATURA KESILDI\n";
       for (const sale of enrichedSales) {
-        csv += `SATIS;${new Date(sale.date).toLocaleDateString("tr-TR")};${sale.customerName};${sale.customerEmail};${sale.amount.toFixed(2)};${sale.packageName};${sale.invoiceSent ? "Evet" : "Hayır"}\n`;
+        csv += `${new Date(sale.date).toLocaleDateString("tr-TR")};${sale.customerName};${sale.customerEmail};${sale.amount.toFixed(2)};${sale.packageName};${sale.invoiceSent ? "Evet" : "Hayir"}\n`;
       }
 
+      // Affiliate ödemeleri bölümü
+      csv += "\n=== AFFILIATE ODEMELERI ===\n";
+      csv += "TARIH;AD SOYAD;EMAIL;TC KIMLIK;IBAN;HESAP SAHIBI;ADRES;TUTAR;PARA BIRIMI;FATURA\n";
       for (const payout of enrichedPayouts) {
-        csv += `ODEME;${new Date(payout.date).toLocaleDateString("tr-TR")};${payout.affiliateName};${payout.tcKimlik || "-"};${payout.amount.toFixed(2)};${payout.iban || "-"};${payout.invoiceUrl ? "Var" : "Yok"}\n`;
+        const addr = (payout.address || "-").replace(/;/g, ",").replace(/\n/g, " ");
+        csv += `${new Date(payout.date).toLocaleDateString("tr-TR")};${payout.affiliateName};${payout.affiliateEmail};${payout.tcKimlik || "-"};${payout.iban || "-"};${payout.affiliateHolderName || "-"};${addr};${payout.amount.toFixed(2)};${payout.currency};${payout.invoiceUrl ? "Var" : "Yok"}\n`;
       }
 
-      csv += `\nOZET;;Toplam Gelir;;${summary.totalRevenue.toFixed(2)};;\n`;
-      csv += `;;Toplam Gider;;${summary.totalExpense.toFixed(2)};;\n`;
-      csv += `;;Net Kazanc;;${summary.netProfit.toFixed(2)};;\n`;
+      // Özet
+      csv += "\n=== OZET ===\n";
+      csv += `Toplam Gelir (Satis);${summary.totalRevenue.toFixed(2)} TRY\n`;
+      csv += `Toplam Gider (Affiliate);${summary.totalExpense.toFixed(2)} TRY\n`;
+      csv += `Net Kazanc;${summary.netProfit.toFixed(2)} TRY\n`;
+      csv += `Satis Adedi;${summary.salesCount}\n`;
+      csv += `Odeme Adedi;${summary.payoutsCount}\n`;
+      csv += `Faturasiz Satis;${summary.uninvoicedCount}\n`;
 
       return new NextResponse(csv, {
         headers: {
@@ -228,10 +259,14 @@ export async function PATCH(request: NextRequest) {
     const { paymentId, invoiceSent } = await request.json();
 
     if (!paymentId || typeof paymentId !== "string") {
-      return NextResponse.json({ error: "Geçersiz ödeme ID" }, { status: 400 });
+      return NextResponse.json({ error: "Gecersiz odeme ID" }, { status: 400 });
+    }
+    // UUID format validation
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(paymentId)) {
+      return NextResponse.json({ error: "Gecersiz odeme ID formati" }, { status: 400 });
     }
     if (typeof invoiceSent !== "boolean") {
-      return NextResponse.json({ error: "invoiceSent boolean olmalı" }, { status: 400 });
+      return NextResponse.json({ error: "invoiceSent boolean olmali" }, { status: 400 });
     }
 
     const admin = createAdminClient();
