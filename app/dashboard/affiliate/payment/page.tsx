@@ -145,10 +145,11 @@ export default function AffiliatePaymentPage() {
 
   // Convert TRY amount to selected currency
   const convertAmount = useCallback((tryAmount: number): string => {
+    const amount = tryAmount ?? 0;
     if (currency === "TRY" || !exchangeRate) {
-      return tryAmount.toLocaleString('tr-TR');
+      return amount.toLocaleString('tr-TR');
     }
-    return (tryAmount / exchangeRate).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return (amount / exchangeRate).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }, [currency, exchangeRate]);
 
   const currencyLabel = currency === "TRY" ? "TRY" : "USD";

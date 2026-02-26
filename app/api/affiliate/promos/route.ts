@@ -202,7 +202,7 @@ export async function GET() {
     // Get affiliate payment info + payout data + referral earnings
     const [paymentInfoRes, payoutsRes, referralEarningsRes] = await Promise.all([
       admin.from("profiles").select("affiliate_iban, affiliate_holder_name").eq("user_id", user.id).single(),
-      admin.from("affiliate_payouts").select("amount, status").eq("affiliate_user_id", user.id),
+      admin.from("affiliate_payouts").select("amount, status, requested_at").eq("affiliate_user_id", user.id),
       admin.from("affiliate_commissions").select("referrer_earning, created_at").eq("referrer_id", user.id).gt("referrer_earning", 0),
     ]);
 
@@ -225,6 +225,15 @@ export async function GET() {
     const payoutsList = payoutsRes.data || [];
     const totalPaidOut = payoutsList.filter((p: any) => p.status === "approved").reduce((sum: number, p: any) => sum + Number(p.amount), 0);
     const totalPending = payoutsList.filter((p: any) => p.status === "pending").reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+
+    // Calculate next auto-payout date
+    const sortedPayouts = [...payoutsList].sort((a: any, b: any) => new Date(b.requested_at).getTime() - new Date(a.requested_at).getTime());
+    const lastRequest = sortedPayouts[0];
+    const AUTO_PAYOUT_INTERVAL_DAYS = 7;
+    const MIN_PAYOUT = 200;
+    const nextAutoDate = lastRequest
+      ? new Date(new Date(lastRequest.requested_at).getTime() + AUTO_PAYOUT_INTERVAL_DAYS * 86400000).toISOString()
+      : null;
 
     // Referral earnings per period
     const allReferralEarnings = referralEarningsRes.data || [];
@@ -264,8 +273,11 @@ export async function GET() {
         totalPaidOut: Math.round(totalPaidOut * 100) / 100,
         totalPending: Math.round(totalPending * 100) / 100,
         available: Math.max(0, availableBalance),
-        canRequestPayout: availableBalance >= 200 && !payoutsList.some((p: any) => p.status === "pending"),
+        canRequestPayout: availableBalance >= MIN_PAYOUT && !payoutsList.some((p: any) => p.status === "pending"),
         hasPendingPayout: payoutsList.some((p: any) => p.status === "pending"),
+        minPayout: MIN_PAYOUT,
+        nextAutoDate,
+        autoPayoutDays: AUTO_PAYOUT_INTERVAL_DAYS,
       },
       recentUsers,
       paymentInfo: paymentInfo ? {
