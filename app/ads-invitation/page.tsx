@@ -25,16 +25,14 @@ function useLiveViewers() {
 // --- Bildirim popup ---
 function useNotifications() {
   const entries = [
-    { name: "Elif", title: "Kerem seni çok seviyorum" },
-    { name: "Merve", title: "İlk günümüzden bugüne" },
-    { name: "Sena", title: "Seninle her an güzel" },
-    { name: "Beyza", title: "Doğum günün kutlu olsun aşkım" },
-    { name: "Cansu", title: "1. yılımız, daha nice yıllara" },
-    { name: "Gizem", title: "Seni tanıdığım güne şükür" },
-    { name: "Hande", title: "Hayatıma anlam kattın" },
-    { name: "Buse", title: "Bu şarkı hep bizi hatırlatacak" },
-    { name: "Dilan", title: "Yıldönümümüz kutlu olsun" },
-    { name: "Fatma", title: "Sonsuz sevgiyle sana" },
+    { name: "Ayşe & Mehmet", title: "Düğünümüze davetlisiniz" },
+    { name: "Fatma & Ali", title: "Nişanımıza bekleriz" },
+    { name: "Zeynep & Can", title: "Kına gecemize davetlisiniz" },
+    { name: "Elif & Burak", title: "Evleniyoruz!" },
+    { name: "Selin & Emre", title: "Söz törenimize bekleriz" },
+    { name: "Merve & Kerem", title: "Düğün davetiyemiz" },
+    { name: "Gizem & Arda", title: "Nikahımıza davetlisiniz" },
+    { name: "Büşra & Onur", title: "Nişan davetiyemiz" },
   ];
   const [notif, setNotif] = useState<{ name: string; title: string; show: boolean }>({ name: "", title: "", show: false });
 
@@ -55,24 +53,24 @@ function useNotifications() {
 // --- Yorumlar ---
 const reviews = [
   {
-    name: "Ayşe K.", city: "İstanbul", when: "2 gün önce",
-    text: "3. yıldönümümüz için yaptım. Müziğimiz çalmaya başlayınca ikimiz de ağladık. Çiçekten, hediyeden kat kat güzel oldu.",
+    name: "Fatma K.", city: "İstanbul", when: "3 gün önce",
+    text: "Düğün davetiyemizi dijital yaptık, 300 kişiye WhatsApp'tan gönderdik. Herkes 'çok modern, çok güzel' dedi. Basılı davetiyeye binlerce lira vermek yerine bunu tercih ettik.",
   },
   {
-    name: "Merve T.", city: "İzmir", when: "1 gün önce",
-    text: "Gece 1'de son dakika doğum günü hediyesi olarak yaptım. Sabah linki attığımda storysine attı, mutluluktan uçuyordu.",
+    name: "Zeynep A.", city: "Ankara", when: "1 hafta önce",
+    text: "Nişan davetiyemizi burada hazırladık. Fotoğraflarımızı, mekan bilgisini ekledik. Davetliler 'böyle davetiye ilk kez görüyorum' dedi.",
   },
   {
-    name: "Sena B.", city: "Ankara", when: "4 gün önce",
-    text: "Uzak mesafe ilişkideyiz. Fotoğraflarımızı ve şarkımızı bir araya koydum. Açtığı an görüntülü aradı, ağlıyordu.",
+    name: "Selin M.", city: "İzmir", when: "2 gün önce",
+    text: "Kına gecesi için hazırladım. Müzik ekleme özelliği harika — davetiyeyi açan herkes müziği duyunca çok beğendi. 10 dakikada hazırladım.",
   },
   {
-    name: "Beyza D.", city: "Bursa", when: "1 hafta önce",
-    text: "'Bunu gerçekten sen mi yaptın?' dedi. 15 dakikada yaptım ama söylemedim tabii. Çok profesyonel görünüyor.",
+    name: "Büşra T.", city: "Bursa", when: "5 gün önce",
+    text: "Düğünümüze 2 ay kala basılı davetiye bastırmaya kalktık, fiyatları görünce vazgeçtik. Burada hem daha güzel hem bedavaya yakın oldu.",
   },
 ];
 
-export default function TikTokLanding() {
+export default function AdsInvitationLanding() {
   const viewers = useLiveViewers();
   const notif = useNotifications();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -85,20 +83,18 @@ export default function TikTokLanding() {
   const router = useRouter();
 
   useEffect(() => {
-    trackEvent("ViewContent", { content_name: "Ads Romantic Landing", content_type: "product" });
+    trackEvent("ViewContent", { content_name: "Ads Invitation Landing", content_type: "product" });
 
     const loadTemplates = async () => {
       try {
-        // "romantic" etiketine sahip şablonları getir
         const { data: taggedData } = await supabase
           .from("template_tags")
           .select("templates(id, name, slug, coin_price, discount_price, discount_label, discount_expires_at, description, html_content, purchase_count, template_tags(tags(name, slug))), tags!inner(slug)")
-          .eq("tags.slug", "romantic")
+          .eq("tags.slug", "davetiye")
           .limit(12);
 
         let filtered = (taggedData || []).map((t: any) => t.templates).filter(Boolean);
 
-        // Eğer romantic etiketli şablon yoksa, tüm aktif şablonları getir (fallback)
         if (filtered.length === 0) {
           const { data } = await supabase
             .from("templates")
@@ -122,7 +118,6 @@ export default function TikTokLanding() {
     };
     loadTemplates();
 
-    // Exit intent
     const handleExit = (e: MouseEvent) => {
       if (e.clientY < 5 && !exitShown.current) {
         exitShown.current = true;
@@ -134,7 +129,7 @@ export default function TikTokLanding() {
   }, []);
 
   const handleCTA = () => {
-    trackEvent("Lead", { content_name: "tiktok_landing_cta" });
+    trackEvent("Lead", { content_name: "invitation_landing_cta" });
   };
 
   return (
@@ -142,9 +137,9 @@ export default function TikTokLanding() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "WebPage",
-        name: "Sevgiline Özel Sürpriz Sayfa Oluştur",
-        description: "Fotoğraflarınız, şarkınız ve özel mesajlarınızla sevgilinize unutulmaz bir dijital anı sayfası hazırlayın.",
-        url: "https://forilove.com/ads-romantic",
+        name: "Dijital Davetiye Oluştur",
+        description: "Düğün, nişan ve özel günleriniz için dijital davetiye oluşturun.",
+        url: "https://forilove.com/ads-invitation",
         isPartOf: { "@id": "https://forilove.com/#website" },
         provider: {
           "@type": "Organization",
@@ -169,36 +164,35 @@ export default function TikTokLanding() {
         </div>
       </div>
 
-
       {/* ===== HERO ===== */}
       <section className="relative min-h-[100svh] flex flex-col items-center justify-center px-5 py-12 sm:py-16 -mt-[73px] pt-[73px] text-center" style={{ zIndex: 1 }}>
 
         {/* Sosyal kanıt badge */}
         <div className="relative flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-pink-500/10 border border-pink-500/30 mb-5">
           <Heart className="h-3.5 w-3.5 text-pink-500 fill-pink-500" />
-          <span className="text-[11px] sm:text-xs font-medium text-pink-300">10.000+ kişi bunu yaptı</span>
+          <span className="text-[11px] sm:text-xs font-medium text-pink-300">5.000+ davetiye oluşturuldu</span>
           <span className="text-[10px] text-zinc-500">·</span>
           <span className="text-[10px] sm:text-[11px] text-zinc-400">{viewers} kişi çevrimiçi</span>
         </div>
 
         {/* Başlık */}
         <h1 className="relative font-extrabold leading-[1.1] mb-5 max-w-lg">
-          <span className="text-[26px] sm:text-[40px]">Sevgiline öyle bir sürpriz yap ki,</span>
+          <span className="text-[26px] sm:text-[40px]">Basılı davetiyeye binlerce lira verme,</span>
           <span className="block text-[36px] sm:text-[48px] text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-400 mt-1">
-            gözleri dolsun.
+            dijitalde oluştur.
           </span>
         </h1>
 
         {/* Alt yazı */}
         <p className="relative text-[15px] sm:text-lg text-zinc-400 mb-6 max-w-md leading-relaxed">
-          Fotoğraflarınız, şarkınız ve özel mesajlarınız tek bir sayfada.
+          Fotoğraflarınız, mekan bilgisi ve müzik tek bir davetiyede.
           <br />
-          <span className="text-white font-medium">WhatsApp&apos;tan linki at, tepkisini izle.</span>
+          <span className="text-white font-medium">WhatsApp&apos;tan gönder, anında ulaşsın.</span>
         </p>
 
         {/* CTA */}
-        <Link href="/register" onClick={handleCTA} className="relative group btn-primary text-lg px-10 py-4 hidden md:flex items-center gap-2" aria-label="Ücretsiz kayıt ol ve sürpriz sayfanı oluştur">
-          Ücretsiz Kayıt Ol
+        <Link href="/register" onClick={handleCTA} className="relative group btn-primary text-lg px-10 py-4 hidden md:flex items-center gap-2" aria-label="Ücretsiz kayıt ol ve davetiye oluştur">
+          Davetiye Oluştur
           <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
         </Link>
 
@@ -212,8 +206,8 @@ export default function TikTokLanding() {
         <div className="w-full px-4 sm:px-6 lg:px-10">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-2xl md:text-3xl font-bold mb-4">Böyle Sayfalar Oluşturabilirsin</h2>
-              <p className="text-zinc-400 text-lg">Birini seç, fotoğraflarını ekle, paylaş.</p>
+              <h2 className="text-2xl md:text-3xl font-bold mb-4">Davetiye Şablonları</h2>
+              <p className="text-zinc-400 text-lg">Birini seç, bilgilerini gir, gönder.</p>
             </div>
 
             {loadingTemplates ? (
@@ -249,12 +243,12 @@ export default function TikTokLanding() {
       {/* ===== NASIL ÇALIŞIR ===== */}
       <section className="py-16 px-5 border-t border-white/5">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-xl font-bold text-center mb-10">3 adım, 10 dakika</h2>
+          <h2 className="text-xl font-bold text-center mb-10">3 adımda davetiye hazır</h2>
           <div className="space-y-0">
             {[
-              { n: "1", t: "Şablon seç", d: "Yıldönümü, doğum günü, teklif — ne istersen." },
-              { n: "2", t: "Fotoğraf & müzik ekle", d: "Sürükle bırak. Şarkınızı ekle, mesajını yaz." },
-              { n: "3", t: "Linki gönder", d: "WhatsApp'tan at, açtığı anı hayal et." },
+              { n: "1", t: "Şablon seç", d: "Düğün, nişan, kına, söz — etkinliğine uygun şablonu seç." },
+              { n: "2", t: "Bilgileri gir", d: "Tarih, saat, mekan, fotoğraf ve müzik ekle." },
+              { n: "3", t: "WhatsApp'tan gönder", d: "Linki kopyala, tüm davetlilere anında gönder." },
             ].map((s, i) => (
               <div key={i} className="flex gap-4 items-stretch">
                 <div className="flex flex-col items-center">
@@ -310,10 +304,10 @@ export default function TikTokLanding() {
 
             <div className="space-y-3">
               {[
-                { q: "Nasıl çalışıyor?", a: "Şablon seç, fotoğraflarını yükle, mesajını yaz, paylaş. 10 dakikada hazır." },
-                { q: "Ücretsiz şablon var mı?", a: "Evet, ücretsiz şablonlar mevcut. Kayıt olup hemen deneyebilirsin." },
-                { q: "Sayfam ne kadar yayında kalır?", a: "Süresiz. Sonsuza kadar aktif kalır, dilediğin zaman düzenleyebilirsin." },
-                { q: "Sevgilim nasıl açacak?", a: "Sana özel link veriyoruz. WhatsApp, Instagram, SMS — istediğin yerden gönder." },
+                { q: "Basılı davetiye yerine kullanılabilir mi?", a: "Evet! Birçok çift artık dijital davetiye tercih ediyor. Hem pratik hem çok daha uygun fiyatlı." },
+                { q: "Kaç kişiye gönderebilirim?", a: "Sınırsız. Linki istediğin kadar kişiye gönderebilirsin. WhatsApp, Instagram, SMS — hepsi çalışır." },
+                { q: "Müzik ekleyebilir miyim?", a: "Evet. Davetiye açıldığında arka planda müzik çalar." },
+                { q: "Ne kadar sürede hazır olur?", a: "Ortalama 10 dakika. Şablon seç, bilgileri gir, paylaş." },
                 { q: "İade var mı?", a: "Evet. 14 gün içinde iade edebilirsin." },
               ].map((faq, i) => (
                 <div key={i} className="border border-white/5 rounded-xl overflow-hidden">
@@ -343,8 +337,8 @@ export default function TikTokLanding() {
       <section className="py-20 px-5 border-t border-white/5">
         <div className="max-w-2xl mx-auto text-center">
           <Heart className="h-12 w-12 text-pink-500 fill-pink-500 mx-auto mb-5 animate-pulse" />
-          <h2 className="text-2xl font-bold mb-3">Bugün bir sürpriz yap</h2>
-          <p className="text-sm text-zinc-400 mb-8">Binlerce kişi Forilove ile sevdiklerini mutlu etti. Sıra sende.</p>
+          <h2 className="text-2xl font-bold mb-3">Bugün davetiyeni oluştur</h2>
+          <p className="text-sm text-zinc-400 mb-8">Binlerce kişi Forilove ile dijital davetiye oluşturdu. Sıra sende.</p>
           <Link href="/register" onClick={handleCTA} className="btn-primary text-base px-8 py-3.5 inline-flex items-center gap-2">
             Ücretsiz Kayıt Ol <ArrowRight className="h-5 w-5" />
           </Link>

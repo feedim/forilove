@@ -27,37 +27,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { package_id } = body;
-
-    if (!package_id) {
-      return NextResponse.json(
-        { success: false, error: 'Paket ID gerekli' },
-        { status: 400 }
-      );
-    }
-
-    // UUID format validation
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (typeof package_id !== 'string' || !uuidRegex.test(package_id)) {
-      return NextResponse.json(
-        { success: false, error: 'Geçersiz paket ID formatı' },
-        { status: 400 }
-      );
-    }
-
-    // Paketi veritabanından al
-    const { data: pkg, error: pkgError } = await supabase
-      .from('coin_packages')
-      .select('id, name, coins, price_try, bonus_coins')
-      .eq('id', package_id)
-      .single();
-
-    if (pkgError || !pkg) {
-      return NextResponse.json(
-        { success: false, error: 'Paket bulunamadı' },
-        { status: 404 }
-      );
-    }
+    const { package_id, amount } = body;
 
     // Kullanıcı bilgilerini al
     const { data: profile } = await supabase
@@ -66,10 +36,64 @@ export async function POST(request: NextRequest) {
       .eq('user_id', user.id)
       .single();
 
-    // Max 1000 TL bakiye limiti kontrolü
     const currentBalance = profile?.coin_balance || 0;
-    const totalCoins = pkg.coins + (pkg.bonus_coins || 0);
-    if (currentBalance + totalCoins > 1000) {
+
+    let priceTry: number;
+    let coinsToAdd: number;
+    let basketName: string;
+    let pkgId: string | null = null;
+
+    if (amount) {
+      // Yeni sistem: doğrudan tutar
+      const numAmount = Number(amount);
+      if (!Number.isInteger(numAmount) || numAmount < 30 || numAmount > 1000) {
+        return NextResponse.json(
+          { success: false, error: 'Tutar 30-1000₺ arasında olmalıdır' },
+          { status: 400 }
+        );
+      }
+
+      priceTry = numAmount;
+      coinsToAdd = numAmount; // 1₺ = 1 bakiye
+      basketName = `${numAmount}₺ Bakiye Yükleme`;
+
+    } else if (package_id) {
+      // Eski sistem: paket bazlı (geriye uyumluluk)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (typeof package_id !== 'string' || !uuidRegex.test(package_id)) {
+        return NextResponse.json(
+          { success: false, error: 'Geçersiz paket ID formatı' },
+          { status: 400 }
+        );
+      }
+
+      const { data: pkg, error: pkgError } = await supabase
+        .from('coin_packages')
+        .select('id, name, coins, price_try, bonus_coins')
+        .eq('id', package_id)
+        .single();
+
+      if (pkgError || !pkg) {
+        return NextResponse.json(
+          { success: false, error: 'Paket bulunamadı' },
+          { status: 404 }
+        );
+      }
+
+      priceTry = pkg.price_try;
+      coinsToAdd = pkg.coins + (pkg.bonus_coins || 0);
+      basketName = pkg.name;
+      pkgId = pkg.id;
+
+    } else {
+      return NextResponse.json(
+        { success: false, error: 'Tutar veya paket ID gerekli' },
+        { status: 400 }
+      );
+    }
+
+    // Max 1000 TL bakiye limiti kontrolü
+    if (currentBalance + coinsToAdd > 1000) {
       return NextResponse.json(
         { success: false, error: `Maksimum bakiye limiti 1.000₺'dir. Mevcut bakiyeniz: ${currentBalance}₺` },
         { status: 400 }
@@ -99,12 +123,12 @@ export async function POST(request: NextRequest) {
 
     // Kullanıcı sepeti (PayTR formatı — base64 encoded JSON)
     const user_basket = Buffer.from(JSON.stringify([
-      [pkg.name, String(pkg.price_try), 1]
+      [basketName, String(priceTry), 1]
     ])).toString('base64');
 
     // PayTR parametreleri
     const email = user.email || 'noreply@forilove.com';
-    const payment_amount = Math.round(pkg.price_try * 100).toString();
+    const payment_amount = Math.round(priceTry * 100).toString();
     const user_name = profile?.full_name || 'Forilove Kullanıcısı';
     const user_address = 'Dijital Urun - Forilove';
     const user_phone = '8508400000';
@@ -138,15 +162,15 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: user.id,
         payment_id: merchant_oid,
-        package_id: pkg.id,
-        price_paid: pkg.price_try,
-        coins_purchased: pkg.coins + (pkg.bonus_coins || 0),
+        package_id: pkgId,
+        price_paid: priceTry,
+        coins_purchased: coinsToAdd,
         status: 'pending',
         payment_provider: 'payttr',
         currency: 'TRY',
         metadata: {
-          package_name: pkg.name,
-          bonus_coins: pkg.bonus_coins || 0,
+          package_name: basketName,
+          bonus_coins: 0,
         },
       })
       .select()
@@ -221,8 +245,8 @@ export async function POST(request: NextRequest) {
           .update({
             status: 'failed',
             metadata: {
-              package_name: pkg.name,
-              bonus_coins: pkg.bonus_coins || 0,
+              package_name: basketName,
+              bonus_coins: 0,
               error: `PayTR bağlantı hatası: ${e?.name === 'AbortError' ? 'timeout' : (e?.message || 'unknown')}`,
             },
             completed_at: new Date().toISOString(),
@@ -251,8 +275,8 @@ export async function POST(request: NextRequest) {
           .update({
             status: 'failed',
             metadata: {
-              package_name: pkg.name,
-              bonus_coins: pkg.bonus_coins || 0,
+              package_name: basketName,
+              bonus_coins: 0,
               error: payttrResult.reason || 'Token alınamadı',
             },
             completed_at: new Date().toISOString(),

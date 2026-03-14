@@ -8,11 +8,13 @@ import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 
 interface PaymentData {
-  package_id: string;
-  package_name: string;
-  price: number;
-  coins: number;
-  bonus_coins: number;
+  amount: number;
+  // Eski format desteği (geriye uyumluluk)
+  package_id?: string;
+  package_name?: string;
+  price?: number;
+  coins?: number;
+  bonus_coins?: number;
 }
 
 export default function PaymentPage() {
@@ -33,7 +35,7 @@ export default function PaymentPage() {
 
     try {
       const parsed = JSON.parse(raw) as PaymentData;
-      if (!parsed.package_id) {
+      if (!parsed.amount && !parsed.package_id) {
         router.push("/dashboard/coins");
         return;
       }
@@ -44,7 +46,7 @@ export default function PaymentPage() {
     }
   }, [router]);
 
-  // Paket verisi hazır olunca otomatik PayTR token al
+  // Ödeme verisi hazır olunca otomatik PayTR token al
   useEffect(() => {
     if (!data || initiatedRef.current) return;
     initiatedRef.current = true;
@@ -57,12 +59,15 @@ export default function PaymentPage() {
           router.push("/login");
           return;
         }
-        const user = session.user;
+
+        const body = data.amount
+          ? { amount: data.amount }
+          : { package_id: data.package_id };
 
         const response = await fetch("/api/payment/payttr/initiate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ package_id: data.package_id }),
+          body: JSON.stringify(body),
         });
 
         const result = await response.json();
@@ -95,7 +100,8 @@ export default function PaymentPage() {
     );
   }
 
-  const totalCoins = data ? data.coins + data.bonus_coins : 0;
+  const displayAmount = data?.amount || data?.price || 0;
+  const displayCoins = data?.amount || (data?.coins ? data.coins + (data.bonus_coins || 0) : 0);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -122,17 +128,12 @@ export default function PaymentPage() {
           <div className="bg-zinc-900 rounded-2xl p-5 mb-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-zinc-400 mb-1">{data.package_name}</p>
+                <p className="text-sm text-zinc-400 mb-1">Bakiye Yükleme</p>
                 <p className="text-xl font-bold text-yellow-500">
-                  {totalCoins.toLocaleString()}₺
+                  {displayCoins}₺
                 </p>
-                {data.bonus_coins > 0 && (
-                  <p className="text-xs text-zinc-500 mt-0.5">
-                    +{data.bonus_coins.toLocaleString()} bonus dahil
-                  </p>
-                )}
               </div>
-              <p className="text-2xl font-bold">{data.price}₺</p>
+              <p className="text-2xl font-bold">{displayAmount}₺</p>
             </div>
           </div>
         )}
@@ -179,7 +180,6 @@ export default function PaymentPage() {
             </div>
           </div>
         ) : !error ? (
-          /* Loading State */
           <div className="flex flex-col items-center justify-center py-16 gap-4">
             <Heart className="h-10 w-10 text-pink-500 fill-pink-500 animate-pulse" />
             <p className="text-zinc-400 text-sm">Ödeme formu yükleniyor...</p>

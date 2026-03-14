@@ -10,21 +10,20 @@ import TransactionCard from "@/components/TransactionCard";
 import { CoinPageSkeleton } from "@/components/Skeletons";
 import { trackEvent } from "@/lib/pixels";
 
-interface CoinPackage {
-  id: string;
-  name: string;
-  coins: number;
-  price_try: number;
-  bonus_coins: number;
-  is_popular: boolean;
-  display_order: number;
+// Tutar seçenekleri: 30-100 arası 10'ar, 100-1000 arası 20'şer
+function getAmountSteps(): number[] {
+  const steps: number[] = [];
+  for (let i = 30; i <= 100; i += 10) steps.push(i);
+  for (let i = 120; i <= 1000; i += 20) steps.push(i);
+  return steps;
 }
 
+const AMOUNT_STEPS = getAmountSteps();
+
 export default function CoinsPage() {
-  const [packages, setPackages] = useState<CoinPackage[]>([]);
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [selectedAmount, setSelectedAmount] = useState(0);
+  const [selectedAmount, setSelectedAmount] = useState(30);
   const [transactions, setTransactions] = useState<any[]>([]);
   const router = useRouter();
   const supabase = createClient();
@@ -50,17 +49,6 @@ export default function CoinsPage() {
 
       setBalance(profile?.coin_balance || 0);
 
-      const { data: pkgs } = await supabase
-        .from('coin_packages')
-        .select('*')
-        .order('display_order', { ascending: true });
-
-      setPackages(pkgs || []);
-
-      if (pkgs && pkgs.length > 0) {
-        setSelectedAmount(pkgs[0].coins);
-      }
-
       // Load last 5 transactions
       const { data: txns } = await supabase
         .from('coin_transactions')
@@ -77,41 +65,24 @@ export default function CoinsPage() {
     }
   };
 
-  const getSelectedPackage = () => {
-    if (packages.length === 0) return null;
-
-    // Find closest package to selected amount
-    let closest = packages[0];
-    let minDiff = Math.abs(packages[0].coins - selectedAmount);
-
-    for (const pkg of packages) {
-      const diff = Math.abs(pkg.coins - selectedAmount);
-      if (diff < minDiff) {
-        minDiff = diff;
-        closest = pkg;
-      }
-    }
-
-    return closest;
-  };
+  const sliderIndex = AMOUNT_STEPS.indexOf(selectedAmount);
 
   const purchaseCoins = () => {
-    const pkg = getSelectedPackage();
-    if (!pkg) {
-      toast.error("Paket seçilmedi");
+    if (selectedAmount < 30 || selectedAmount > 1000) {
+      toast.error("Geçersiz tutar");
       return;
     }
 
-    // Paket bilgilerini sessionStorage'a kaydet ve ödeme sayfasına yönlendir
+    if (balance + selectedAmount > 1000) {
+      toast.error(`Maksimum bakiye limiti 1.000₺. Mevcut bakiyeniz: ${balance}₺`);
+      return;
+    }
+
     sessionStorage.setItem('forilove_payment', JSON.stringify({
-      package_id: pkg.id,
-      package_name: pkg.name,
-      price: pkg.price_try,
-      coins: pkg.coins,
-      bonus_coins: pkg.bonus_coins,
+      amount: selectedAmount,
     }));
 
-    trackEvent('InitiateCheckout', { content_type: 'product', content_id: pkg.id, value: pkg.price_try, currency: 'TRY' });
+    trackEvent('InitiateCheckout', { content_type: 'product', value: selectedAmount, currency: 'TRY' });
     router.push('/dashboard/payment');
   };
 
@@ -152,113 +123,88 @@ export default function CoinsPage() {
       </header>
 
       <main className="container mx-auto px-3 sm:px-6 pt-16 pb-24 md:pb-16 max-w-xl">
-        {packages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 sm:py-20 text-center">
-            <Wallet className="h-14 w-14 sm:h-20 sm:w-20 text-yellow-500 mb-3 sm:mb-4" />
-            <h2 className="text-lg sm:text-2xl font-bold mb-2">Paketler yükleniyor</h2>
-            <p className="text-zinc-400 mb-5 sm:mb-6 text-sm px-4">Bakiye paketleri henüz yapılandırılmamış.</p>
-            <button onClick={() => { if (window.history.length > 1) { router.back(); } else { router.push('/dashboard'); } }} className="btn-primary">
-              Geri Dön
-            </button>
+        <div className="space-y-8">
+          <div className="text-center space-y-4">
+            <div className="text-5xl font-bold text-yellow-500">
+              {selectedAmount}₺
+            </div>
+            <p className="text-sm text-zinc-400 font-semibold">Yüklenecek bakiye</p>
           </div>
-        ) : null}
-        {packages.length > 0 && (() => {
-          const pkg = getSelectedPackage();
-          if (!pkg) return null;
 
-          const totalCoins = pkg.coins + pkg.bonus_coins;
+          <input
+            type="range"
+            min="0"
+            max={AMOUNT_STEPS.length - 1}
+            step="1"
+            value={sliderIndex >= 0 ? sliderIndex : 0}
+            onChange={(e) => {
+              const index = parseInt(e.target.value);
+              setSelectedAmount(AMOUNT_STEPS[index]);
+            }}
+            className="w-full h-2 bg-zinc-800 rounded-full appearance-none cursor-pointer
+              [&::-webkit-slider-thumb]:appearance-none
+              [&::-webkit-slider-thumb]:w-8
+              [&::-webkit-slider-thumb]:h-8
+              [&::-webkit-slider-thumb]:rounded-full
+              [&::-webkit-slider-thumb]:bg-yellow-500
+              [&::-webkit-slider-thumb]:cursor-pointer
+              [&::-webkit-slider-thumb]:shadow-lg
+              [&::-moz-range-thumb]:w-8
+              [&::-moz-range-thumb]:h-8
+              [&::-moz-range-thumb]:rounded-full
+              [&::-moz-range-thumb]:bg-yellow-500
+              [&::-moz-range-thumb]:border-0
+              [&::-moz-range-thumb]:cursor-pointer
+              [&::-moz-range-thumb]:shadow-lg"
+          />
 
-          return (
-            <div className="space-y-8">
-              <div className="text-center space-y-4">
-                <div className="text-5xl font-bold text-yellow-500">
-                  {totalCoins.toLocaleString()}₺
-                </div>
-                {pkg.bonus_coins > 0 && (
-                  <div className="text-sm text-zinc-400 mb-2">
-                    +{pkg.bonus_coins.toLocaleString()}₺ bonus
-                  </div>
-                )}
-                <p className="text-sm text-zinc-400">{pkg.name}</p>
-              </div>
 
-              <input
-                type="range"
-                min="0"
-                max={packages.length - 1}
-                step="1"
-                value={Math.max(0, packages.findIndex(p => p.coins === pkg.coins))}
-                onChange={(e) => {
-                  const index = parseInt(e.target.value);
-                  setSelectedAmount(packages[index].coins);
-                }}
-                className="w-full h-2 bg-zinc-800 rounded-full appearance-none cursor-pointer
-                  [&::-webkit-slider-thumb]:appearance-none
-                  [&::-webkit-slider-thumb]:w-8
-                  [&::-webkit-slider-thumb]:h-8
-                  [&::-webkit-slider-thumb]:rounded-full
-                  [&::-webkit-slider-thumb]:bg-yellow-500
-                  [&::-webkit-slider-thumb]:cursor-pointer
-                  [&::-webkit-slider-thumb]:shadow-lg
-                  [&::-moz-range-thumb]:w-8
-                  [&::-moz-range-thumb]:h-8
-                  [&::-moz-range-thumb]:rounded-full
-                  [&::-moz-range-thumb]:bg-yellow-500
-                  [&::-moz-range-thumb]:border-0
-                  [&::-moz-range-thumb]:cursor-pointer
-                  [&::-moz-range-thumb]:shadow-lg"
-              />
+          <button
+            onClick={purchaseCoins}
+            disabled={balance + selectedAmount > 1000}
+            className="btn-primary w-full py-3 sm:py-4 text-sm sm:text-lg disabled:opacity-50 disabled:cursor-not-allowed" style={{ background: 'var(--color-yellow-500)', color: 'black' }}
+          >
+            {balance + selectedAmount > 1000 ? 'Bakiye limiti aşılıyor' : 'Ödeme'}
+          </button>
 
-              <button
-                onClick={purchaseCoins}
-                className="btn-primary w-full py-3 sm:py-4 text-sm sm:text-lg" style={{ background: 'var(--color-yellow-500)', color: 'black' }}
-              >
-                Satın Al
-              </button>
+          <div className="text-center space-y-4 pt-8 border-t border-white/10">
+            <p className="text-sm text-zinc-400">
+              Premium şablonların kilidini açmak için bakiye kullanın
+            </p>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center text-sm">
+              <Link href="/fl-coins" className="text-zinc-400 hover:text-white transition">
+                Bakiye Hakkında
+              </Link>
+              <Link href="/payment-security" className="text-zinc-400 hover:text-white transition">
+                Ödeme Güvenliği
+              </Link>
+              <Link href="/refund-policy" className="text-zinc-400 hover:text-white transition">
+                İade Politikası
+              </Link>
+            </div>
+          </div>
 
-              <div className="text-center space-y-4 pt-8 border-t border-white/10">
-                <div className="space-y-2">
-                  <p className="text-sm text-zinc-400">
-                    Premium şablonların kilidini açmak için bakiye kullanın
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center text-sm">
-                  <Link href="/fl-coins" className="text-zinc-400 hover:text-white transition">
-                    Bakiye Hakkında
-                  </Link>
-                  <Link href="/payment-security" className="text-zinc-400 hover:text-white transition">
-                    Ödeme Güvenliği
-                  </Link>
-                  <Link href="/refund-policy" className="text-zinc-400 hover:text-white transition">
-                    İade Politikası
-                  </Link>
-                </div>
-              </div>
-
-              {/* Recent Transactions */}
-              {transactions.length > 0 && (
-                <div className="pt-8 border-t border-white/5">
-                  <div className="space-y-4">
-                    {transactions.map((txn) => (
-                      <TransactionCard key={txn.id} transaction={txn} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* İşlem Geçmişi Link */}
-              <div className="pt-6 text-center">
-                <Link href="/dashboard/transactions">
-                  <button className="btn-secondary px-6 py-3">
-                    İşlem Geçmişi
-                  </button>
-                </Link>
+          {/* Recent Transactions */}
+          {transactions.length > 0 && (
+            <div className="pt-8 border-t border-white/5">
+              <div className="space-y-4">
+                {transactions.map((txn) => (
+                  <TransactionCard key={txn.id} transaction={txn} />
+                ))}
               </div>
             </div>
-          );
-        })()}
-      </main>
+          )}
 
+          {/* İşlem Geçmişi Link */}
+          <div className="pt-6 text-center">
+            <Link href="/dashboard/transactions">
+              <button className="btn-secondary px-6 py-3">
+                İşlem Geçmişi
+              </button>
+            </Link>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
