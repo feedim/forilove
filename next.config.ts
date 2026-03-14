@@ -43,7 +43,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "frame-ancestors 'self'; base-uri 'self'; form-action 'self' https://www.paytr.com;"
+            value: "frame-ancestors 'self' https://*.facebook.com; base-uri 'self'; form-action 'self' https://www.paytr.com;"
           }
         ]
       }
