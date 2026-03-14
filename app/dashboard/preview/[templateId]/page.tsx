@@ -5,6 +5,7 @@ import { Heart } from "lucide-react";
 import DOMPurify from "isomorphic-dompurify";
 import { isScriptSafe } from "@/lib/security/script-allowlist";
 import MusicPlayer from "@/components/MusicPlayer";
+import { trackEvent } from "@/lib/pixels";
 
 // Extract <script> contents from HTML before DOMPurify strips them
 function extractScripts(html: string): { cleanHtml: string; scripts: string[] } {
@@ -101,6 +102,7 @@ export default function PreviewPage() {
       setMusicUrl(data.musicUrl || "");
       if (data.templateName) {
         document.title = `Önizleme - ${data.templateName}`;
+        trackEvent('ViewContent', { content_name: data.templateName, content_type: 'template_preview' });
       }
     } catch (e) { if (process.env.NODE_ENV === 'development') console.warn('Operation failed:', e); }
     setLoaded(true);

@@ -6,6 +6,7 @@ import { escapeHtml, sanitizeUrl } from "@/lib/security/sanitize";
 import { isScriptSafe } from "@/lib/security/script-allowlist";
 import DOMPurify from 'isomorphic-dompurify';
 import MusicPlayer from "@/components/MusicPlayer";
+import { trackEvent } from "@/lib/pixels";
 import ShareIconButton from "@/components/ShareIconButton";
 
 // Remove an element (and its children) matching a specific attribute from HTML string
@@ -343,6 +344,7 @@ export function HTMLTemplateRender({ project, musicUrl }: { project: any; musicU
     const { sanitizedHtml, scripts: extractedScripts } = processTemplateHtml(template.html_content, htmlData);
     setProcessedHtml(sanitizedHtml);
     setScripts(extractedScripts);
+    trackEvent('ViewContent', { content_name: project.title, content_type: 'project' });
   }, [template, htmlData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Inject font <link> tags into document <head>

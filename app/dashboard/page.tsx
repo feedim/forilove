@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ErrorState";
 import WelcomeCouponModal from "@/components/WelcomeCouponModal";
 import DashboardNav from "@/components/DashboardNav";
 import AffiliateBanner from "@/components/AffiliateBanner";
+import { trackEvent } from "@/lib/pixels";
 
 const ITEMS_PER_PAGE = 6;
 
@@ -275,6 +276,7 @@ export default function DashboardPage() {
           throw error;
         }
 
+        trackEvent('AddToWishlist', { content_type: 'template', content_id: templateId });
         toast.success("Kaydedilenlere eklendi!");
       }
     } catch (error: any) {
@@ -283,6 +285,7 @@ export default function DashboardPage() {
   };
 
   const handleTemplateClick = (templateId: string) => {
+    trackEvent('AddToCart', { content_type: 'template', content_id: templateId });
     router.push(`/dashboard/editor/${templateId}`);
   };
 

@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatCount } from "@/lib/utils";
 import toast from "react-hot-toast";
 import { ShareSheet } from "@/components/ShareIconButton";
+import { trackEvent } from "@/lib/pixels";
 
 interface PublicProject {
   id: string;
@@ -158,6 +159,7 @@ export default function ExplorePage() {
           .from("saved_projects")
           .insert({ user_id: user.id, project_id: projectId });
         if (error) throw error;
+        trackEvent('AddToWishlist', { content_type: 'project', content_id: projectId });
         toast.success("Kaydedilenlere eklendi!");
       }
     } catch {

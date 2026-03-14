@@ -12,6 +12,9 @@ const EVENT_MAP: Record<string, { fb: string; tt: string }> = {
   PlaceAnOrder:         { fb: 'Purchase',              tt: 'PlaceAnOrder' },
   ViewContent:          { fb: 'ViewContent',           tt: 'ViewContent' },
   Subscribe:            { fb: 'Subscribe',             tt: 'Subscribe' },
+  AddToCart:            { fb: 'AddToCart',              tt: 'AddToCart' },
+  AddToWishlist:        { fb: 'AddToWishlist',         tt: 'AddToCart' },
+  Lead:                 { fb: 'Lead',                  tt: 'SubmitForm' },
 };
 
 export function trackEvent(eventName: string, params?: Record<string, unknown>) {

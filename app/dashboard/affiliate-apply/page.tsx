@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, TrendingUp, CheckCircle, Clock, XCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
+import { trackEvent } from "@/lib/pixels";
 
 const ALLOWED_DOMAINS = [
   "instagram.com", "www.instagram.com",
@@ -128,6 +129,7 @@ export default function AffiliateApplyPage() {
         return;
       }
       setExistingApplication({ status: "pending", created_at: new Date().toISOString(), social_media: form.socialMedia, followers: form.followers, description: form.description });
+      trackEvent('Lead', { content_name: 'affiliate_application' });
       // Save referral code to profile
       if (form.referralCode.trim() && user) {
         await supabase.from("profiles")
