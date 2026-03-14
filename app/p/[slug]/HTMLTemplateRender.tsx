@@ -344,7 +344,7 @@ export function HTMLTemplateRender({ project, musicUrl }: { project: any; musicU
     const { sanitizedHtml, scripts: extractedScripts } = processTemplateHtml(template.html_content, htmlData);
     setProcessedHtml(sanitizedHtml);
     setScripts(extractedScripts);
-    trackEvent('ViewContent', { content_name: project.title, content_type: 'project' });
+    trackEvent('ViewContent', { content_name: project.title, content_type: 'product', content_id: project.id });
   }, [template, htmlData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Inject font <link> tags into document <head>

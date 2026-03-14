@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 import { trackEvent } from "@/lib/pixels";
 
 const ALL_EVENTS = [
-  { name: "ViewContent", params: { content_name: "Test Template", content_type: "template" } },
-  { name: "AddToCart", params: { content_type: "template", content_id: "test-123" } },
-  { name: "AddToWishlist", params: { content_type: "template", content_id: "test-123" } },
-  { name: "InitiateCheckout", params: { content_type: "product", value: 49.99, currency: "TRY" } },
-  { name: "Purchase", params: { content_type: "product", value: 49.99, currency: "TRY" } },
+  { name: "ViewContent", params: { content_name: "Test Template", content_type: "product", content_id: "test-123" } },
+  { name: "AddToCart", params: { content_type: "product", content_id: "test-123" } },
+  { name: "AddToWishlist", params: { content_type: "product", content_id: "test-123" } },
+  { name: "InitiateCheckout", params: { content_type: "product", content_id: "test-123", value: 49.99, currency: "TRY" } },
+  { name: "Purchase", params: { content_type: "product", content_id: "test-123", value: 49.99, currency: "TRY" } },
   { name: "CompleteRegistration", params: {} },
   { name: "Lead", params: { content_name: "affiliate_application" } },
   { name: "Subscribe", params: { content_type: "product", content_id: "test-123" } },

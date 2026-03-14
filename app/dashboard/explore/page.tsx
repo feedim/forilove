@@ -159,7 +159,7 @@ export default function ExplorePage() {
           .from("saved_projects")
           .insert({ user_id: user.id, project_id: projectId });
         if (error) throw error;
-        trackEvent('AddToWishlist', { content_type: 'project', content_id: projectId });
+        trackEvent('AddToWishlist', { content_type: 'product', content_id: projectId });
         toast.success("Kaydedilenlere eklendi!");
       }
     } catch {

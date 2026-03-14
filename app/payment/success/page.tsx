@@ -54,7 +54,7 @@ export default function PaymentSuccessPage() {
             setVerified(true);
             setCoinBalance(body.coin_balance);
             setCoinsAdded(body.coins_added);
-            trackEvent('Purchase', { content_type: 'product', value: body.coins_added, currency: 'TRY' });
+            trackEvent('Purchase', { content_type: 'product', content_id: body.payment_id || 'coin_purchase', value: body.coins_added, currency: 'TRY' });
             setVerifying(false);
             return;
           }

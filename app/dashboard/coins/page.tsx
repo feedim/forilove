@@ -111,7 +111,7 @@ export default function CoinsPage() {
       bonus_coins: pkg.bonus_coins,
     }));
 
-    trackEvent('InitiateCheckout', { content_type: 'product', value: pkg.price_try, currency: 'TRY' });
+    trackEvent('InitiateCheckout', { content_type: 'product', content_id: pkg.id, value: pkg.price_try, currency: 'TRY' });
     router.push('/dashboard/payment');
   };
 

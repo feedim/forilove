@@ -102,7 +102,7 @@ export default function PreviewPage() {
       setMusicUrl(data.musicUrl || "");
       if (data.templateName) {
         document.title = `Önizleme - ${data.templateName}`;
-        trackEvent('ViewContent', { content_name: data.templateName, content_type: 'template_preview' });
+        trackEvent('ViewContent', { content_name: data.templateName, content_type: 'product' });
       }
     } catch (e) { if (process.env.NODE_ENV === 'development') console.warn('Operation failed:', e); }
     setLoaded(true);
