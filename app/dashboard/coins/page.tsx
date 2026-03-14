@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Coins, Heart } from "lucide-react";
+import { ArrowLeft, Wallet, Heart } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import TransactionCard from "@/components/TransactionCard";
@@ -121,7 +121,7 @@ export default function CoinsPage() {
         <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-xl min-h-[73px]">
           <nav className="container mx-auto px-3 sm:px-6 flex items-center justify-between min-h-[73px]">
             <div className="flex items-center gap-2"><ArrowLeft className="h-5 w-5" /><span className="font-medium">Geri</span></div>
-            <h1 className="text-lg font-semibold">FL Satın Al</h1>
+            <h1 className="text-lg font-semibold">Bakiye Yükle</h1>
             <div className="w-16" />
           </nav>
         </header>
@@ -140,12 +140,12 @@ export default function CoinsPage() {
             <ArrowLeft className="h-5 w-5" />
             <span className="font-medium">Geri</span>
           </button>
-          <h1 className="text-lg font-semibold">FL Satın Al</h1>
+          <h1 className="text-lg font-semibold">Bakiye Yükle</h1>
           <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
-            <Coins className="h-5 w-5 text-yellow-500" />
-            <div className="flex items-baseline gap-1">
+            <Wallet className="h-5 w-5 text-yellow-500" />
+            <div className="flex items-baseline gap-0.5">
               <span className="font-bold text-yellow-500">{balance.toLocaleString()}</span>
-              <span className="text-sm text-yellow-500 font-medium">FL</span>
+              <span className="text-sm text-yellow-500 font-medium">₺</span>
             </div>
           </div>
         </nav>
@@ -154,9 +154,9 @@ export default function CoinsPage() {
       <main className="container mx-auto px-3 sm:px-6 pt-16 pb-24 md:pb-16 max-w-xl">
         {packages.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 sm:py-20 text-center">
-            <Coins className="h-14 w-14 sm:h-20 sm:w-20 text-yellow-500 mb-3 sm:mb-4" />
+            <Wallet className="h-14 w-14 sm:h-20 sm:w-20 text-yellow-500 mb-3 sm:mb-4" />
             <h2 className="text-lg sm:text-2xl font-bold mb-2">Paketler yükleniyor</h2>
-            <p className="text-zinc-400 mb-5 sm:mb-6 text-sm px-4">Coin paketleri henüz yapılandırılmamış.</p>
+            <p className="text-zinc-400 mb-5 sm:mb-6 text-sm px-4">Bakiye paketleri henüz yapılandırılmamış.</p>
             <button onClick={() => { if (window.history.length > 1) { router.back(); } else { router.push('/dashboard'); } }} className="btn-primary">
               Geri Dön
             </button>
@@ -172,14 +172,13 @@ export default function CoinsPage() {
             <div className="space-y-8">
               <div className="text-center space-y-4">
                 <div className="text-5xl font-bold text-yellow-500">
-                  {totalCoins.toLocaleString()} FL
+                  {totalCoins.toLocaleString()}₺
                 </div>
                 {pkg.bonus_coins > 0 && (
                   <div className="text-sm text-zinc-400 mb-2">
-                    +{pkg.bonus_coins.toLocaleString()} bonus coin
+                    +{pkg.bonus_coins.toLocaleString()}₺ bonus
                   </div>
                 )}
-                <div className="text-3xl font-bold mb-0 leading-none">{pkg.price_try}₺</div>
                 <p className="text-sm text-zinc-400">{pkg.name}</p>
               </div>
 
@@ -188,7 +187,7 @@ export default function CoinsPage() {
                 min="0"
                 max={packages.length - 1}
                 step="1"
-                value={packages.findIndex(p => p.coins === pkg.coins)}
+                value={Math.max(0, packages.findIndex(p => p.coins === pkg.coins))}
                 onChange={(e) => {
                   const index = parseInt(e.target.value);
                   setSelectedAmount(packages[index].coins);
@@ -220,12 +219,12 @@ export default function CoinsPage() {
               <div className="text-center space-y-4 pt-8 border-t border-white/10">
                 <div className="space-y-2">
                   <p className="text-sm text-zinc-400">
-                    Premium şablonların kilidini açmak için FL kullanın
+                    Premium şablonların kilidini açmak için bakiye kullanın
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center text-sm">
                   <Link href="/fl-coins" className="text-zinc-400 hover:text-white transition">
-                    FL Hakkında
+                    Bakiye Hakkında
                   </Link>
                   <Link href="/payment-security" className="text-zinc-400 hover:text-white transition">
                     Ödeme Güvenliği

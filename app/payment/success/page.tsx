@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle, Coins, Heart, AlertCircle } from "lucide-react";
+import { CheckCircle, Wallet, Heart, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { trackEvent } from "@/lib/pixels";
 
@@ -93,7 +93,7 @@ export default function PaymentSuccessPage() {
             {verified ? (
               <CheckCircle className="h-24 w-24 text-yellow-500 relative" />
             ) : verifying ? (
-              <Coins className="h-24 w-24 text-yellow-500 relative animate-pulse" />
+              <Wallet className="h-24 w-24 text-yellow-500 relative animate-pulse" />
             ) : (
               <AlertCircle className="h-24 w-24 text-red-500 relative" />
             )}
@@ -109,12 +109,12 @@ export default function PaymentSuccessPage() {
               </h1>
               <p className="text-base text-zinc-400">
                 {coinsAdded != null
-                  ? `${coinsAdded} FL hesabınıza eklendi`
-                  : 'FL\'leriniz hesabınıza eklendi'}
+                  ? `${coinsAdded}₺ hesabınıza eklendi`
+                  : 'Bakiyeniz hesabınıza eklendi'}
               </p>
               {coinBalance != null && (
                 <p className="text-sm text-zinc-500">
-                  Güncel bakiyeniz: <span className="text-yellow-500 font-semibold">{coinBalance} FL</span>
+                  Güncel bakiyeniz: <span className="text-yellow-500 font-semibold">{coinBalance}₺</span>
                 </p>
               )}
             </>
@@ -144,13 +144,13 @@ export default function PaymentSuccessPage() {
         <div className="space-y-3">
           {returnUrl ? (
             <Link href={returnUrl} className="block">
-              <button className="btn-primary w-full py-4 text-lg" style={{ background: 'var(--color-yellow-500)', color: 'black' }}>
+              <button className="btn-primary w-full py-4 text-lg" style={{ background: 'var(--color-yellow-500, #10b981)', color: 'black' }}>
                 Şablona Dön
               </button>
             </Link>
           ) : (
             <Link href="/dashboard" className="block">
-              <button className="btn-primary w-full py-4 text-lg" style={{ background: 'var(--color-yellow-500)', color: 'black' }}>
+              <button className="btn-primary w-full py-4 text-lg" style={{ background: 'var(--color-yellow-500, #10b981)', color: 'black' }}>
                 Şablonları Keşfet
               </button>
             </Link>

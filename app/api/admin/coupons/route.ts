@@ -95,10 +95,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ promos });
     }
 
-    // Default: return coupons
+    // Default: return coupons (promo_generated olanları hariç tut)
     const { data, error } = await admin
       .from("coupons")
       .select("*")
+      .neq("coupon_type", "promo_generated")
       .order("created_at", { ascending: false })
       .limit(50);
 

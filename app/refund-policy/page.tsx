@@ -4,8 +4,8 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "İade ve İptal Politikası - Forilove",
-  description: "Forilove iade ve iptal politikası. FL Coins iadeleri, şablon iade koşulları ve para iadesi süreçleri hakkında bilgi.",
-  keywords: ["iade politikası", "iptal koşulları", "para iadesi", "fl coins iade", "cayma hakkı"],
+  description: "Forilove iade ve iptal politikası. Bakiye iadeleri, şablon iade koşulları ve para iadesi süreçleri hakkında bilgi.",
+  keywords: ["iade politikası", "iptal koşulları", "para iadesi", "bakiye iade", "cayma hakkı"],
 };
 
 export default function RefundPolicyPage() {
@@ -14,12 +14,12 @@ export default function RefundPolicyPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "WebPage", name: "İade ve İptal Politikası - Forilove", description: "Forilove iade ve iptal politikası.", url: "https://forilove.com/refund-policy", isPartOf: { "@id": "https://forilove.com/#website" } }) }} />
           <section>
             <p>
-              Satın alınan FL Coins kural olarak iade edilemez ve geri ödemesi yapılamaz. Coinler dijital bir
-              para birimi olup, satın alındığı anda hesabınıza tanımlanır ve kullanıma hazır hale gelir.
+              Yüklenen bakiye kural olarak iade edilemez ve geri ödemesi yapılamaz. Bakiye dijital bir
+              değer olup, yüklendiği anda hesabınıza tanımlanır ve kullanıma hazır hale gelir.
             </p>
             <p className="mt-4">
-              <strong className="text-white">İstisna:</strong> FL Coins satın aldıktan sonra henüz hiçbir
-              şablon satın almadıysanız (coinlerinizi hiç kullanmadıysanız), satın alma tarihinden itibaren
+              <strong className="text-white">İstisna:</strong> Bakiye yükledikten sonra henüz hiçbir
+              şablon satın almadıysanız (bakiyenizi hiç kullanmadıysanız), yükleme tarihinden itibaren
               <strong className="text-white"> 14 gün içinde</strong> tam iade talebinde bulunabilirsiniz.
               Bu durumda ödenen tutar, ödeme yapılan kredi/banka kartına iade edilir.
             </p>
@@ -28,9 +28,9 @@ export default function RefundPolicyPage() {
           <section>
             <h2 className="text-xl font-bold text-white mb-3">Şablon Satın Alımları</h2>
             <p>
-              FL Coins ile satın aldığınız şablonlardan memnun kalmazsanız, satın alma tarihinden
+              Bakiye ile satın aldığınız şablonlardan memnun kalmazsanız, satın alma tarihinden
               itibaren 14 gün içerisinde iade talebinde bulunabilirsiniz. İade talebiniz onaylanırsa
-              harcanan coinler hesabınıza iade edilir.
+              harcanan bakiye hesabınıza iade edilir.
             </p>
             <p className="mt-4">
               <strong className="text-white">İade şartları:</strong>
@@ -53,14 +53,14 @@ export default function RefundPolicyPage() {
               </li>
               <li>İade sebebinizi detaylı olarak açıklayın</li>
               <li>Destek ekibimiz talebinizi 2 iş günü içinde değerlendirir</li>
-              <li>Onay durumunda coinler 1-3 iş günü içinde hesabınıza iade edilir</li>
+              <li>Onay durumunda bakiye 1-3 iş günü içinde hesabınıza iade edilir</li>
             </ol>
           </section>
 
           <section>
             <h2 className="text-xl font-bold text-white mb-3">Para İadesi</h2>
             <p>
-              Hatalı ödeme veya teknik sorunlar nedeniyle coin satın alamadıysanız, ödemeniz
+              Hatalı ödeme veya teknik sorunlar nedeniyle bakiye yükleyemediyseniz, ödemeniz
               5-10 iş günü içinde kartınıza/hesabınıza iade edilir. Bu durumda lütfen bankacılık
               işlem detaylarınızı içeren ekran görüntülerini bizimle paylaşın.
             </p>

@@ -1,14 +1,19 @@
 import Link from "next/link";
+import { Heart, ArrowRight } from "lucide-react";
 
 export default function CTASection() {
   return (
-    <section className="border-t border-white/10 py-20">
-      <div className="container mx-auto px-6 text-center">
-        <h2 className="text-2xl font-bold mb-4">Hazır mısın?</h2>
-        <p className="text-zinc-400 mb-8 max-w-xl mx-auto">
-          Sevdikleri için harika sayfalar oluşturan binlerce kişiye katıl
+    <section className="py-20 px-5 border-t border-white/5">
+      <div className="max-w-2xl mx-auto text-center">
+        <Heart className="h-12 w-12 text-pink-500 fill-pink-500 mx-auto mb-5 animate-pulse" />
+        <h2 className="text-2xl font-bold mb-3">Bugün bir sürpriz yap</h2>
+        <p className="text-sm text-zinc-400 mb-8">
+          Binlerce kişi Forilove ile sevdiklerini mutlu etti. Sıra sende.
         </p>
-        <Link href="/register" className="btn-primary text-lg">Başlayın</Link>
+        <Link href="/register" className="btn-primary text-base px-8 py-3.5 inline-flex items-center gap-2">
+          Ücretsiz Kayıt Ol
+          <ArrowRight className="h-5 w-5" />
+        </Link>
       </div>
     </section>
   );

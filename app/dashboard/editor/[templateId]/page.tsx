@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Eye, ChevronDown, ChevronUp, PanelLeftClose, PanelLeft, X, Heart, Coins, Upload, Music, Play, Pause, Globe, Lock, LayoutGrid, Undo2, Redo2, Sparkles, Trash2, Palette } from "lucide-react";
+import { ArrowLeft, Eye, ChevronDown, ChevronUp, PanelLeftClose, PanelLeft, X, Heart, Upload, Music, Play, Pause, Globe, Lock, LayoutGrid, Undo2, Redo2, Sparkles, Trash2, Palette } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { compressImage, validateImageFile, getOptimizedFileName, isHeicFile, convertHeicToJpeg } from '@/lib/utils/imageCompression';
@@ -2057,7 +2057,7 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
         });
         const data = await res.json();
         if (!res.ok || !data.success) {
-          return { success: false, error: data.error || "Coin harcama başarısız" };
+          return { success: false, error: data.error || "Bakiye hatası" };
         }
         return { success: true, newBalance: data.newBalance };
       },
@@ -2189,7 +2189,7 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
                   ? (project?.is_published ? "Güncelleniyor..." : !isPurchased && !guestMode && !affiliateFreeActive && (isDiscountActive(template) ? template.discount_price! : template.coin_price) > 0 ? "Satın Alınıyor..." : "Paylaşılıyor...")
                   : project?.is_published ? "Güncelle"
                   : !isPurchased && !guestMode && !affiliateFreeActive && (isDiscountActive(template) ? template.discount_price! : template.coin_price) > 0
-                    ? <><Coins className="h-4 w-4 text-yellow-400" />{isDiscountActive(template) ? template.discount_price! : template.coin_price} FL</>
+                    ? <>{isDiscountActive(template) ? template.discount_price! : template.coin_price}₺</>
                     : "Paylaş"
                 }
               </button>
@@ -2359,7 +2359,7 @@ export default function NewEditorPage({ params, guestMode: initialGuestMode = fa
                         ? (project?.is_published ? "Güncelleniyor..." : !isPurchased && !guestMode && !affiliateFreeActive && (isDiscountActive(template) ? template.discount_price! : template.coin_price) > 0 ? "Satın Alınıyor..." : "Paylaşılıyor...")
                         : project?.is_published ? "Güncelle"
                         : !isPurchased && !guestMode && !affiliateFreeActive && (isDiscountActive(template) ? template.discount_price! : template.coin_price) > 0
-                          ? <><Coins className="h-4 w-4 text-yellow-400" />{isDiscountActive(template) ? template.discount_price! : template.coin_price} FL</>
+                          ? <>{isDiscountActive(template) ? template.discount_price! : template.coin_price}₺</>
                           : "Paylaş"
                       }
                     </button>

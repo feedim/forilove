@@ -278,7 +278,7 @@ export default function NewŞablonPage() {
             </div>
 
             <div>
-              <label className="block text-sm text-zinc-400 mb-1.5">Fiyat (FL)</label>
+              <label className="block text-sm text-zinc-400 mb-1.5">Fiyat (₺)</label>
               <input
                 type="number"
                 value={coinPrice}

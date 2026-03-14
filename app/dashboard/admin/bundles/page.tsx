@@ -421,19 +421,19 @@ export default function AdminBundlesPage() {
                         Toplam ({selectedIds.size} şablon)
                       </span>
                       <span className="text-zinc-400 line-through">
-                        {priceInfo.totalOriginal} FL
+                        {priceInfo.totalOriginal}₺
                       </span>
                     </div>
                     <div className="flex justify-between text-sm font-semibold">
                       <span className="text-pink-400">%20 İndirimli Fiyat</span>
                       <span className="text-yellow-500">
-                        {priceInfo.bundlePrice} FL
+                        {priceInfo.bundlePrice}₺
                       </span>
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-pink-400">Tasarruf</span>
                       <span className="text-pink-400">
-                        {priceInfo.savings} FL
+                        {priceInfo.savings}₺
                       </span>
                     </div>
                   </div>
@@ -516,7 +516,7 @@ export default function AdminBundlesPage() {
                                   Toplam ({editSelectedIds.size} şablon)
                                 </span>
                                 <span className="text-zinc-400 line-through">
-                                  {editPriceInfo.totalOriginal} FL
+                                  {editPriceInfo.totalOriginal}₺
                                 </span>
                               </div>
                               <div className="flex justify-between text-sm font-semibold">
@@ -524,7 +524,7 @@ export default function AdminBundlesPage() {
                                   %20 İndirimli Fiyat
                                 </span>
                                 <span className="text-yellow-500">
-                                  {editPriceInfo.bundlePrice} FL
+                                  {editPriceInfo.bundlePrice}₺
                                 </span>
                               </div>
                             </div>
@@ -621,13 +621,13 @@ export default function AdminBundlesPage() {
                             return (
                               <div className="flex items-center gap-3 text-xs">
                                 <span className="text-zinc-500 line-through">
-                                  {info.totalOriginal} FL
+                                  {info.totalOriginal}₺
                                 </span>
                                 <span className="text-yellow-500 font-semibold">
-                                  {info.bundlePrice} FL
+                                  {info.bundlePrice}₺
                                 </span>
                                 <span className="text-pink-400">
-                                  {info.savings} FL tasarruf
+                                  {info.savings}₺ tasarruf
                                 </span>
                               </div>
                             );

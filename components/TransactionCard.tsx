@@ -29,11 +29,11 @@ export default function TransactionCard({ transaction }: TransactionCardProps) {
 
         <div className="text-right ml-4">
           <div className={`text-xl font-bold ${isPositive ? 'text-yellow-500' : 'text-[#e30076]'}`}>
-            {isPositive ? '+' : ''}{transaction.amount?.toLocaleString() || 0}
+            {isPositive ? '+' : ''}{Math.abs(transaction.amount)?.toLocaleString() || 0}₺
           </div>
           {transaction.balance_after !== undefined && transaction.balance_after !== null && (
             <div className="text-sm text-zinc-500">
-              Bakiye: {transaction.balance_after.toLocaleString()}
+              Bakiye: {transaction.balance_after.toLocaleString()}₺
             </div>
           )}
         </div>

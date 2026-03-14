@@ -48,7 +48,7 @@ export default function GiftSection({
         return;
       }
 
-      toast.success(`${numericAmount} FL başarıyla gönderildi!`);
+      toast.success(`${numericAmount}₺ başarıyla gönderildi!`);
       onSent?.(numericAmount);
       setEmail("");
       setAmount("");
@@ -69,7 +69,7 @@ export default function GiftSection({
           <div className="min-w-0">
             <h3 className="font-bold text-lg">Hediye Gönder</h3>
             <p className="text-sm text-zinc-400">
-              Sevdiklerine FL bakiye hediye et
+              Sevdiklerine ₺ bakiye hediye et
             </p>
           </div>
         </div>
@@ -93,7 +93,7 @@ export default function GiftSection({
         <div className="bg-black/20 rounded-lg p-3 sm:p-4 flex items-center justify-between">
           <span className="text-sm text-zinc-400">Mevcut Bakiye</span>
           <span className="text-lg font-bold text-yellow-500">
-            {coinBalance} <span className="text-sm">FL</span>
+            {coinBalance}₺
           </span>
         </div>
 
@@ -114,7 +114,7 @@ export default function GiftSection({
         {/* Miktar */}
         <div className="bg-black/20 rounded-lg p-3 sm:p-4">
           <label className="block text-sm text-zinc-400 mb-2">
-            Miktar (FL)
+            Miktar (₺)
           </label>
           <div className="flex flex-wrap gap-2 mb-3">
             {QUICK_AMOUNTS.map((q) => (
@@ -127,7 +127,7 @@ export default function GiftSection({
                     : "bg-white/5 text-zinc-300 hover:bg-white/10"
                 }`}
               >
-                {q} FL
+                {q}₺
               </button>
             ))}
           </div>

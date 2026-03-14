@@ -5,33 +5,33 @@ import CTASection from "@/components/CTASection";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "FL Coins Nedir? - Forilove",
-  description: "FL Coins ile premium şablonlara erişin. Güvenli ödeme, bonus coinler ve kalıcı kullanım hakkı. FL Coins sistemi hakkında detaylı bilgi.",
-  keywords: ["fl coins", "premium şablon", "dijital para birimi", "coin satın al", "bonus coin"],
+  title: "Bakiye Sistemi - Forilove",
+  description: "Forilove bakiye sistemi ile premium şablonlara erişin. Güvenli ödeme, bonus bakiye ve kalıcı kullanım hakkı. Bakiye sistemi hakkında detaylı bilgi.",
+  keywords: ["bakiye", "premium şablon", "bakiye yükle", "bonus bakiye"],
 };
 
 export default function LPCoinsPage() {
   return (
     <div className="min-h-screen bg-black text-white">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "WebPage", name: "FL Coins Nedir? - Forilove", description: "FL Coins ile premium şablonlara erişin.", url: "https://forilove.com/fl-coins", isPartOf: { "@id": "https://forilove.com/#website" } }) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "WebPage", name: "Bakiye Sistemi - Forilove", description: "Forilove bakiye sistemi ile premium şablonlara erişin.", url: "https://forilove.com/fl-coins", isPartOf: { "@id": "https://forilove.com/#website" } }) }} />
       <PublicHeader variant="back" />
 
       <main className="container mx-auto px-6 py-16 max-w-3xl">
-        <h1 className="text-4xl font-bold mb-6">FL Coins Nedir?</h1>
+        <h1 className="text-4xl font-bold mb-6">Bakiye Sistemi</h1>
 
         <div className="space-y-6 text-zinc-400">
           <p>
-            FL Coins, Forilove platformunda premium şablonlara erişim sağlayan dijital bir para birimidir.
-            Platformumuzda coin satın alarak özel tasarlanmış şablonları kullanabilir ve sevdikleriniz için
+            Forilove platformunda premium şablonlara erişim sağlamak için bakiye sistemi kullanılmaktadır.
+            Hesabınıza TL cinsinden bakiye yükleyerek özel tasarlanmış şablonları kullanabilir ve sevdikleriniz için
             benzersiz sayfalar oluşturabilirsiniz.
           </p>
 
           <section>
             <h2 className="text-2xl font-bold text-white mb-4">Nasıl Çalışır?</h2>
             <ul className="list-disc list-inside space-y-2">
-              <li>Hesabınıza FL Coins satın alın</li>
+              <li>Hesabınıza ₺ bakiye yükleyin</li>
               <li>Premium şablonları keşfedin</li>
-              <li>Beğendiğiniz şablonu coin ile satın alın</li>
+              <li>Beğendiğiniz şablonu bakiyenizle satın alın</li>
               <li>Sınırsız kez kullanın ve düzenleyin</li>
             </ul>
           </section>
@@ -39,7 +39,7 @@ export default function LPCoinsPage() {
           <section>
             <h2 className="text-2xl font-bold text-white mb-4">Avantajlar</h2>
             <ul className="list-disc list-inside space-y-2">
-              <li>Bonus coin fırsatları ile daha fazla kazanın</li>
+              <li>Bonus bakiye fırsatları ile daha fazla kazanın</li>
               <li>Satın aldığınız şablonlar kalıcı olarak sizindir</li>
               <li>Güvenli ödeme altyapısı</li>
               <li>Anında kullanıma hazır</li>
@@ -47,10 +47,10 @@ export default function LPCoinsPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">Paketler</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">Bakiye Paketleri</h2>
             <p>
-              Farklı ihtiyaçlara uygun coin paketlerimiz bulunmaktadır. Daha büyük paketlerde
-              bonus coinler kazanabilirsiniz. Coin satın almak için{" "}
+              Farklı ihtiyaçlara uygun bakiye paketlerimiz bulunmaktadır. Daha büyük paketlerde
+              bonus bakiye kazanabilirsiniz. Bakiye yüklemek için{" "}
               <Link href="/dashboard/coins" className="text-pink-500 hover:text-pink-400">
                 buraya tıklayın
               </Link>.

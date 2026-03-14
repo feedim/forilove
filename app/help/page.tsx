@@ -16,7 +16,7 @@ export default function HelpPage() {
     url: "https://forilove.com/help",
     mainEntity: [
       { "@type": "Question", name: "Forilove nedir?", acceptedAnswer: { "@type": "Answer", text: "Forilove, sevdiklerinize özel kişiselleştirilmiş anı sayfaları oluşturmanıza olanak sağlayan bir platformdur." } },
-      { "@type": "Question", name: "FL Coins nedir?", acceptedAnswer: { "@type": "Answer", text: "Premium şablonları satın almak için kullanılan dijital para birimidir." } },
+      { "@type": "Question", name: "Bakiye sistemi nedir?", acceptedAnswer: { "@type": "Answer", text: "Premium şablonları satın almak için kullanılan TL cinsinden bakiye sistemidir." } },
       { "@type": "Question", name: "Şablonu satın aldıktan sonra ne olur?", acceptedAnswer: { "@type": "Answer", text: "Şablon kalıcı olarak sizindir. İstediğiniz kadar düzenleyebilir ve yeniden yayımlayabilirsiniz." } },
       { "@type": "Question", name: "Müzik nasıl eklenir?", acceptedAnswer: { "@type": "Answer", text: "Editörde Müzik Ekle butonuna tıklayarak bir YouTube linki yapıştırın. Müzik sayfanızda arka planda çalacaktır." } },
       { "@type": "Question", name: "Sayfam herkese açık mı?", acceptedAnswer: { "@type": "Answer", text: "Yayımlarken Herkese Açık veya Özel URL seçeneğini belirleyebilirsiniz. Özel URL seçerseniz sadece linke sahip olanlar görebilir." } },
@@ -41,33 +41,33 @@ export default function HelpPage() {
         <ol className="list-decimal list-inside space-y-2">
           <li>Ücretsiz bir hesap oluşturun veya giriş yapın</li>
           <li>Ana sayfadan beğendiğiniz bir şablonu seçin</li>
-          <li>Şablonu FL Coins ile satın alın</li>
+          <li>Şablonu bakiyenizle satın alın</li>
           <li>Editörde fotoğraf, metin ve müzik ekleyerek kişiselleştirin</li>
           <li>Sayfanızı yayımlayın ve linki sevdiklerinizle paylaşın</li>
         </ol>
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-white mb-4">FL Coins</h2>
+        <h2 className="text-2xl font-bold text-white mb-4">Bakiye Sistemi</h2>
         <ul className="list-disc list-inside space-y-2">
           <li>
-            <strong className="text-white">FL Coins nedir?</strong> — Premium şablonları
-            satın almak için kullanılan dijital para birimidir.{" "}
+            <strong className="text-white">Bakiye sistemi nedir?</strong> — Premium şablonları
+            satın almak için kullanılan ₺ (TL) cinsinden bakiye sistemidir.{" "}
             <Link href="/fl-coins" className="text-pink-500 hover:text-pink-400">
               Detaylı bilgi
             </Link>
           </li>
           <li>
-            <strong className="text-white">Nasıl satın alırım?</strong> — Profil
+            <strong className="text-white">Nasıl bakiye yüklerim?</strong> — Profil
             menüsünden veya{" "}
             <Link href="/dashboard/coins" className="text-pink-500 hover:text-pink-400">
-              Bakiye Al
+              Bakiye Yükle
             </Link>{" "}
-            sayfasından kredi kartı ile satın alabilirsiniz.
+            sayfasından kredi kartı ile bakiye yükleyebilirsiniz.
           </li>
           <li>
-            <strong className="text-white">Bonus coin nedir?</strong> — Büyük paketlerde
-            ekstra coin kazanırsınız. Bonus coinler normal coinler gibi kullanılır.
+            <strong className="text-white">Bonus bakiye nedir?</strong> — Büyük paketlerde
+            ekstra bakiye kazanırsınız. Bonus bakiye normal bakiye gibi kullanılır.
           </li>
         </ul>
       </section>

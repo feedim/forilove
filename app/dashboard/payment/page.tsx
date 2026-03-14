@@ -124,7 +124,7 @@ export default function PaymentPage() {
               <div>
                 <p className="text-sm text-zinc-400 mb-1">{data.package_name}</p>
                 <p className="text-xl font-bold text-yellow-500">
-                  {totalCoins.toLocaleString()} FL
+                  {totalCoins.toLocaleString()}₺
                 </p>
                 {data.bonus_coins > 0 && (
                   <p className="text-xs text-zinc-500 mt-0.5">

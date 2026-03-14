@@ -21,11 +21,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (!amount || typeof amount !== "number" || amount < 1 || !Number.isInteger(amount)) {
-      return NextResponse.json({ error: "Miktar en az 1 FL olmalıdır." }, { status: 400 });
+      return NextResponse.json({ error: "Miktar en az 1₺ olmalıdır." }, { status: 400 });
     }
 
     if (amount > 10000) {
-      return NextResponse.json({ error: "Tek seferde en fazla 10.000 FL gönderilebilir." }, { status: 400 });
+      return NextResponse.json({ error: "Tek seferde en fazla 10.000₺ gönderilebilir." }, { status: 400 });
     }
 
     const trimmedEmail = email.trim().toLowerCase();
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
       user_id: user.id,
       amount: -amount,
       transaction_type: "gift_sent",
-      description: `${trimmedEmail} adresine ${amount} FL hediye gönderildi`,
+      description: `${trimmedEmail} adresine ${amount}₺ hediye gönderildi`,
       reference_type: "gift",
     });
 
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
       user_id: recipientId,
       amount: amount,
       transaction_type: "gift_received",
-      description: `${senderName} kişisinden ${amount} FL hediye alındı`,
+      description: `${senderName} kişisinden ${amount}₺ hediye alındı`,
       reference_type: "gift",
     });
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Coins } from "lucide-react";
+import { Wallet } from "lucide-react";
 import Link from "next/link";
 
 export function CoinWallet() {
@@ -35,20 +35,20 @@ export function CoinWallet() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 px-4 py-2 bg-zinc-900 rounded-xl animate-pulse" aria-label="Bakiye yükleniyor">
-        <Coins className="h-5 w-5 text-yellow-500" aria-hidden="true" />
+      <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-zinc-900 rounded-lg animate-pulse" aria-label="Bakiye yükleniyor">
+        <Wallet className="h-4 w-4 text-yellow-500" aria-hidden="true" />
         <span className="font-bold">...</span>
       </div>
     );
   }
 
   return (
-    <Link href="/dashboard/coins" aria-label={`FL bakiyesi: ${balance.toLocaleString()}`}>
-      <div className="flex items-center gap-2 px-3 py-2 bg-zinc-900 hover:bg-zinc-800 border border-white/10 rounded-xl transition-all cursor-pointer group">
-        <Coins className="h-5 w-5 text-yellow-500" aria-hidden="true" />
-        <div className="flex items-baseline gap-1">
-          <span className="font-bold text-yellow-500">{balance.toLocaleString()}</span>
-          <span className="text-sm text-yellow-500 font-medium">FL</span>
+    <Link href="/dashboard/coins" aria-label={`Bakiye: ${balance.toLocaleString()}₺`}>
+      <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-white/10 rounded-lg transition-all cursor-pointer group">
+        <Wallet className="h-4 w-4 text-yellow-500" aria-hidden="true" />
+        <div className="flex items-baseline gap-0.5">
+          <span className="text-sm font-bold text-yellow-500">{balance.toLocaleString()}</span>
+          <span className="text-xs text-yellow-500 font-medium">₺</span>
         </div>
       </div>
     </Link>

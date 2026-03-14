@@ -111,28 +111,21 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
     return () => { document.body.style.overflow = ""; };
   }, []);
 
-  // Auto-apply promo code from localStorage (set by PromoBanner / ?promo=CODE)
+  // Pre-fill promo code from localStorage (user must click "Uygula" manually)
   useEffect(() => {
     if (!options.allowCoupon) return;
     const storedPromo = localStorage.getItem("forilove_pending_promo");
+    const promoExpiry = localStorage.getItem("forilove_promo_expiry");
+
     if (storedPromo && !appliedCoupon) {
+      // Süre kontrolü — süresi dolmuşsa temizle
+      if (promoExpiry && Date.now() > parseInt(promoExpiry)) {
+        localStorage.removeItem("forilove_pending_promo");
+        localStorage.removeItem("forilove_promo_expiry");
+        return;
+      }
       setCouponCode(storedPromo);
       setCouponOpen(true);
-      // Auto-validate
-      (async () => {
-        setCouponLoading(true);
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session?.user) return;
-          const { data } = await supabase.rpc('validate_coupon', {
-            p_code: storedPromo,
-            p_user_id: session.user.id,
-          });
-          if (data?.valid) {
-            setAppliedCoupon({ code: storedPromo, couponId: data.coupon_id, discountPercent: data.discount_percent });
-          }
-        } catch {} finally { setCouponLoading(false); }
-      })();
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -199,7 +192,7 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
     try {
       const result = await options.onConfirm(appliedCoupon || undefined);
       if (result.success && result.newBalance !== undefined) {
-        trackEvent('Purchase', { content_type: 'product', content_name: options.itemName, value: effectiveCost, currency: 'FL' });
+        trackEvent('Purchase', { content_type: 'product', content_name: options.itemName, value: effectiveCost, currency: 'TRY' });
         onResult({ success: true, newBalance: result.newBalance });
       } else {
         setError(result.error || "İşlem başarısız oldu");
@@ -258,11 +251,11 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
           <div className="flex items-center justify-center gap-2 mt-1.5">
             {(options.originalPrice && options.originalPrice !== options.coinCost) || appliedCoupon ? (
               <span className="text-xl font-bold text-zinc-500 line-through decoration-red-500/70 decoration-2">
-                {appliedCoupon ? options.coinCost : options.originalPrice} FL
+                {appliedCoupon ? options.coinCost : options.originalPrice}₺
               </span>
             ) : null}
             <span className="text-[32px] font-extrabold text-yellow-500 tracking-tight">
-              {effectiveCost} FL
+              {effectiveCost}₺
             </span>
           </div>
           <p className="text-sm text-zinc-400">{options.itemName}</p>
@@ -272,13 +265,13 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
         <div className="border border-white/10 rounded-xl p-3.5 flex flex-col gap-1.5">
           <div className="flex justify-between items-center pb-0.5">
             <span className="text-[14px] text-zinc-400">Mevcut bakiye:</span>
-            <span className="text-[14px] font-semibold text-white">{options.currentBalance} FL</span>
+            <span className="text-[14px] font-semibold text-white">{options.currentBalance}₺</span>
           </div>
           <div className="h-px bg-yellow-500/10" />
           <div className="flex justify-between items-center pt-0.5">
             <span className="text-[14px] text-zinc-400">İşlem sonrası:</span>
             <span className={`text-[14px] font-semibold ${insufficientBalance ? "text-red-500" : "text-yellow-500"}`}>
-              {insufficientBalance ? "Yetersiz bakiye" : `${balanceAfter} FL`}
+              {insufficientBalance ? "Yetersiz bakiye" : `${balanceAfter}₺`}
             </span>
           </div>
         </div>
@@ -353,7 +346,7 @@ function PurchaseConfirmSheet({ options, onClose, onResult }: SheetProps) {
             {loading ? (
               <span className="inline-block w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
             ) : insufficientBalance ? (
-              "Coin Al"
+              "Bakiye Yükle"
             ) : (
               "Onayla ve Satın Al"
             )}

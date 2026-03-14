@@ -36,7 +36,7 @@ export default function PublicFooter() {
               Sorumluluk Reddi
             </Link>
             <Link href="/fl-coins" className="text-zinc-400 hover:text-white transition">
-              FL
+              Bakiye
             </Link>
             <Link href="/payment-security" className="text-zinc-400 hover:text-white transition">
               Ödeme Güvenliği

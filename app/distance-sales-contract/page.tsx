@@ -53,7 +53,7 @@ export default function DistanceSalesContractPage() {
           <section className="bg-zinc-900 rounded-xl p-6">
             <h2 className="text-2xl font-bold mb-4 text-pink-500">MADDE 3: ÜRÜN/HİZMET BİLGİLERİ</h2>
             <div className="text-zinc-300 space-y-2">
-              <p><strong>Ürün/Hizmet:</strong> FL Coins (Dijital Para Birimi) ve Premium Şablonlar</p>
+              <p><strong>Ürün/Hizmet:</strong> Bakiye (Dijital Para Birimi) ve Premium Şablonlar</p>
               <p><strong>Miktar:</strong> Kullanıcının seçtiği paket/şablon</p>
               <p><strong>Birim Fiyat:</strong> Paket/şablon bazında değişkenlik gösterir</p>
               <p><strong>Toplam Satış Bedeli:</strong> KDV Dahil (sipariş anında belirlenir)</p>
@@ -68,13 +68,13 @@ export default function DistanceSalesContractPage() {
             <h2 className="text-2xl font-bold mb-4 text-pink-500">MADDE 4: CAYMA HAKKI</h2>
             <div className="text-zinc-300 space-y-3">
               <p>
-                <strong>4.1.</strong> ALICI, dijital içerik niteliğindeki <strong>FL Coins'in</strong>
+                <strong>4.1.</strong> ALICI, dijital içerik niteliğindeki <strong>Bakiye'in</strong>
                 hesabına tanımlanması ile cayma hakkını kaybeder (6502 sayılı Tüketicinin Korunması
                 Hakkında Kanun, Madde 15/ı).
               </p>
               <p>
-                <strong>4.2.</strong> <strong>İstisna:</strong> ALICI, FL Coins satın aldıktan sonra henüz
-                hiçbir şablon satın almamışsa (coinlerini hiç kullanmamışsa), satın alma tarihinden itibaren
+                <strong>4.2.</strong> <strong>İstisna:</strong> ALICI, Bakiye satın aldıktan sonra henüz
+                hiçbir şablon satın almamışsa (bakiyesini hiç kullanmamışsa), satın alma tarihinden itibaren
                 <strong> 14 gün içinde</strong> tam iade talebinde bulunabilir. Bu durumda ödenen tutar
                 ALICI&apos;nın kullandığı ödeme yöntemine iade edilir.
               </p>
@@ -111,7 +111,7 @@ export default function DistanceSalesContractPage() {
                 korumalı</strong> güvenli ödeme sistemi (PayTR) üzerinden alınır.
               </p>
               <p>
-                <strong>5.2.</strong> Dijital içerik niteliğindeki FL Coins, ödeme onayından sonra
+                <strong>5.2.</strong> Dijital içerik niteliğindeki Bakiye, ödeme onayından sonra
                 <strong> en geç 48 saat içinde</strong> ALICI hesabına tanımlanır.
               </p>
               <p>
@@ -134,7 +134,7 @@ export default function DistanceSalesContractPage() {
                 <ul className="list-disc list-inside ml-4 space-y-1 text-zinc-300">
                   <li>Doğru ve güncel bilgi sağlamak</li>
                   <li>Kullanım koşullarına uymak</li>
-                  <li>FL Coins'leri kendi kullanımı için satın almak</li>
+                  <li>Bakiye'leri kendi kullanımı için satın almak</li>
                   <li>Oluşturulan içeriklerden sorumlu olmak</li>
                   <li>Üçüncü şahıs haklarını ihlal etmemek</li>
                 </ul>

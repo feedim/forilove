@@ -316,7 +316,7 @@ export default function EditŞablonPage({ params }: { params: Promise<{ template
             </div>
 
             <div>
-              <label className="block text-sm text-zinc-400 mb-1.5">Fiyat (FL)</label>
+              <label className="block text-sm text-zinc-400 mb-1.5">Fiyat (₺)</label>
               <input
                 type="number"
                 value={coinPrice}
@@ -351,7 +351,7 @@ export default function EditŞablonPage({ params }: { params: Promise<{ template
               </div>
 
               <div>
-                <label className="block text-xs text-zinc-500 mb-1">İndirimli Fiyat (FL)</label>
+                <label className="block text-xs text-zinc-500 mb-1">İndirimli Fiyat (₺)</label>
                 <input
                   type="number"
                   value={discountPrice ?? ""}
@@ -410,9 +410,9 @@ export default function EditŞablonPage({ params }: { params: Promise<{ template
 
                   <div className="bg-pink-500/10 border border-pink-500/20 rounded-lg px-3 py-2">
                     <p className="text-xs text-pink-300">
-                      <span className="line-through text-zinc-500">{coinPrice} FL</span>
+                      <span className="line-through text-zinc-500">{coinPrice}₺</span>
                       {" → "}
-                      <span className="font-bold text-yellow-500">{discountPrice} FL</span>
+                      <span className="font-bold text-yellow-500">{discountPrice}₺</span>
                       {discountLabel && <span className="ml-1 text-pink-400">({discountLabel})</span>}
                     </p>
                   </div>

@@ -42,13 +42,13 @@ export default function PreInformationFormPage() {
             <div className="text-zinc-300 space-y-3">
               <div>
                 <h3 className="text-lg font-semibold mb-2 text-white">Ürün Türü:</h3>
-                <p>Dijital İçerik (FL Coins - Dijital Para Birimi ve Premium Şablonlar)</p>
+                <p>Dijital İçerik (Bakiye - Dijital Para Birimi ve Premium Şablonlar)</p>
               </div>
 
               <div>
                 <h3 className="text-lg font-semibold mb-2 text-white">Temel Özellikler:</h3>
                 <ul className="list-disc list-inside ml-4 space-y-1">
-                  <li><strong>FL Coins:</strong> Platform içinde kullanılabilen dijital para birimi</li>
+                  <li><strong>Bakiye:</strong> Platform içinde kullanılabilen dijital para birimi</li>
                   <li><strong>Premium Şablonlar:</strong> Özelleştirilebilir web sayfası şablonları</li>
                   <li>Anında teslimat (dijital içerik)</li>
                   <li>Hesaba otomatik tanımlama</li>
@@ -89,10 +89,10 @@ export default function PreInformationFormPage() {
                 <h3 className="text-lg font-semibold mb-2 text-white">Teslimat Şekli ve Süresi:</h3>
                 <p>
                   <strong>Dijital teslimat:</strong> Ödeme onayından sonra <strong>0-48 saat</strong> içinde
-                  FL Coins kullanıcı hesabına otomatik olarak tanımlanır.
+                  Bakiye kullanıcı hesabına otomatik olarak tanımlanır.
                 </p>
                 <p className="text-sm text-zinc-400 mt-2">
-                  Not: Çoğu ödemede FL Coins anında hesaba yüklenir. Nadir durumlarda banka onay
+                  Not: Çoğu ödemede Bakiye anında hesaba yüklenir. Nadir durumlarda banka onay
                   süreçleri nedeniyle 48 saate kadar sürebilir.
                 </p>
               </div>
@@ -112,10 +112,10 @@ export default function PreInformationFormPage() {
             <div className="text-zinc-300 space-y-3">
               <div className="bg-white/5 border border-white/10 rounded-xl p-6">
                 <p className="text-zinc-300">
-                  <strong>ÖNEMLİ:</strong> FL Coins dijital içerik niteliğinde olduğundan, hesabınıza
+                  <strong>ÖNEMLİ:</strong> Bakiye dijital içerik niteliğinde olduğundan, hesabınıza
                   tanımlandıktan sonra cayma hakkınız sona erer (6502 sayılı
                   Tüketicinin Korunması Hakkında Kanun, Madde 15/ı).
-                  Ancak FL Coins satın aldıktan sonra henüz hiçbir şablon satın almadıysanız,
+                  Ancak Bakiye satın aldıktan sonra henüz hiçbir şablon satın almadıysanız,
                   <strong> 14 gün içinde</strong> tam iade talebinde bulunabilirsiniz.
                 </p>
               </div>
@@ -123,7 +123,7 @@ export default function PreInformationFormPage() {
               <div>
                 <h3 className="text-lg font-semibold mb-2 text-white">Cayma Hakkı Kullanılabilen Durumlar:</h3>
                 <ul className="list-disc list-inside ml-4 space-y-1">
-                  <li>FL Coins satın alındı ancak henüz <strong>hiçbir şablon satın alınmadıysa</strong> (coinler kullanılmadıysa)</li>
+                  <li>Bakiye satın alındı ancak henüz <strong>hiçbir şablon satın alınmadıysa</strong> (bakiye kullanılmadıysa)</li>
                   <li>Premium şablon satın alındı ancak henüz <strong>yayınlanmadıysa</strong></li>
                   <li>Cayma süresi: Satın alımdan sonra <strong>14 gün</strong></li>
                 </ul>

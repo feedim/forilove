@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     if (spendError) {
       return NextResponse.json(
-        { success: false, error: "Coin harcama hatası" },
+        { success: false, error: "Bakiye hatası" },
         { status: 500 }
       );
     }

@@ -60,7 +60,7 @@ export default function PaymentFailedPage() {
 
         {/* Countdown */}
         <p className="text-sm text-zinc-500">
-          {countdown} saniye sonra coin sayfasına yönlendirileceksiniz...
+          {countdown} saniye sonra bakiye sayfasına yönlendirileceksiniz...
         </p>
 
         {/* Actions */}

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Coins, Heart } from "lucide-react";
+import { Heart } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { calculateBundlePrice } from "@/lib/bundle-price";
 
@@ -295,16 +295,15 @@ export default function BundleCard({ bundle }: BundleCardProps) {
             </p>
           )}
           <div className="flex items-center gap-2.5">
-            <Coins className="h-6 w-6 text-yellow-500 shrink-0" />
             <span className="text-base font-bold text-zinc-500 line-through decoration-red-500/70 decoration-2">
-              {totalOriginal}
+              {totalOriginal}₺
             </span>
             <span className="text-3xl font-black text-yellow-500">
-              {bundlePrice}
+              {bundlePrice}₺
             </span>
             <div className="w-px h-7 bg-white/15 shrink-0" />
             <span className="text-xs text-pink-400 font-semibold">
-              {savings} FL
+              {savings}₺
               <br />
               tasarruf
             </span>

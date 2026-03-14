@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Coins, Heart } from "lucide-react";
+import { ArrowLeft, Wallet, Heart } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import TransactionCard from "@/components/TransactionCard";
 import { TransactionListSkeleton } from "@/components/Skeletons";
@@ -149,10 +149,10 @@ export default function TransactionsPage() {
           </button>
           <h1 className="text-lg font-semibold">İşlem Geçmişi</h1>
           <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
-            <Coins className="h-5 w-5 text-yellow-500" />
-            <div className="flex items-baseline gap-1">
+            <Wallet className="h-5 w-5 text-yellow-500" />
+            <div className="flex items-baseline gap-0.5">
               <span className="font-bold text-yellow-500">{balance.toLocaleString()}</span>
-              <span className="text-sm text-yellow-500 font-medium">FL</span>
+              <span className="text-sm text-yellow-500 font-medium">₺</span>
             </div>
           </div>
         </nav>
@@ -164,10 +164,10 @@ export default function TransactionsPage() {
           <div className="text-center py-12 sm:py-20">
             <Heart className="h-12 w-12 sm:h-16 sm:w-16 text-white mx-auto mb-3 sm:mb-4" />
             <h2 className="text-lg sm:text-xl font-bold mb-2">Henüz işlem yok</h2>
-            <p className="text-zinc-400 mb-5 sm:mb-6 text-sm sm:text-base">Başlamak için coin satın alın.</p>
+            <p className="text-zinc-400 mb-5 sm:mb-6 text-sm sm:text-base">Başlamak için bakiye yükleyin.</p>
             <Link href="/dashboard/coins">
               <button className="btn-primary">
-                FL Satın Al
+                Bakiye Yükle
               </button>
             </Link>
           </div>

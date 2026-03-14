@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
       p_reference_type: "ai_generate",
     });
     if (spendError) {
-      return NextResponse.json({ error: "Coin harcama hatası" }, { status: 500 });
+      return NextResponse.json({ error: "Bakiye hatası" }, { status: 500 });
     }
     if (!spendResult[0]?.success) {
       return NextResponse.json(

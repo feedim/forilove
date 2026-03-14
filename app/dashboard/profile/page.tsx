@@ -250,10 +250,10 @@ export default function ProfilePage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-zinc-400 mb-1">Bakiye</p>
-              <p className="text-4xl font-black text-yellow-500">{profile?.coin_balance || 0} <span className="text-xl text-zinc-400">FL</span></p>
+              <p className="text-4xl font-black text-yellow-500">{profile?.coin_balance || 0}₺</p>
             </div>
             <Link href="/dashboard/coins">
-              <button className="btn-primary px-6 py-3" style={{ background: 'var(--color-yellow-500)', color: 'black' }}>
+              <button className="btn-primary px-6 py-3" style={{ background: 'var(--color-yellow-500, #10b981)', color: 'black' }}>
                 <Wallet className="h-5 w-5 inline mr-2" />
                 Yükle
               </button>
@@ -286,7 +286,7 @@ export default function ProfilePage() {
                 <p className="text-2xl font-bold">{adminStats.totalPayments.toLocaleString('tr-TR')}</p>
               </div>
               <div className="bg-white/5 rounded-xl p-4">
-                <p className="text-xs text-zinc-400 mb-1">Toplam Coin</p>
+                <p className="text-xs text-zinc-400 mb-1">Toplam Bakiye</p>
                 <p className="text-2xl font-bold text-yellow-500">{adminStats.totalCoins.toLocaleString('tr-TR')}</p>
               </div>
               <div className="bg-white/5 rounded-xl p-4">

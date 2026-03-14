@@ -62,9 +62,19 @@ export async function POST(request: NextRequest) {
     // Kullanıcı bilgilerini al
     const { data: profile } = await supabase
       .from('profiles')
-      .select('full_name, email')
+      .select('full_name, email, coin_balance')
       .eq('user_id', user.id)
       .single();
+
+    // Max 1000 TL bakiye limiti kontrolü
+    const currentBalance = profile?.coin_balance || 0;
+    const totalCoins = pkg.coins + (pkg.bonus_coins || 0);
+    if (currentBalance + totalCoins > 1000) {
+      return NextResponse.json(
+        { success: false, error: `Maksimum bakiye limiti 1.000₺'dir. Mevcut bakiyeniz: ${currentBalance}₺` },
+        { status: 400 }
+      );
+    }
 
     // PayTR merchant bilgileri — .trim() ile olası whitespace/newline temizliği
     const merchant_id = (process.env.PAYTTR_MERCHANT_ID || '').trim();

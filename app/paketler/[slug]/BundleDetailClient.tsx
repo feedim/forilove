@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Package, Coins, Heart, ShoppingCart, Check } from "lucide-react";
+import { ArrowLeft, Package, Heart, ShoppingCart, Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { calculateBundlePrice } from "@/lib/bundle-price";
 import { getActivePrice } from "@/lib/discount";
@@ -99,7 +99,7 @@ export default function BundleDetailClient({ bundle }: BundleDetailClientProps) 
     if (allOwned || purchased) return;
 
     if (effectivePrice.bundlePrice > coinBalance) {
-      toast.error("Yetersiz bakiye. Coin satın alın.");
+      toast.error("Yetersiz bakiye. Bakiye yükleyin.");
       router.push("/dashboard/coins");
       return;
     }
@@ -164,7 +164,7 @@ export default function BundleDetailClient({ bundle }: BundleDetailClientProps) 
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm text-zinc-400">Toplam Değer</span>
               <span className="text-lg text-zinc-500 line-through">
-                {totalOriginal} FL
+                {totalOriginal}₺
               </span>
             </div>
             <div className="flex items-center justify-between mb-2">
@@ -172,17 +172,15 @@ export default function BundleDetailClient({ bundle }: BundleDetailClientProps) 
                 Paket Fiyatı (%20 İndirim)
               </span>
               <div className="flex items-center gap-2">
-                <Coins className="h-5 w-5 text-yellow-500" />
                 <span className="text-2xl font-black text-yellow-500">
-                  {allOwned ? 0 : effectivePrice.bundlePrice}
+                  {allOwned ? 0 : effectivePrice.bundlePrice}₺
                 </span>
-                <span className="text-sm text-zinc-500">FL</span>
               </div>
             </div>
             <div className="flex items-center justify-between mb-6">
               <span className="text-xs text-pink-400">Tasarruf</span>
               <span className="text-sm text-pink-400 font-medium">
-                {savings} FL
+                {savings}₺
               </span>
             </div>
 
@@ -222,14 +220,14 @@ export default function BundleDetailClient({ bundle }: BundleDetailClientProps) 
                 {purchasing
                   ? "Satın alınıyor..."
                   : user
-                  ? `Paketi Satın Al (${effectivePrice.bundlePrice} FL)`
+                  ? `Paketi Satın Al (${effectivePrice.bundlePrice}₺)`
                   : "Giriş Yap ve Satın Al"}
               </button>
             )}
 
             {user && !purchased && !allOwned && (
               <p className="text-xs text-zinc-500 text-center mt-2">
-                Mevcut bakiye: {coinBalance} FL
+                Mevcut bakiye: {coinBalance}₺
               </p>
             )}
           </div>

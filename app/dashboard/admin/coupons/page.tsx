@@ -100,7 +100,16 @@ export default function AdminCouponsPage() {
     }
   };
 
-  const generalCoupons = coupons.filter(c => c.coupon_type === 'general');
+  // Otomatik üretilen tek kullanımlık kısa süreli kuponları hariç tut
+  const generalCoupons = coupons.filter(c => {
+    if (c.max_uses === 1 && c.expires_at) {
+      const expiresAt = new Date(c.expires_at).getTime();
+      const createdAt = new Date(c.created_at).getTime();
+      // Süresi 1 saatten kısa olan tek kullanımlıklar = otomatik üretilmiş
+      if (expiresAt - createdAt < 60 * 60 * 1000) return false;
+    }
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-black text-white">

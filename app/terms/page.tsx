@@ -28,7 +28,7 @@ export default function TermsPage() {
             <ul className="list-disc list-inside space-y-2 ml-4">
               <li>Özelleştirilebilir şablon kitaplığı</li>
               <li>Sürükle-bırak içerik editörü</li>
-              <li>FL Coins ile satın alma sistemi</li>
+              <li>₺ bakiye ile satın alma sistemi</li>
               <li>Bulut tabanlı içerik barındırma</li>
               <li>Özel URL oluşturma</li>
             </ul>
@@ -95,20 +95,20 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-bold text-white mb-3">7. FL Coins ve Ödeme Koşulları</h2>
+            <h2 className="text-xl font-bold text-white mb-3">7. Bakiye ve Ödeme Koşulları</h2>
             <p className="mb-3">
-              FL Coins, platformdaki sanal para birimidir. Ödeme yaparken:
+              ₺ bakiye, platformdaki dijital bakiye sistemidir. Ödeme yaparken:
             </p>
             <ul className="list-disc list-inside space-y-2 ml-4">
               <li>Tüm ödemeler güvenli POS sistemi üzerinden işlenir</li>
-              <li>FL Coins satın alımları kesindir, iade edilemez. Ancak hiçbir şablon satın alınmadıysa, 14 gün içinde tam iade yapılır</li>
+              <li>Bakiye yüklemeleri kesindir, iade edilemez. Ancak hiçbir şablon satın alınmadıysa, 14 gün içinde tam iade yapılır</li>
               <li>Şablon satın alımlarında 14 gün iade garantisi vardır</li>
               <li>Fiyatlar önceden haber verilmeksizin değiştirilebilir</li>
               <li>İndirim ve promosyonlar belirli koşullara tabidir</li>
             </ul>
             <p className="mt-3">
               Detaylı bilgi için{" "}
-              <a href="/fl-coins" className="text-pink-500 hover:text-pink-400 underline">FL Coins</a>,{" "}
+              <a href="/fl-coins" className="text-pink-500 hover:text-pink-400 underline">Bakiye</a>,{" "}
               <a href="/payment-security" className="text-pink-500 hover:text-pink-400 underline">Ödeme Güvenliği</a> ve{" "}
               <a href="/refund-policy" className="text-pink-500 hover:text-pink-400 underline">İade Politikası</a> sayfalarını inceleyiniz.
             </p>

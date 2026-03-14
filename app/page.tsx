@@ -108,7 +108,7 @@ export default function Home() {
   const faqReveal = useScrollReveal();
 
   // Counter values
-  const usersCount = useCountUp(1000, 1500, statsReveal.isVisible);
+  const usersCount = useCountUp(10000, 1500, statsReveal.isVisible);
   const sharesCount = useCountUp(50000, 1800, statsReveal.isVisible);
   const ratingCount = useCountUp(4.9, 1200, statsReveal.isVisible, 1);
 
@@ -158,17 +158,17 @@ export default function Home() {
             {/* Badge */}
             <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-pink-500/10 border border-pink-500/20 mb-6 sm:mb-8">
               <Heart className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-pink-500 fill-pink-500" aria-hidden="true" />
-              <span className="text-xs sm:text-sm text-zinc-300">Özel anlarınız için dijital sayfalar!</span>
+              <span className="text-xs sm:text-sm text-zinc-300 font-semibold">Özel anlarınız için dijital sayfalar!</span>
             </div>
 
             {/* Main Title */}
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6" style={{ lineHeight: 1.1 }}>
               Sevginizi dijitalde
-              <span className="block text-pink-500 mt-3">ölümsüzleştirin</span>
+              <span className="block text-pink-500 mt-3">ölümsüzleştirin.</span>
             </h1>
 
             {/* Description */}
-            <p className="text-base sm:text-lg md:text-xl text-zinc-400 mb-10 max-w-2xl mx-auto px-2">
+            <p className="text-xs sm:text-sm md:text-base text-zinc-400 mb-8 max-w-2xl mx-auto px-2">
               Özel tasarlanmış şablonlar ile sevdikleriniz için unutulmaz anı sayfaları oluşturun.
             </p>
 
@@ -401,36 +401,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="border-t border-white/10 py-24">
-        <div className="w-full px-4 sm:px-6 lg:px-10">
-          <div className="max-w-5xl mx-auto">
-            <div ref={testimonialReveal.ref} className={`text-center mb-12 ${testimonialReveal.isVisible ? 'animate-fade-up' : 'opacity-0'}`}>
-              <h2 className="text-2xl md:text-3xl font-bold mb-4">Kullanıcılarımız Ne Diyor?</h2>
-              <p className="text-zinc-400 text-lg">Gerçek kullanıcılardan gerçek hikayeler</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {testimonials.map((t, index) => (
-                <div
-                  key={t.name}
-                  className={`bg-zinc-900 border border-white/10 rounded-2xl p-6 ${testimonialReveal.isVisible ? 'animate-fade-up-scale' : 'opacity-0'}`}
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <div className="flex gap-0.5 mb-4">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className="h-4 w-4 text-pink-500 fill-pink-500" />
-                    ))}
-                  </div>
-                  <p className="text-zinc-300 mb-4 leading-relaxed">&ldquo;{t.text}&rdquo;</p>
-                  <p className="text-sm font-semibold text-white">{t.name}</p>
-                  <p className="text-xs text-zinc-500 mt-0.5">{t.context}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Sıkça Sorulan Sorular */}
       <section className="border-t border-white/10 py-24">

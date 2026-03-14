@@ -953,7 +953,7 @@ export default function AdminPostsPage() {
                       <p className="font-medium text-sm">{item.name}</p>
                       {embedModal === "template" && (
                         <p className="text-xs text-zinc-500 mt-0.5">
-                          {item.coin_price} FL
+                          {item.coin_price}₺
                         </p>
                       )}
                       {embedModal === "bundle" && (
